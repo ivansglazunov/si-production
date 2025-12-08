@@ -13,20 +13,28 @@ export default function Home() {
   const [maskVisible, setMaskVisible] = useState(true)
 
   useEffect(() => {
-    // Создаем сетку 150x150 с рандомными задержками для каждого квадратика
+    // Создаем сетку 40x40 с рандомными задержками для каждого квадратика
+    // Не все ячейки заполнены - примерно 65% заполненность
+    const gridSize = 40
+    const fillProbability = 0.65 // 65% ячеек будут заполнены
     const cells = []
-    for (let i = 0; i < 150; i++) {
-      for (let j = 0; j < 150; j++) {
-        // Генерируем рандомный цвет
-        const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`
-        // Рандомная задержка от 1s до 5s (начинаем после завершения анимации линий)
-        // Линии анимируются 1s, поэтому квадратики начинают появляться с 1s
-        const delay = 1 + Math.random() * 4
-        cells.push({
-          id: `${i}-${j}`,
-          color: randomColor,
-          delay: delay
-        })
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        // Случайно решаем, будет ли эта ячейка заполнена
+        if (Math.random() < fillProbability) {
+          // Генерируем рандомный цвет
+          const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`
+          // Рандомная задержка от 1s до 5s (начинаем после завершения анимации линий)
+          // Линии анимируются 1s, поэтому квадратики начинают появляться с 1s
+          const delay = 1 + Math.random() * 4
+          cells.push({
+            id: `${i}-${j}`,
+            color: randomColor,
+            delay: delay,
+            row: i,
+            col: j
+          })
+        }
       }
     }
     setGrid(cells)
@@ -85,8 +93,8 @@ export default function Home() {
           transition: 'transform 5s ease-out',
           transformOrigin: 'center center',
           position: 'relative',
-          width: '7500px', // 150 * 50px
-          height: '7500px',
+          width: '2000px', // 40 * 50px
+          height: '2000px',
         }}>
           {/* Черный прямоугольник для отрезания линий - повернут на 45 градусов */}
           <div
@@ -94,8 +102,8 @@ export default function Home() {
               position: 'absolute',
               top: '50%',
               left: '50%',
-              width: '10607px', // 7500 * sqrt(2) для перекрытия всей сетки при повороте на 45°
-              height: '10607px',
+              width: '2828px', // 2000 * sqrt(2) для перекрытия всей сетки при повороте на 45°
+              height: '2828px',
               backgroundColor: '#000000',
               transformOrigin: 'center center',
               transform: maskVisible 
@@ -113,16 +121,18 @@ export default function Home() {
             top: 0,
             left: 0,
             display: 'grid',
-            gridTemplateColumns: 'repeat(150, 50px)',
-            gridTemplateRows: 'repeat(150, 50px)',
+            gridTemplateColumns: 'repeat(40, 50px)',
+            gridTemplateRows: 'repeat(40, 50px)',
             gap: 0,
-            // zIndex: 2
+            zIndex: 2
           }}>
             {grid.map((cell) => (
               <div
                 key={cell.id}
                 className="square-fade-in"
                 style={{
+                  gridRow: cell.row + 1,
+                  gridColumn: cell.col + 1,
                   width: '50px',
                   height: '50px',
                   backgroundColor: cell.color,
@@ -139,10 +149,10 @@ export default function Home() {
               position: 'absolute',
               top: 0,
               left: 0,
-              width: '100%',
-              height: '100%',
+              width: '2000px',
+              height: '2000px',
               backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0, transparent 49px, #ffffff 49px, #ffffff 50px)',
-              zIndex: 2,
+              zIndex: 3,
               transform: linesVisible ? 'translateX(0)' : 'translateX(-100%)',
               transition: 'transform 1s ease-out',
               pointerEvents: 'none'
@@ -155,10 +165,10 @@ export default function Home() {
               position: 'absolute',
               top: 0,
               left: 0,
-              width: '100%',
-              height: '100%',
+              width: '2000px',
+              height: '2000px',
               backgroundImage: 'repeating-linear-gradient(to right, transparent 0, transparent 49px, #ffffff 49px, #ffffff 50px)',
-              zIndex: 2,
+              zIndex: 3,
               transform: linesVisible ? 'translateY(0)' : 'translateY(-100%)',
               transition: 'transform 1s ease-out',
               pointerEvents: 'none'
@@ -199,6 +209,22 @@ export default function Home() {
         height: '100vh', 
         backgroundColor: '#000000'
       }} />
+
+      {/* Надпись SI ПРОДАКШЕН */}
+      <div style={{
+        position: 'fixed',
+        right: '16px',
+        bottom: '16px',
+        fontSize: '48px',
+        fontWeight: 'bold',
+        color: '#ffffff',
+        fontFamily: "'Science Gothic', sans-serif",
+        zIndex: 9999,
+        pointerEvents: 'none',
+        textShadow: '0 0 20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 0, 0, 0.6), 0 4px 8px rgba(0, 0, 0, 0.9)'
+      }}>
+        SI-PRODUCTION
+      </div>
     </>
   )
 }

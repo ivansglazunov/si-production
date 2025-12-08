@@ -13,7 +13,7 @@ npm install
 Для работы второго экрана с Яндекс картами необходимо:
 
 1. Получить API ключ на [Яндекс.Кабинете разработчика](https://developer.tech.yandex.ru/)
-2. Добавить API ключ в файл `.env.local`:
+2. Добавить API ключ в файл `.env`:
    ```
    NEXT_PUBLIC_YANDEX_MAPS_API_KEY=ваш_api_ключ
    ```
