@@ -18,6 +18,22 @@
   src: url('/fonts/ScienceGothic-Bold.ttf') format('truetype');
 }
 
+@font-face {
+  font-family: 'Izvod';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Izvod.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'Slovic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Slovic_Demo-Serif.otf') format('opentype');
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
@@ -45,20 +61,17 @@ a {
   text-decoration: none;
 }
 
-@keyframes fadeInSquare {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.star {
+  position: absolute;
+  background: #ffffff;
+  border-radius: 50%;
+  pointer-events: none;
 }
 
-.square-fade-in {
-  opacity: 0;
-  animation: fadeInSquare 0.5s ease-in forwards;
-  position: relative;
-  transform-origin: center center;
-  z-index: 1;
-  pointer-events: auto;
+/* Скрытие scrollbar для слайдера */
+section div[style*="overflowX"]::-webkit-scrollbar {
+  display: none;
 }
+
+
+
