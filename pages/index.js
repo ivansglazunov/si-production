@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, Suspense } from 'react'
+import React, { useRef, useState, useEffect, Suspense, memo, useMemo } from 'react'
 import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
 
@@ -945,7 +945,7 @@ function RadialBarChartComponent({ progressMotionValue }) {
 }
 
 // Компонент карусели с постерами фильмов (вращающаяся карусель)
-function MoviesCarousel({ movies, mouseParallaxValues = null }) {
+const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValues = null }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [wasDragging, setWasDragging] = useState(false)
@@ -953,10 +953,36 @@ function MoviesCarousel({ movies, mouseParallaxValues = null }) {
   const [dragOffset, setDragOffset] = useState(0)
   const carouselRef = useRef(null)
   const autoPlayRef = useRef(null)
+  const [isInViewport, setIsInViewport] = useState(false)
+
+  // Проверка видимости компонента в viewport
+  useEffect(() => {
+    if (!carouselRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsInViewport(entry.isIntersecting)
+        })
+      },
+      {
+        threshold: 0.1 // Компонент считается видимым, если видно хотя бы 10%
+      }
+    )
+
+    observer.observe(carouselRef.current)
+
+    return () => {
+      if (carouselRef.current) {
+        observer.unobserve(carouselRef.current)
+      }
+    }
+  }, [])
 
   // Автоматическое вращение карусели (но не скролл страницы)
   useEffect(() => {
-    if (!isDragging) {
+    // Автоплей работает только когда компонент виден
+    if (!isDragging && isInViewport) {
       autoPlayRef.current = setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % movies.length)
       }, 3000) // Меняем каждые 3 секунды
@@ -971,7 +997,7 @@ function MoviesCarousel({ movies, mouseParallaxValues = null }) {
         clearInterval(autoPlayRef.current)
       }
     }
-  }, [movies.length, isDragging])
+  }, [movies.length, isDragging, isInViewport])
 
   // Обработчики для перетаскивания
   const handleMouseDown = (e) => {
@@ -1081,8 +1107,15 @@ function MoviesCarousel({ movies, mouseParallaxValues = null }) {
           const offset = Math.abs(index - currentIndex)
           
           // Определяем параллакс в зависимости от расстояния от центра
+          // Параллакс работает только когда компонент в viewport
           let parallaxX, parallaxY, rotateX, rotateY
-          if (offset === 0) {
+          if (!isInViewport) {
+            // Если не в viewport - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          } else if (offset === 0) {
             // Центральная карточка - сильный параллакс
             parallaxX = mouseParallaxValues?.centerX || 0
             parallaxY = mouseParallaxValues?.centerY || 0
@@ -1226,15 +1259,20 @@ function MoviesCarousel({ movies, mouseParallaxValues = null }) {
       </div>
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  // Кастомная функция сравнения - перерисовываем только если изменились movies
+  // mouseParallaxValues - это motion values, они не должны вызывать перерисовки
+  return prevProps.movies === nextProps.movies
+})
 
 // Компонент текстуры с закругленными прямоугольниками для границ экрана
 function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset = null }) {
-  // Параметры текстуры - увеличенные размеры
+  // Параметры текстуры - одинаковые отступы
+  const gap = 5 // Отступ между элементами и от краев
   const rectWidth = 20
-  const rectHeight = 16 // Увеличено с 8 до 16
-  const rectSpacing = 30
-  const borderRadius = 6 // Увеличено для пропорциональности
+  const rectHeight = 16
+  const rectSpacing = rectWidth + gap * 2 // Ширина элемента + отступы с обеих сторон
+  const borderRadius = 2 // Меньше закругление
   const edgeOffset = 20 // Отступ от края экрана
 
   // Преобразуем scrollProgress в смещение текстуры с spring эффектом
@@ -1272,7 +1310,7 @@ function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset
   // Создаем SVG паттерн с закругленными прямоугольниками
   const createPattern = () => {
     const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
-<rect x="${(rectSpacing - rectWidth) / 2}" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.4"/>
+<rect x="${gap}" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.4"/>
 </svg>`
     const encoded = encodeURIComponent(svg)
     return `data:image/svg+xml;charset=utf-8,${encoded}`
@@ -1702,7 +1740,7 @@ function PartnersGrid({ partners }) {
   )
 }
 
-function StarrySky({ starCount = 50 }) {
+const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
   const [stars] = useState(() => {
     return Array.from({ length: starCount }, () => ({
       x: Math.random() * 100, // Позиция X в процентах
@@ -1739,6 +1777,51 @@ function StarrySky({ starCount = 50 }) {
         />
       ))}
     </div>
+  )
+}, (prevProps, nextProps) => {
+  // Перерисовываем только если изменился starCount
+  return prevProps.starCount === nextProps.starCount
+})
+
+// Компонент текстуры перфорации для лент
+function LentaPerforationTexture({ width, height, position = 'top', scale = 1 }) {
+  // Параметры текстуры - масштабируемые
+  // Отступы одинаковые: от краев ленты и между элементами
+  const gap = 5 * scale // Отступ между элементами и от краев (одинаковый)
+  const rectWidth = 20 * scale
+  const rectHeight = Math.min(height * 0.8, 16 * scale) // Адаптируем под высоту полосы
+  // Расстояние между началами элементов = ширина элемента + gap (отступ между элементами)
+  const rectSpacing = rectWidth + gap // Ширина элемента + один отступ
+  const borderRadius = 2 * scale // Меньше закругление
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  // Элемент начинается с 0, так как отступ от края уже учтен в позиции контейнера
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.2"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        [position]: 0,
+        left: `${gap}px`, // Отступ от левого края
+        width: `${width - gap * 2}px`, // Уменьшаем ширину на отступы с обеих сторон
+        height: `${height}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: '0 0',
+        pointerEvents: 'none',
+        zIndex: 1
+      }}
+    />
   )
 }
 
@@ -1812,7 +1895,8 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
             alignItems: 'stretch',
             justifyContent: 'center',
             pointerEvents: 'none', // Контейнер не перехватывает события - скролл проходит сквозь
-            transform: translateXValue
+            transform: translateXValue,
+            position: 'relative' // Для позиционирования перфорации на уровне всей ленты
           }}
           onWheel={(e) => {
             // Пробрасываем скролл событие - не блокируем его
@@ -1823,6 +1907,34 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
             e.stopPropagation()
           }}
         >
+          {(() => {
+            // Вычисляем параметры один раз для всей ленты
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale
+            const totalWidth = frameWidth * frameCount
+            
+            return (
+              <>
+                {/* Текстура перфорации на верхней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="top"
+                  scale={scale}
+                />
+                
+                {/* Текстура перфорации на нижней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="bottom"
+                  scale={scale}
+                />
+              </>
+            )
+          })()}
+          
           {/* Кадры ленты */}
           {frames.map((color, index) => {
             const isHovered = false // Временно отключено для производительности
@@ -1873,8 +1985,6 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
                   touchAction: 'pan-y' // Разрешаем вертикальный скролл на touch устройствах
                 }}
               >
-                {/* Перфорация убрана для оптимизации производительности */}
-                
                 {/* Сам кадр в центре */}
                 <div
                   style={{
@@ -1911,6 +2021,11 @@ export default function Home() {
   // Motion values для позиции мыши - без перерендеров
   const mouseX = useMotionValue(50) // 0-100, начальное значение центр
   const mouseY = useMotionValue(50) // 0-100, начальное значение центр
+  
+  // Motion value для кастомного скролла
+  const customScrollTop = useMotionValue(0)
+  const [isDraggingScrollbar, setIsDraggingScrollbar] = useState(false)
+  const scrollbarRef = useRef(null)
   
   // Для отображения в UI (только для текста) - используем useState только для индикаторов
   const [progressText, setProgressText] = useState(0)
@@ -2063,6 +2178,26 @@ export default function Home() {
   const movieCardFarRotateX = useTransform(mouseY, [0, 100], [1, -1]) // градусы
   const movieCardFarRotateY = useTransform(mouseX, [0, 100], [-1, 1]) // градусы
 
+  // Стабилизируем объект mouseParallaxValues через useMemo, чтобы не вызывать перерисовки MoviesCarousel
+  const movieParallaxValues = useMemo(() => ({
+    centerX: movieCardCenterParallaxX,
+    centerY: movieCardCenterParallaxY,
+    centerRotateX: movieCardCenterRotateX,
+    centerRotateY: movieCardCenterRotateY,
+    nearX: movieCardNearParallaxX,
+    nearY: movieCardNearParallaxY,
+    nearRotateX: movieCardNearRotateX,
+    nearRotateY: movieCardNearRotateY,
+    farX: movieCardFarParallaxX,
+    farY: movieCardFarParallaxY,
+    farRotateX: movieCardFarRotateX,
+    farRotateY: movieCardFarRotateY
+  }), [
+    movieCardCenterParallaxX, movieCardCenterParallaxY, movieCardCenterRotateX, movieCardCenterRotateY,
+    movieCardNearParallaxX, movieCardNearParallaxY, movieCardNearRotateX, movieCardNearRotateY,
+    movieCardFarParallaxX, movieCardFarParallaxY, movieCardFarRotateX, movieCardFarRotateY
+  ])
+
   // 6 популярных российских кинопродакшенов/киностудий, принимающих госзаказы
   const partners = [
     { name: 'Мосфильм' },
@@ -2145,6 +2280,64 @@ export default function Home() {
     }, 600) // Время на анимацию закрытия
   }
 
+  // Кастомный скролл - синхронизируем customScrollTop с реальным scrollY
+  const isUpdatingScroll = useRef(false)
+  
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const container = containerRef.current
+    
+    // Синхронизируем customScrollTop -> scrollTop
+    const unsubscribe = customScrollTop.on('change', (value) => {
+      if (!isUpdatingScroll.current && container.scrollTop !== value) {
+        isUpdatingScroll.current = true
+        container.scrollTop = value
+        requestAnimationFrame(() => {
+          isUpdatingScroll.current = false
+        })
+      }
+    })
+    
+    // Обновляем customScrollTop при изменении реального scrollTop (на случай внешних изменений)
+    const updateCustomScroll = () => {
+      if (!isUpdatingScroll.current) {
+        const currentScroll = container.scrollTop
+        if (Math.abs(customScrollTop.get() - currentScroll) > 1) {
+          customScrollTop.set(currentScroll)
+        }
+      }
+    }
+    
+    container.addEventListener('scroll', updateCustomScroll, { passive: true })
+    
+    return () => {
+      unsubscribe()
+      container.removeEventListener('scroll', updateCustomScroll)
+    }
+  }, [customScrollTop])
+  
+  // Обработка wheel событий для кастомного скролла
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const container = containerRef.current
+    const handleWheel = (e) => {
+      e.preventDefault()
+      const delta = e.deltaY
+      const currentScroll = customScrollTop.get()
+      const maxScroll = container.scrollHeight - container.clientHeight
+      const newScroll = Math.max(0, Math.min(maxScroll, currentScroll + delta))
+      customScrollTop.set(newScroll)
+    }
+    
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    
+    return () => {
+      container.removeEventListener('wheel', handleWheel)
+    }
+  }, [customScrollTop])
+  
   // Отслеживаем скролл контейнера с помощью framer-motion
   const { scrollYProgress, scrollY } = useScroll({
     container: containerRef,
@@ -2361,13 +2554,8 @@ export default function Home() {
         left: 0,
         width: '100vw',
         height: '100vh',
-        overflow: 'auto',
-        overflowX: 'hidden',
-        WebkitOverflowScrolling: 'touch'
-      }}
-      onWheel={(e) => {
-        // Убеждаемся, что скролл работает даже если курсор над лентами
-        // Событие уже обрабатывается контейнером, просто не блокируем его
+        overflow: 'hidden', // Отключаем нативный скролл
+        overflowX: 'hidden'
       }}
     >
       {/* Ленты размещены внутри скроллящейся зоны */}
@@ -2421,7 +2609,7 @@ export default function Home() {
         style={{ 
           width: '100vw', 
           height: '100vh', 
-          backgroundColor: '#000000',
+          backgroundColor: '#0a0a0a', // Чуть светлее черного
           position: 'relative'
         }}
       >
@@ -2872,20 +3060,7 @@ export default function Home() {
           <div style={{ minHeight: '500px' }}>
             <MoviesCarousel 
               movies={topMovies}
-              mouseParallaxValues={{
-                centerX: movieCardCenterParallaxX,
-                centerY: movieCardCenterParallaxY,
-                centerRotateX: movieCardCenterRotateX,
-                centerRotateY: movieCardCenterRotateY,
-                nearX: movieCardNearParallaxX,
-                nearY: movieCardNearParallaxY,
-                nearRotateX: movieCardNearRotateX,
-                nearRotateY: movieCardNearRotateY,
-                farX: movieCardFarParallaxX,
-                farY: movieCardFarParallaxY,
-                farRotateX: movieCardFarRotateX,
-                farRotateY: movieCardFarRotateY
-              }}
+              mouseParallaxValues={movieParallaxValues}
             />
           </div>
         </div>
@@ -2921,8 +3096,208 @@ export default function Home() {
           {/* Сетка с логотипами партнеров */}
           <PartnersGrid partners={partners} />
         </div>
+        
+        {/* Футер - Made in Zvenigorod на звездном фоне */}
+        <footer style={{
+          position: 'absolute',
+          bottom: '2rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '100%',
+          textAlign: 'center',
+          zIndex: 1000,
+          pointerEvents: 'none'
+        }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
+            fontFamily: "'Slovic', sans-serif",
+            fontWeight: 'bold'
+          }}>
+            <span>Made in</span>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+              fontFamily: "'Slovic', sans-serif",
+              fontWeight: 'bold'
+            }}>
+              {/* Иконка православного купола из SVG файла */}
+              <img 
+                src="/tampls.svg" 
+                alt="Zvenigorod dome" 
+                style={{ 
+                  display: 'inline-block',
+                  verticalAlign: 'middle',
+                  width: '24px',
+                  height: '24px'
+                }}
+              />
+              <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
+            </span>
+          </div>
+        </footer>
       </section>
+      
+      {/* Кастомный скроллбар */}
+      <CustomScrollbar 
+        containerRef={containerRef}
+        scrollTop={customScrollTop}
+        isDragging={isDraggingScrollbar}
+        setIsDragging={setIsDraggingScrollbar}
+        scrollbarRef={scrollbarRef}
+      />
     </div>
     </>
+  )
+}
+
+// Компонент кастомного скроллбара
+function CustomScrollbar({ containerRef, scrollTop, isDragging, setIsDragging, scrollbarRef }) {
+  const [scrollbarHeight, setScrollbarHeight] = useState(0)
+  const [scrollbarTop, setScrollbarTop] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(0)
+  const [contentHeight, setContentHeight] = useState(0)
+  const dragStartY = useRef(0)
+  const dragStartScroll = useRef(0)
+  
+  // Вычисляем размеры скроллбара
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const updateScrollbar = () => {
+      const container = containerRef.current
+      if (!container) return
+      
+      const ch = container.clientHeight
+      const sh = container.scrollHeight
+      const st = scrollTop.get()
+      
+      setContainerHeight(ch)
+      setContentHeight(sh)
+      
+      // Высота скроллбара пропорциональна видимой области
+      const thumbHeight = Math.max(20, (ch / sh) * ch)
+      setScrollbarHeight(thumbHeight)
+      
+      // Позиция скроллбара пропорциональна scrollTop
+      const maxTop = ch - thumbHeight
+      const scrollProgress = sh > ch ? st / (sh - ch) : 0
+      setScrollbarTop(scrollProgress * maxTop)
+    }
+    
+    const unsubscribe = scrollTop.on('change', updateScrollbar)
+    updateScrollbar()
+    
+    // Обновляем при изменении размера окна
+    window.addEventListener('resize', updateScrollbar)
+    
+    return () => {
+      unsubscribe()
+      window.removeEventListener('resize', updateScrollbar)
+    }
+  }, [containerRef, scrollTop])
+  
+  // Обработка drag скроллбара
+  useEffect(() => {
+    if (!isDragging) return
+    
+    const handleMouseMove = (e) => {
+      if (!containerRef.current || !scrollbarRef.current) return
+      
+      const container = containerRef.current
+      const scrollbar = scrollbarRef.current
+      const containerRect = container.getBoundingClientRect()
+      const scrollbarRect = scrollbar.getBoundingClientRect()
+      
+      const deltaY = e.clientY - dragStartY.current
+      const scrollbarTrackHeight = containerHeight - scrollbarHeight
+      const scrollRatio = (deltaY / scrollbarTrackHeight) * (contentHeight - containerHeight)
+      
+      const newScroll = Math.max(0, Math.min(contentHeight - containerHeight, dragStartScroll.current + scrollRatio))
+      scrollTop.set(newScroll)
+    }
+    
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, containerRef, scrollbarRef, containerHeight, scrollbarHeight, contentHeight, scrollTop, setIsDragging])
+  
+  const handleMouseDown = (e) => {
+    e.preventDefault()
+    dragStartY.current = e.clientY
+    dragStartScroll.current = scrollTop.get()
+    setIsDragging(true)
+  }
+  
+  const handleTrackClick = (e) => {
+    if (!containerRef.current || !scrollbarRef.current) return
+    
+    const container = containerRef.current
+    const scrollbar = scrollbarRef.current
+    const containerRect = container.getBoundingClientRect()
+    const clickY = e.clientY - containerRect.top
+    
+    const scrollbarTrackHeight = containerHeight - scrollbarHeight
+    const clickRatio = clickY / scrollbarTrackHeight
+    const newScroll = clickRatio * (contentHeight - containerHeight)
+    
+    scrollTop.set(Math.max(0, Math.min(contentHeight - containerHeight, newScroll)))
+  }
+  
+  if (contentHeight <= containerHeight) return null // Не показываем скроллбар если контент помещается
+  
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        right: '10px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '8px',
+        height: `${containerHeight}px`,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '4px',
+        zIndex: 10000,
+        cursor: 'pointer'
+      }}
+      onClick={handleTrackClick}
+    >
+      <div
+        ref={scrollbarRef}
+        style={{
+          position: 'absolute',
+          top: `${scrollbarTop}px`,
+          left: 0,
+          width: '100%',
+          height: `${scrollbarHeight}px`,
+          backgroundColor: 'rgba(255, 255, 255, 0.5)',
+          borderRadius: '4px',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: isDragging ? 'none' : 'background-color 0.2s ease',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'
+        }}
+        onMouseLeave={(e) => {
+          if (!isDragging) {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'
+          }
+        }}
+      />
+    </div>
   )
 }
