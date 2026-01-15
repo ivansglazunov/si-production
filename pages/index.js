@@ -1572,7 +1572,7 @@ function StarrySky({ starCount = 50 }) {
   )
 }
 
-function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef }) {
+function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
   // Генерируем случайные цвета для каждого кадра один раз при монтировании
   const [frames] = useState(() => {
     return Array.from({ length: frameCount }, () => {
@@ -1603,7 +1603,7 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
   
   // Прямое преобразование progress в позицию - без задержки, синхронно
   const translateXValue = useTransform(progressMotion, (prog) => {
-    let targetLeftPosition = (prog - center) * 500 * speed
+    let targetLeftPosition = Math.max(-200, Math.min(200, (prog - center) * 500 * speed))
     if (inverse) {
       targetLeftPosition = -targetLeftPosition
     }
@@ -1622,12 +1622,17 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
       zIndex: 1000,
       pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
           }}>
-      {/* Контейнер поворота - поворачивается на angle градусов */}
+      {/* Контейнер поворота - поворачивается на angle градусов + параллакс */}
             <motion.div
         style={{
         rotate: `${angle}deg`,
         transformOrigin: 'center center',
-        pointerEvents: 'none'
+        pointerEvents: 'none',
+        x: parallaxX || 0,
+        y: parallaxY || 0,
+        rotateX: rotateX || 0,
+        rotateY: rotateY || 0,
+        perspective: '1000px'
       }}>
         {/* Контейнер движения - двигается по повернутой оси X */}
         <motion.div
@@ -1733,6 +1738,10 @@ export default function Home() {
   const secondScreenProgressMotionValue = useMotionValue(0)
   const thirdScreenProgressMotionValue = useMotionValue(0)
   
+  // Motion values для позиции мыши - без перерендеров
+  const mouseX = useMotionValue(50) // 0-100, начальное значение центр
+  const mouseY = useMotionValue(50) // 0-100, начальное значение центр
+  
   // Для отображения в UI (только для текста) - используем useState только для индикаторов
   const [progressText, setProgressText] = useState(0)
   const [firstScreenProgressText, setFirstScreenProgressText] = useState(0)
@@ -1756,6 +1765,58 @@ export default function Home() {
 
     return () => clearTimeout(timer)
   }, [])
+
+  // Отслеживание позиции мыши для параллакса - без перерендеров
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const x = (e.clientX / window.innerWidth) * 100 // 0-100
+      const y = (e.clientY / window.innerHeight) * 100 // 0-100
+      mouseX.set(x)
+      mouseY.set(y)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [mouseX, mouseY])
+
+  // Transforms для параллакса - преобразуем позицию мыши в значения перспективы
+  // Для крупных лент (scale >= 1.5): сильный эффект
+  const lentaLargeParallaxX = useTransform(mouseX, [0, 100], [-30, 30]) // -30px до +30px
+  const lentaLargeParallaxY = useTransform(mouseY, [0, 100], [-30, 30]) // -30px до +30px
+  const lentaLargeRotateX = useTransform(mouseY, [0, 100], [8, -8]) // градусы
+  const lentaLargeRotateY = useTransform(mouseX, [0, 100], [-8, 8]) // градусы
+
+  // Для средних лент (scale < 1.5): средний эффект
+  const lentaMediumParallaxX = useTransform(mouseX, [0, 100], [-20, 20]) // -20px до +20px
+  const lentaMediumParallaxY = useTransform(mouseY, [0, 100], [-20, 20]) // -20px до +20px
+  const lentaMediumRotateX = useTransform(mouseY, [0, 100], [5, -5]) // градусы
+  const lentaMediumRotateY = useTransform(mouseX, [0, 100], [-5, 5]) // градусы
+
+  // Для маленьких лент: слабый эффект
+  const lentaSmallParallaxX = useTransform(mouseX, [0, 100], [-15, 15]) // -15px до +15px
+  const lentaSmallParallaxY = useTransform(mouseY, [0, 100], [-15, 15]) // -15px до +15px
+  const lentaSmallRotateX = useTransform(mouseY, [0, 100], [3, -3]) // градусы
+  const lentaSmallRotateY = useTransform(mouseX, [0, 100], [-3, 3]) // градусы
+
+  // Для крупной круговой диаграммы в центре: СЛАБЫЙ эффект (она на переднем плане)
+  const chartCenterParallaxX = useTransform(mouseX, [0, 100], [-5, 5]) // -5px до +5px
+  const chartCenterParallaxY = useTransform(mouseY, [0, 100], [-5, 5]) // -5px до +5px
+  const chartCenterRotateX = useTransform(mouseY, [0, 100], [1, -1]) // градусы
+  const chartCenterRotateY = useTransform(mouseX, [0, 100], [-1, 1]) // градусы
+
+  // Для маленьких диаграмм на заднем плане: СИЛЬНЫЙ эффект (они дальше)
+  const chartBackParallaxX = useTransform(mouseX, [0, 100], [-25, 25]) // -25px до +25px
+  const chartBackParallaxY = useTransform(mouseY, [0, 100], [-25, 25]) // -25px до +25px
+  const chartBackRotateX = useTransform(mouseY, [0, 100], [6, -6]) // градусы
+  const chartBackRotateY = useTransform(mouseX, [0, 100], [-6, 6]) // градусы
+
+  // Комбинированные transforms для центрирования + параллакс
+  const chartCenterX = useTransform(chartCenterParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartCenterY = useTransform(chartCenterParallaxY, (py) => `calc(-50% + ${py}px)`)
+  const chartTopX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartTopY = useTransform(chartBackParallaxY, (py) => `calc(2rem + ${py}px)`)
+  const chartBottomX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartBottomY = useTransform(chartBackParallaxY, (py) => `calc(-2rem + ${py}px)`)
 
   // 6 популярных российских кинопродакшенов/киностудий, принимающих госзаказы
   const partners = [
@@ -2012,27 +2073,27 @@ export default function Home() {
       {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
       {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
       {/* Первая лента: когда Составление плана 60%, лента по центру экрана, размер вдвое */}
-      <KinoLenta lentaId="lenta-1" frameCount={8} progress={progressMotionValue} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-1" frameCount={8} progress={progressMotionValue} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
 
       {/* Вторая лента: inverse (справа налево), центр при 90%, topOffset 25vh, противоположный угол */}
-      <KinoLenta lentaId="lenta-2" frameCount={8} progress={progressMotionValue} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-2" frameCount={8} progress={progressMotionValue} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
 
       {/* Ленты сверху - распределены пониже */}
-      <KinoLenta lentaId="lenta-3" frameCount={8} progress={progressMotionValue} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      <KinoLenta lentaId="lenta-4" frameCount={8} progress={progressMotionValue} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      <KinoLenta lentaId="lenta-5" frameCount={8} progress={progressMotionValue} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      <KinoLenta lentaId="lenta-6" frameCount={8} progress={progressMotionValue} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      <KinoLenta lentaId="lenta-7" frameCount={8} progress={progressMotionValue} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      <KinoLenta lentaId="lenta-8" frameCount={8} progress={progressMotionValue} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      <KinoLenta lentaId="lenta-9" frameCount={8} progress={progressMotionValue} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      <KinoLenta lentaId="lenta-10" frameCount={8} progress={progressMotionValue} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-3" frameCount={8} progress={progressMotionValue} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-4" frameCount={8} progress={progressMotionValue} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-5" frameCount={8} progress={progressMotionValue} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-6" frameCount={8} progress={progressMotionValue} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-7" frameCount={8} progress={progressMotionValue} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-8" frameCount={8} progress={progressMotionValue} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-9" frameCount={8} progress={progressMotionValue} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-10" frameCount={8} progress={progressMotionValue} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
 
       {/* Дополнительные ленты в центре */}
-      <KinoLenta lentaId="lenta-11" frameCount={8} progress={progressMotionValue} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-11" frameCount={8} progress={progressMotionValue} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
 
       {/* Дополнительные ленты снизу - меньше лент */}
-      <KinoLenta lentaId="lenta-12" frameCount={8} progress={progressMotionValue} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      <KinoLenta lentaId="lenta-13" frameCount={8} progress={progressMotionValue} center={0.85 * 0.6 / 3} topOffset={38} speed={1.1} angle={-20} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-12" frameCount={8} progress={progressMotionValue} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-13" frameCount={8} progress={progressMotionValue} center={0.85 * 0.6 / 3} topOffset={38} speed={1.1} angle={-20} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
       
       {/* Индикатор прогресса в левом верхнем углу */}
       <div style={{
@@ -2271,53 +2332,74 @@ export default function Home() {
         {/* Линейная диаграмма на весь экран */}
         <LineChartComponent progressMotionValue={secondScreenScrollProgress} />
         
-        {/* Круговая диаграмма прогресса - по центру */}
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 15,
-          width: '80vw',
-          height: '80vw',
-          maxWidth: '1000px',
-          maxHeight: '1000px',
-          pointerEvents: 'none'
-        }}>
-          <ProgressChart progressMotionValue={secondScreenScrollProgress} />
-        </div>
-        
-        {/* Радарная диаграмма - сверху с отступом */}
-        <div style={{
-          position: 'absolute',
-          top: '2rem',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 15,
-          width: '25vw',
-          height: '25vw',
-          maxWidth: '300px',
-          maxHeight: '300px',
-          pointerEvents: 'none'
-        }}>
+        {/* Радарная диаграмма - сверху с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <motion.div
+          style={{
+            position: 'absolute',
+            top: '2rem',
+            left: '50%',
+            zIndex: 12,
+            width: '25vw',
+            height: '25vw',
+            maxWidth: '300px',
+            maxHeight: '300px',
+            pointerEvents: 'none',
+            x: chartTopX,
+            y: chartTopY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+            perspective: '1000px',
+            transformStyle: 'preserve-3d'
+          }}
+        >
           <RadarChartComponent progressMotionValue={secondScreenScrollProgress} />
-        </div>
+        </motion.div>
         
-        {/* Радиальная столбчатая диаграмма - снизу с отступом */}
-        <div style={{
-          position: 'absolute',
-          bottom: '2rem',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 15,
-          width: '25vw',
-          height: '25vw',
-          maxWidth: '300px',
-          maxHeight: '300px',
-          pointerEvents: 'none'
-        }}>
+        {/* Радиальная столбчатая диаграмма - снизу с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <motion.div
+          style={{
+            position: 'absolute',
+            bottom: '2rem',
+            left: '50%',
+            zIndex: 12,
+            width: '25vw',
+            height: '25vw',
+            maxWidth: '300px',
+            maxHeight: '300px',
+            pointerEvents: 'none',
+            x: chartBottomX,
+            y: chartBottomY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+            perspective: '1000px',
+            transformStyle: 'preserve-3d'
+          }}
+        >
           <RadialBarChartComponent progressMotionValue={secondScreenScrollProgress} />
-        </div>
+        </motion.div>
+
+        {/* Круговая диаграмма прогресса - по центру, передний план, СЛАБЫЙ параллакс */}
+        <motion.div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            zIndex: 18,
+            width: '80vw',
+            height: '80vw',
+            maxWidth: '1000px',
+            maxHeight: '1000px',
+            pointerEvents: 'none',
+            x: chartCenterX,
+            y: chartCenterY,
+            rotateX: chartCenterRotateX,
+            rotateY: chartCenterRotateY,
+            perspective: '1000px',
+            transformStyle: 'preserve-3d'
+          }}
+        >
+          <ProgressChart progressMotionValue={secondScreenScrollProgress} />
+        </motion.div>
         
           {/* Контейнер для договора */}
           <div style={{
@@ -2392,11 +2474,11 @@ export default function Home() {
               paddingLeft: '2em',
               paddingRight: '2em'
             }}>
-              <ContractItem text="Согласен с условиями" progress={secondScreenProgressMotionValue} threshold={35} textColor="#ffffff" />
-              <ContractItem text="Принимаю обязательства" progress={secondScreenProgressMotionValue} threshold={40} textColor="#ffffff" />
-              <ContractItem text="Подтверждаю ознакомление" progress={secondScreenProgressMotionValue} threshold={50} textColor="#ffffff" />
-              <ContractItem text="Готов к сотрудничеству" progress={secondScreenProgressMotionValue} threshold={60} textColor="#ffffff" />
-              <ContractItem text="Принимаю ответственность" progress={secondScreenProgressMotionValue} threshold={65} textColor="#ffffff" />
+              <ContractItem text="Организуем пре-продакшн и локации" progress={secondScreenProgressMotionValue} threshold={35} textColor="#ffffff" />
+              <ContractItem text="Согласуем все договоренности и разрешения" progress={secondScreenProgressMotionValue} threshold={40} textColor="#ffffff" />
+              <ContractItem text="Проводим съемочный процесс и постпродакшн" progress={secondScreenProgressMotionValue} threshold={50} textColor="#ffffff" />
+              <ContractItem text="Соберем результаты и финальный монтаж" progress={secondScreenProgressMotionValue} threshold={60} textColor="#ffffff" />
+              <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={secondScreenProgressMotionValue} threshold={65} textColor="#ffffff" />
             </div>
 
             {/* Кнопка Подписать снизу */}
@@ -2523,9 +2605,19 @@ export default function Home() {
           </div>
 
           {/* Карусель с фильмами */}
-          <div style={{ minHeight: '500px' }}>
+          <motion.div 
+            style={{ 
+              minHeight: '500px',
+              x: chartCenterParallaxX,
+              y: chartCenterParallaxY,
+              rotateX: chartCenterRotateX,
+              rotateY: chartCenterRotateY,
+              perspective: '1000px',
+              transformStyle: 'preserve-3d'
+            }}
+          >
             <MoviesCarousel movies={topMovies} />
-          </div>
+          </motion.div>
         </div>
 
         {/* Секция ПАРТНЕРЫ */}
@@ -2557,7 +2649,18 @@ export default function Home() {
           </div>
 
           {/* Сетка с логотипами партнеров */}
-          <PartnersGrid partners={partners} />
+          <motion.div
+            style={{
+              x: chartCenterParallaxX,
+              y: chartCenterParallaxY,
+              rotateX: chartCenterRotateX,
+              rotateY: chartCenterRotateY,
+              perspective: '1000px',
+              transformStyle: 'preserve-3d'
+            }}
+          >
+            <PartnersGrid partners={partners} />
+          </motion.div>
         </div>
       </section>
     </div>
