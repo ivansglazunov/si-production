@@ -1140,6 +1140,54 @@ function MoviesCarousel({ movies }) {
   )
 }
 
+// Компонент текстуры с закругленными прямоугольниками для границ экрана
+function PerforatedBorderTexture({ scrollProgress, position = 'top' }) {
+  // Параметры текстуры - увеличенные размеры
+  const rectWidth = 20
+  const rectHeight = 16 // Увеличено с 8 до 16
+  const rectSpacing = 30
+  const borderRadius = 6 // Увеличено для пропорциональности
+  const edgeOffset = 20 // Отступ от края экрана
+  
+  // Преобразуем scrollProgress в смещение текстуры с spring эффектом
+  const scrollOffsetRaw = useTransform(scrollProgress, [0, 1], [0, 600]) // Увеличено в 3 раза (200 -> 600)
+  const scrollOffset = useSpring(scrollOffsetRaw, {
+    stiffness: 50,
+    damping: 20,
+    mass: 1
+  })
+  const backgroundPosition = useTransform(scrollOffset, (value) => `${value}px 0`)
+  
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="${(rectSpacing - rectWidth) / 2}" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.4"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+  
+  const patternUrl = createPattern()
+  
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        [position]: `${edgeOffset}px`, // Отступ от края
+        left: 0,
+        width: '100%',
+        height: `${rectHeight + 4}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: backgroundPosition,
+        pointerEvents: 'none',
+        zIndex: 25
+      }}
+    />
+  )
+}
+
 // Компонент эффекта помех/повреждения пленки для второго экрана
 function FilmGrainEffect({ scrollProgress }) {
   const [grainIntensity, setGrainIntensity] = useState(0)
@@ -1558,37 +1606,135 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
         <motion.div
           style={{
             display: 'flex',
-            gap: '8px',
-            alignItems: 'center',
+            gap: 0, // Убираем отступы между кадрами для цельной ленты
+            alignItems: 'stretch',
             justifyContent: 'center',
             pointerEvents: 'none', // Пропускаем события мыши
             x: xPosition
           }}>
-        {frames.map((color, index) => {
-          const isHovered = hoveredIndex === index
-          return (
-            <div
-              key={index}
-              onMouseEnter={() => setHoveredIndex(index)}
-              onMouseLeave={() => setHoveredIndex(null)}
-              onClick={() => onFrameClick && onFrameClick(lentaId, index, frames)}
-              style={{
-                width: `${120 * scale}px`,
-                height: `${80 * scale}px`,
-                backgroundColor: color,
-                borderRadius: '4px',
-                flexShrink: 0,
-                boxShadow: isHovered 
-                  ? '0 8px 16px rgba(0, 0, 0, 0.4)' // Большая тень при hover
-                  : '0 2px 4px rgba(0, 0, 0, 0.3)', // Маленькая тень по умолчанию
-                transform: isHovered ? 'scale(1.1)' : 'scale(1)',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                cursor: 'pointer',
-                pointerEvents: 'auto' // Кадры остаются кликабельными
-              }}
-            />
-          )
-        })}
+          {/* Кадры ленты */}
+          {frames.map((color, index) => {
+            const isHovered = hoveredIndex === index
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale // Высота черной полосы сверху/снизу
+            const holeSize = 4 * scale // Размер дырочек
+            const holeSpacing = 12 * scale // Расстояние между центрами дырочек
+            
+            return (
+              <div
+                key={index}
+                onMouseEnter={() => setHoveredIndex(index)}
+                onMouseLeave={() => setHoveredIndex(null)}
+                onClick={() => onFrameClick && onFrameClick(lentaId, index, frames)}
+                style={{
+                  width: `${frameWidth}px`,
+                  height: `${frameHeight + borderWidth * 2}px`,
+                  flexShrink: 0,
+                  position: 'relative',
+                  backgroundColor: '#000000', // Черный фон для полос сверху/снизу
+                  boxShadow: isHovered 
+                    ? '0 8px 16px rgba(0, 0, 0, 0.4)' // Большая тень при hover
+                    : '0 2px 4px rgba(0, 0, 0, 0.3)', // Маленькая тень по умолчанию
+                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'pointer',
+                  pointerEvents: 'auto' // Кадры остаются кликабельными
+                }}
+              >
+                {/* Контейнер для перфорации сверху */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${borderWidth}px`,
+                    zIndex: 2,
+                    pointerEvents: 'none'
+                  }}
+                >
+                  {/* Черная полоса сверху */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: '#000000'
+                    }}
+                  />
+                  {/* Дырочки - вырезаем через mix-blend-mode */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      backgroundImage: Array.from({ length: Math.ceil(frameWidth / holeSpacing) + 2 }, (_, i) => 
+                        `radial-gradient(circle ${holeSize / 2}px at ${i * holeSpacing}px ${borderWidth / 2}px, white ${holeSize / 2}px, white ${holeSize / 2}px)`
+                      ).join(', '),
+                      mixBlendMode: 'destination-out'
+                    }}
+                  />
+                </div>
+                
+                {/* Контейнер для перфорации снизу */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${borderWidth}px`,
+                    zIndex: 2,
+                    pointerEvents: 'none'
+                  }}
+                >
+                  {/* Черная полоса снизу */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: '#000000'
+                    }}
+                  />
+                  {/* Дырочки - вырезаем через mix-blend-mode */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      backgroundImage: Array.from({ length: Math.ceil(frameWidth / holeSpacing) + 2 }, (_, i) => 
+                        `radial-gradient(circle ${holeSize / 2}px at ${i * holeSpacing}px ${borderWidth / 2}px, white ${holeSize / 2}px, white ${holeSize / 2}px)`
+                      ).join(', '),
+                      mixBlendMode: 'destination-out'
+                    }}
+                  />
+                </div>
+                
+                {/* Сам кадр в центре */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: `${borderWidth}px`,
+                    left: 0,
+                    width: '100%',
+                    height: `${frameHeight}px`,
+                    backgroundColor: color,
+                    borderRadius: '2px'
+                  }}
+                />
+              </div>
+            )
+          })}
         </motion.div>
       </motion.div>
             </div>
@@ -1849,6 +1995,7 @@ export default function Home() {
         width: '100vw',
         height: '100vh',
         overflow: 'auto',
+        overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch'
       }}
     >
@@ -1928,11 +2075,18 @@ export default function Home() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          overflowX: 'hidden'
         }}
       >
         {/* Эффект помех/повреждения пленки */}
         <FilmGrainEffect scrollProgress={secondScreenScrollProgress} />
+        
+        {/* Текстура с закругленными прямоугольниками сверху */}
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" />
+        
+        {/* Текстура с закругленными прямоугольниками снизу */}
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" />
         
         {/* Индикатор прогресса второго экрана */}
         <div style={{
@@ -2138,6 +2292,7 @@ export default function Home() {
           background: 'linear-gradient(to bottom, #000000 0%, #0a0a2e 50%, #1a1a3e 100%)',
           position: 'relative',
           overflow: 'visible',
+          overflowX: 'hidden',
           paddingBottom: '4rem'
         }}
       >
