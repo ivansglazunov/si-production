@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect, Suspense } from 'react'
 import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
-import CinemaProductionProgress from '../components/CinemaProductionProgress'
 
 // Компонент пункта договора с галочкой
 function ContractItem({ text, progress, threshold, textColor }) {
@@ -28,7 +27,7 @@ function ContractItem({ text, progress, threshold, textColor }) {
           display: 'flex',
           alignItems: 'center',
       gap: '0.8em',
-      fontSize: '1em',
+      fontSize: '0.7em',
       fontFamily: 'Helvetica, Arial, sans-serif',
       marginBottom: '0.8em'
     }}>
@@ -326,7 +325,8 @@ function Clapperboard({ isActive, isVisible, onClose }) {
       >
             <span style={{
           fontFamily: "'Slovic', sans-serif",
-          color: '#ff0000'
+          color: '#ff0000',
+          transform: 'translateY(-3px)'
         }}>SI</span>
         <span style={{
           textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
@@ -1583,8 +1583,8 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
     })
   })
   
-  // Состояние для отслеживания hover на каждом кадре
-  const [hoveredIndex, setHoveredIndex] = useState(null)
+  // Состояние для отслеживания hover на каждом кадре - временно отключено для производительности
+  // const [hoveredIndex, setHoveredIndex] = useState(null)
 
   // progress может быть motion value или числом
   // Прямое преобразование progress в позицию без spring - синхронно со скроллом
@@ -1650,7 +1650,7 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
         >
           {/* Кадры ленты */}
           {frames.map((color, index) => {
-            const isHovered = hoveredIndex === index
+            const isHovered = false // Временно отключено для производительности
             const frameWidth = 120 * scale
             const frameHeight = 80 * scale
             const borderWidth = 12 * scale // Высота черной полосы сверху/снизу
@@ -1660,8 +1660,6 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
             return (
               <div
                 key={index}
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
                 onClick={(e) => {
                   e.stopPropagation()
                   if (onFrameClick) onFrameClick(lentaId, index, frames)
@@ -1966,7 +1964,8 @@ export default function Home() {
       }}>
         <span style={{
           fontFamily: "'Slovic', sans-serif",
-          color: '#ff0000'
+          color: '#ff0000',
+          transform: 'translateY(-3px)'
         }}>SI</span>
         <span style={{
           textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
@@ -1990,18 +1989,6 @@ export default function Home() {
         <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
             </div>
 
-      {/* Диаграмма прогресса кинопродакшена - над звездным небом, под контентом */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 2, // Над звездным небом (1), но под контентом (10+)
-        pointerEvents: 'none'
-      }}>
-        <CinemaProductionProgress progressMotionValue={progressMotionValue} />
-      </div>
 
     <div 
       ref={containerRef} 
@@ -2127,7 +2114,135 @@ export default function Home() {
           overflowX: 'hidden'
         }}
       >
-        {/* Эффект помех отключен для производительности */}
+        {/* Статические помехи как на старой пленке - зернистость */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 100,
+          opacity: 0.6,
+          backgroundImage: `
+            radial-gradient(circle at 0 0, rgba(255,255,255,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 2px 2px, rgba(0,0,0,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 0.5px, transparent 0.5px)
+          `,
+          backgroundSize: '4px 4px, 4px 4px, 2px 2px',
+          backgroundPosition: '0 0, 2px 2px, 1px 1px',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(2) brightness(0.85)'
+        }} />
+        
+        {/* Дополнительный слой зернистости - точки */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 101,
+          opacity: 0.5,
+          backgroundImage: `
+            repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(255,255,255,0.1) 1px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 3px),
+            repeating-linear-gradient(90deg, transparent 0px, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 3px)
+          `,
+          backgroundSize: '2px 2px',
+          mixBlendMode: 'screen',
+          filter: 'contrast(1.8)'
+        }} />
+        
+        {/* Третий слой - более крупная зернистость */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 102,
+          opacity: 0.4,
+          background: `
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px)
+          `,
+          backgroundSize: '3px 3px',
+          mixBlendMode: 'multiply',
+          filter: 'contrast(1.5)'
+        }} />
+        
+        {/* Четвертый слой - очень заметная зернистость с точками */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 103,
+          opacity: 0.7,
+          backgroundImage: `
+            repeating-conic-gradient(from 0deg at 50% 50%, 
+              rgba(255,255,255,0.2) 0deg, 
+              transparent 1deg, 
+              transparent 2deg, 
+              rgba(0,0,0,0.2) 2deg, 
+              rgba(0,0,0,0.2) 3deg, 
+              transparent 3deg, 
+              transparent 4deg
+            )
+          `,
+          backgroundSize: '2px 2px',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(2.5) brightness(0.8)'
+        }} />
+        
+        {/* Горизонтальные царапины */}
+        {Array.from({ length: 15 }, (_, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              width: `${Math.random() * 400 + 200}px`,
+              height: '2px',
+              background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent)',
+              pointerEvents: 'none',
+              zIndex: 102,
+              opacity: 0.3 + Math.random() * 0.3,
+              transform: `rotate(${Math.random() * 2 - 1}deg)`,
+              boxShadow: '0 0 3px rgba(255, 255, 255, 0.2)'
+            }}
+          />
+        ))}
+        
+        {/* Вертикальные полосы повреждений */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 103,
+          opacity: 0.25,
+          backgroundImage: `
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.15) 2px,
+              rgba(255, 255, 255, 0.15) 3px,
+              transparent 3px,
+              transparent 8px
+            )
+          `,
+          backgroundSize: '60px 100%',
+          mixBlendMode: 'overlay'
+        }} />
 
         {/* Движущиеся ленты перфорации по границам экрана */}
         <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" />
@@ -2303,7 +2418,24 @@ export default function Home() {
                   cursor: 'pointer',
                   textTransform: 'uppercase',
                   fontWeight: 'bold',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ff0000'
+                  e.currentTarget.style.color = '#ffffff'
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
                 }}
               >
                 Подписать
@@ -2331,19 +2463,17 @@ export default function Home() {
       {/* Третий экран */}
       <section 
         ref={thirdScreenRef}
-        style={{ 
-        width: '100vw', 
-          minHeight: '100vh', 
+        style={{
+        width: '100vw',
+          minHeight: '100vh',
           background: 'linear-gradient(to bottom, #000000 0%, #0a0a2e 50%, #1a1a3e 100%)',
           position: 'relative',
-          overflow: 'visible',
-          overflowX: 'hidden',
-          paddingBottom: '4rem'
+          overflow: 'hidden'
         }}
       >
         {/* Упрощенное звездное небо для производительности */}
         <StarrySky starCount={50} />
-        
+
         {/* Индикатор прогресса третьего экрана */}
         <div style={{
           position: 'sticky',
@@ -2372,7 +2502,7 @@ export default function Home() {
           paddingBottom: '4rem',
           display: 'flex',
           flexDirection: 'column',
-          zIndex: 10,
+          zIndex: 20,
           position: 'relative'
         }}>
           {/* Заголовок ПРОЕКТЫ */}
@@ -2406,7 +2536,7 @@ export default function Home() {
           paddingBottom: '4rem',
           display: 'flex',
           flexDirection: 'column',
-          zIndex: 10,
+          zIndex: 20,
           position: 'relative'
         }}>
           {/* Заголовок ПАРТНЕРЫ */}
@@ -2414,7 +2544,7 @@ export default function Home() {
             textAlign: 'center',
             marginBottom: '3rem'
           }}>
-            <h1 
+            <h1
               style={{
                 fontSize: 'clamp(2em, 5vw, 4em)',
                 fontFamily: "'Slovic', sans-serif",
