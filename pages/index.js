@@ -1,6 +1,7 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, Suspense } from 'react'
 import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
+import CinemaProductionProgress from '../components/CinemaProductionProgress'
 
 // Компонент пункта договора с галочкой
 function ContractItem({ text, progress, threshold, textColor }) {
@@ -658,11 +659,18 @@ function Gallery({ frames, initialIndex, onClose }) {
 
 function ProgressChart({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
+  const lastUpdateRef = useRef(0)
 
-  // Отслеживаем изменения motion value и преобразуем в число
+  // Оптимизация: дебаунсинг обновлений диаграммы (обновляем каждые 100ms вместо каждого кадра)
   useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    const now = Date.now()
     const progressPercent = Math.min(Math.max(latest * 100, 0), 100)
-    setProgress(progressPercent)
+
+    // Обновляем только если прошло 100ms и значимое изменение (>1%)
+    if (now - lastUpdateRef.current > 100 && Math.abs(progressPercent - progress) > 1) {
+      setProgress(progressPercent)
+      lastUpdateRef.current = now
+    }
   })
 
   // Внешний круг - больше элементов, зависящих от скролла
@@ -749,11 +757,17 @@ function ProgressChart({ progressMotionValue }) {
 // Компонент линейной диаграммы с точками, зависящими от скролла
 function LineChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
+  const lastUpdateRef = useRef(0)
 
-  // Отслеживаем изменения motion value и преобразуем в число
+  // Оптимизация: дебаунсинг обновлений диаграммы
   useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    const now = Date.now()
     const progressPercent = Math.min(Math.max(latest * 100, 0), 100)
-    setProgress(progressPercent)
+
+    if (now - lastUpdateRef.current > 100 && Math.abs(progressPercent - progress) > 1) {
+      setProgress(progressPercent)
+      lastUpdateRef.current = now
+    }
   })
 
   // Создаем данные для диаграммы - точки двигаются вверх и вниз в зависимости от скролла
@@ -830,11 +844,17 @@ function LineChartComponent({ progressMotionValue }) {
 // Компонент радарной диаграммы
 function RadarChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
+  const lastUpdateRef = useRef(0)
 
-  // Отслеживаем изменения motion value и преобразуем в число
+  // Оптимизация: дебаунсинг обновлений диаграммы
   useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    const now = Date.now()
     const progressPercent = Math.min(Math.max(latest * 100, 0), 100)
-    setProgress(progressPercent)
+
+    if (now - lastUpdateRef.current > 100 && Math.abs(progressPercent - progress) > 1) {
+      setProgress(progressPercent)
+      lastUpdateRef.current = now
+    }
   })
 
   const data = [
@@ -877,11 +897,17 @@ function RadarChartComponent({ progressMotionValue }) {
 // Компонент радиальной столбчатой диаграммы, зависимый от скролла
 function RadialBarChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
+  const lastUpdateRef = useRef(0)
 
-  // Отслеживаем изменения motion value и преобразуем в число
+  // Оптимизация: дебаунсинг обновлений диаграммы
   useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    const now = Date.now()
     const progressPercent = Math.min(Math.max(latest * 100, 0), 100)
-    setProgress(progressPercent)
+
+    if (now - lastUpdateRef.current > 100 && Math.abs(progressPercent - progress) > 1) {
+      setProgress(progressPercent)
+      lastUpdateRef.current = now
+    }
   })
 
   const data = [
@@ -1164,7 +1190,7 @@ function PerforatedBorderTexture({ scrollProgress, position = 'top' }) {
   const rectSpacing = 30
   const borderRadius = 6 // Увеличено для пропорциональности
   const edgeOffset = 20 // Отступ от края экрана
-  
+
   // Преобразуем scrollProgress в смещение текстуры с spring эффектом
   const scrollOffsetRaw = useTransform(scrollProgress, [0, 1], [0, 600]) // Увеличено в 3 раза (200 -> 600)
   const scrollOffset = useSpring(scrollOffsetRaw, {
@@ -1173,7 +1199,7 @@ function PerforatedBorderTexture({ scrollProgress, position = 'top' }) {
     mass: 1
   })
   const backgroundPosition = useTransform(scrollOffset, (value) => `${value}px 0`)
-  
+
   // Создаем SVG паттерн с закругленными прямоугольниками
   const createPattern = () => {
     const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
@@ -1182,9 +1208,9 @@ function PerforatedBorderTexture({ scrollProgress, position = 'top' }) {
     const encoded = encodeURIComponent(svg)
     return `data:image/svg+xml;charset=utf-8,${encoded}`
   }
-  
+
   const patternUrl = createPattern()
-  
+
   return (
     <motion.div
       style={{
@@ -1506,15 +1532,13 @@ function PartnersGrid({ partners }) {
   )
 }
 
-function StarrySky({ starCount = 100 }) {
+function StarrySky({ starCount = 50 }) {
   const [stars] = useState(() => {
     return Array.from({ length: starCount }, () => ({
       x: Math.random() * 100, // Позиция X в процентах
       y: Math.random() * 100, // Позиция Y в процентах
-      size: Math.random() * 3 + 0.5, // Размер от 0.5px до 3.5px
-      opacity: Math.random() * 0.8 + 0.2, // Прозрачность от 0.2 до 1
-      twinkleSpeed: Math.random() * 3 + 1, // Скорость мерцания от 1 до 4 секунд
-      twinkleDelay: Math.random() * 2 // Задержка начала анимации
+      size: Math.random() * 2 + 0.5, // Размер от 0.5px до 2.5px (меньше)
+      opacity: Math.random() * 0.6 + 0.3 // Прозрачность от 0.3 до 0.9 (выше)
     }))
   })
 
@@ -1529,7 +1553,7 @@ function StarrySky({ starCount = 100 }) {
       zIndex: 1
     }}>
       {stars.map((star, index) => (
-        <motion.div
+        <div
           key={index}
           style={{
             position: 'absolute',
@@ -1539,17 +1563,8 @@ function StarrySky({ starCount = 100 }) {
             height: `${star.size}px`,
             borderRadius: '50%',
             backgroundColor: '#ffffff',
-            boxShadow: `0 0 ${star.size * 2}px rgba(255, 255, 255, ${star.opacity})`
-          }}
-          animate={{
-            opacity: [star.opacity * 0.3, star.opacity, star.opacity * 0.3],
-            scale: [0.8, 1.2, 0.8]
-          }}
-          transition={{
-            duration: star.twinkleSpeed,
-            delay: star.twinkleDelay,
-            repeat: Infinity,
-            ease: "easeInOut"
+            opacity: star.opacity,
+            boxShadow: `0 0 ${star.size}px rgba(255, 255, 255, ${star.opacity * 0.5})`
           }}
         />
       ))}
@@ -1587,12 +1602,12 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
   }, [progress, progressMotion])
   
   // Прямое преобразование progress в позицию - без задержки, синхронно
-  const xPosition = useTransform(progressMotion, (prog) => {
+  const translateXValue = useTransform(progressMotion, (prog) => {
     let targetLeftPosition = (prog - center) * 500 * speed
     if (inverse) {
       targetLeftPosition = -targetLeftPosition
     }
-    return `${targetLeftPosition}vw`
+    return `translateX(${targetLeftPosition}vw)`
   })
 
   return (
@@ -1608,7 +1623,7 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
       pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
           }}>
       {/* Контейнер поворота - поворачивается на angle градусов */}
-            <motion.div 
+            <motion.div
         style={{
         rotate: `${angle}deg`,
         transformOrigin: 'center center',
@@ -1622,7 +1637,7 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
             alignItems: 'stretch',
             justifyContent: 'center',
             pointerEvents: 'none', // Контейнер не перехватывает события - скролл проходит сквозь
-            x: xPosition
+            transform: translateXValue
           }}
           onWheel={(e) => {
             // Пробрасываем скролл событие - не блокируем его
@@ -1677,9 +1692,7 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
                   flexShrink: 0,
                   position: 'relative',
                   backgroundColor: '#000000', // Черный фон для полос сверху/снизу
-                  boxShadow: isHovered 
-                    ? '0 8px 16px rgba(0, 0, 0, 0.4)' // Большая тень при hover
-                    : '0 2px 4px rgba(0, 0, 0, 0.3)', // Маленькая тень по умолчанию
+                  // Тени убраны для оптимизации производительности
                   transform: isHovered ? 'scale(1.1)' : 'scale(1)',
                   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                   cursor: 'pointer',
@@ -1687,83 +1700,7 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
                   touchAction: 'pan-y' // Разрешаем вертикальный скролл на touch устройствах
                 }}
               >
-                {/* Контейнер для перфорации сверху */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${borderWidth}px`,
-                    zIndex: 2,
-                    pointerEvents: 'none'
-                  }}
-                >
-                  {/* Черная полоса сверху */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      backgroundColor: '#000000'
-                    }}
-                  />
-                  {/* Дырочки - вырезаем через mix-blend-mode */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      backgroundImage: Array.from({ length: Math.ceil(frameWidth / holeSpacing) + 2 }, (_, i) => 
-                        `radial-gradient(circle ${holeSize / 2}px at ${i * holeSpacing}px ${borderWidth / 2}px, white ${holeSize / 2}px, white ${holeSize / 2}px)`
-                      ).join(', '),
-                      mixBlendMode: 'destination-out'
-                    }}
-                  />
-                </div>
-                
-                {/* Контейнер для перфорации снизу */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${borderWidth}px`,
-                    zIndex: 2,
-                    pointerEvents: 'none'
-                  }}
-                >
-                  {/* Черная полоса снизу */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      backgroundColor: '#000000'
-                    }}
-                  />
-                  {/* Дырочки - вырезаем через mix-blend-mode */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      backgroundImage: Array.from({ length: Math.ceil(frameWidth / holeSpacing) + 2 }, (_, i) => 
-                        `radial-gradient(circle ${holeSize / 2}px at ${i * holeSpacing}px ${borderWidth / 2}px, white ${holeSize / 2}px, white ${holeSize / 2}px)`
-                      ).join(', '),
-                      mixBlendMode: 'destination-out'
-                    }}
-                  />
-                </div>
+                {/* Перфорация убрана для оптимизации производительности */}
                 
                 {/* Сам кадр в центре */}
                 <div
@@ -1804,11 +1741,23 @@ export default function Home() {
   const [secondScreenProgressText, setSecondScreenProgressText] = useState(0)
   const [thirdScreenProgressText, setThirdScreenProgressText] = useState(0)
   const [flashActive, setFlashActive] = useState(false)
-  const [clapperboardActive, setClapperboardActive] = useState(true) // Изначально открыта
-  const [clapperboardVisible, setClapperboardVisible] = useState(false) // Изначально скрыта
-  
+  const [clapperboardActive, setClapperboardActive] = useState(false) // Отключено по умолчанию для производительности
+  const [clapperboardVisible, setClapperboardVisible] = useState(false) // Скрыто по умолчанию
+
   // Состояние для активной галереи
   const [activeGallery, setActiveGallery] = useState(null) // { lentaId, frameIndex, frames }
+
+  // Ленивая загрузка лент для производительности
+  const [showLents, setShowLents] = useState(false)
+
+  // Показываем ленты после полной загрузки страницы (оптимизация производительности)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLents(true)
+    }, 1000) // Показываем ленты через 1 секунду после загрузки
+
+    return () => clearTimeout(timer)
+  }, [])
 
   // 6 популярных российских кинопродакшенов/киностудий, принимающих госзаказы
   const partners = [
@@ -1972,7 +1921,7 @@ export default function Home() {
     }
   }, [firstScreenScrollProgress, secondScreenScrollProgress, thirdScreenScrollProgress, firstScreenProgressMotionValue, secondScreenProgressMotionValue, thirdScreenProgressMotionValue])
   
-  // Для отображения текста - обновляем редко (только для UI)
+  // UI обновления - синхронные для плавной работы (дебаунсинг только для тяжелых диаграмм)
   useMotionValueEvent(progressMotionValue, "change", (latest) => {
     setProgressText(Math.round(latest * 100))
   })
@@ -2041,17 +1990,17 @@ export default function Home() {
         <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
             </div>
 
-      {/* Линейная диаграмма для третьего экрана - fixed на весь экран, под контентом, но над фоном */}
+      {/* Диаграмма прогресса кинопродакшена - над звездным небом, под контентом */}
       <div style={{
         position: 'fixed',
         top: 0,
         left: 0,
         width: '100vw',
         height: '100vh',
-        zIndex: 5, // Под контентом третьего экрана (10), но выше звездного неба (1)
+        zIndex: 2, // Над звездным небом (1), но под контентом (10+)
         pointerEvents: 'none'
       }}>
-        <LineChartComponent progressMotionValue={thirdScreenScrollProgress} />
+        <CinemaProductionProgress progressMotionValue={progressMotionValue} />
       </div>
 
     <div 
@@ -2077,10 +2026,10 @@ export default function Home() {
       {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
       {/* Первая лента: когда Составление плана 60%, лента по центру экрана, размер вдвое */}
       <KinoLenta lentaId="lenta-1" frameCount={8} progress={progressMotionValue} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      
+
       {/* Вторая лента: inverse (справа налево), центр при 90%, topOffset 25vh, противоположный угол */}
       <KinoLenta lentaId="lenta-2" frameCount={8} progress={progressMotionValue} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      
+
       {/* Ленты сверху - распределены пониже */}
       <KinoLenta lentaId="lenta-3" frameCount={8} progress={progressMotionValue} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} />
       <KinoLenta lentaId="lenta-4" frameCount={8} progress={progressMotionValue} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} />
@@ -2090,10 +2039,10 @@ export default function Home() {
       <KinoLenta lentaId="lenta-8" frameCount={8} progress={progressMotionValue} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} />
       <KinoLenta lentaId="lenta-9" frameCount={8} progress={progressMotionValue} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} />
       <KinoLenta lentaId="lenta-10" frameCount={8} progress={progressMotionValue} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      
+
       {/* Дополнительные ленты в центре */}
       <KinoLenta lentaId="lenta-11" frameCount={8} progress={progressMotionValue} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} />
-      
+
       {/* Дополнительные ленты снизу - меньше лент */}
       <KinoLenta lentaId="lenta-12" frameCount={8} progress={progressMotionValue} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} />
       <KinoLenta lentaId="lenta-13" frameCount={8} progress={progressMotionValue} center={0.85 * 0.6 / 3} topOffset={38} speed={1.1} angle={-20} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
@@ -2178,13 +2127,10 @@ export default function Home() {
           overflowX: 'hidden'
         }}
       >
-        {/* Эффект помех/повреждения пленки */}
-        <FilmGrainEffect scrollProgress={secondScreenScrollProgress} />
-        
-        {/* Текстура с закругленными прямоугольниками сверху */}
+        {/* Эффект помех отключен для производительности */}
+
+        {/* Движущиеся ленты перфорации по границам экрана */}
         <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" />
-        
-        {/* Текстура с закругленными прямоугольниками снизу */}
         <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" />
         
         {/* Индикатор прогресса второго экрана */}
@@ -2395,8 +2341,8 @@ export default function Home() {
           paddingBottom: '4rem'
         }}
       >
-        {/* Звездное небо */}
-        <StarrySky starCount={150} />
+        {/* Упрощенное звездное небо для производительности */}
+        <StarrySky starCount={50} />
         
         {/* Индикатор прогресса третьего экрана */}
         <div style={{
