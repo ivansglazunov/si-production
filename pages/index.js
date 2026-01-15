@@ -896,6 +896,19 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
 const ProgressChart = memo(function ProgressChart({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
 
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
   // Внешний круг - больше элементов, зависящих от скролла
   const outerData = [
     { name: 'P1', value: progress }, // 0-100%
@@ -981,6 +994,19 @@ const ProgressChart = memo(function ProgressChart({ progressMotionValue }) {
 const LineChartComponent = memo(function LineChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
 
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
   // Мемоизация данных для предотвращения перерисовки точек (Dots)
   const data = useMemo(() => [
     { name: 'A', value: 20 + progress * 0.3, value2: 30 - progress * 0.2 }, // Первая линия вверх, вторая вниз
@@ -1063,6 +1089,19 @@ const LineChartComponent = memo(function LineChartComponent({ progressMotionValu
 const RadarChartComponent = memo(function RadarChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
 
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
   const data = [
     { subject: 'A', value: 50 + progress * 0.3, fullMark: 100 },
     { subject: 'B', value: 60 - progress * 0.2, fullMark: 100 },
@@ -1103,6 +1142,19 @@ const RadarChartComponent = memo(function RadarChartComponent({ progressMotionVa
 // Компонент радиальной столбчатой диаграммы, зависимый от скролла
 const RadialBarChartComponent = memo(function RadialBarChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
 
   // Мемоизация данных для предотвращения перерисовки секторов (RadialBarSectors)
   const data = useMemo(() => [
@@ -2038,7 +2090,10 @@ const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
       x: Math.random() * 100, // Позиция X в процентах
       y: Math.random() * 100, // Позиция Y в процентах
       size: Math.random() * 2 + 0.5, // Размер от 0.5px до 2.5px (меньше)
-      opacity: Math.random() * 0.6 + 0.3 // Прозрачность от 0.3 до 0.9 (выше)
+      baseOpacity: Math.random() * 0.4 + 0.2, // Базовая прозрачность от 0.2 до 0.6
+      peakOpacity: Math.random() * 0.3 + 0.7, // Пиковая прозрачность от 0.7 до 1.0
+      duration: Math.random() * 2 + 1.5, // Длительность анимации от 1.5 до 3.5 секунд
+      delay: Math.random() * 2 // Задержка начала анимации от 0 до 2 секунд
     }))
   })
 
@@ -2053,8 +2108,18 @@ const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
       zIndex: 1
     }}>
       {stars.map((star, index) => (
-        <div
+        <motion.div
           key={index}
+          initial={{ opacity: star.baseOpacity }}
+          animate={{
+            opacity: [star.baseOpacity, star.peakOpacity, star.baseOpacity]
+          }}
+          transition={{
+            duration: star.duration,
+            repeat: Infinity,
+            delay: star.delay,
+            ease: "easeInOut"
+          }}
           style={{
             position: 'absolute',
             left: `${star.x}%`,
@@ -2063,8 +2128,7 @@ const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
             height: `${star.size}px`,
             borderRadius: '50%',
             backgroundColor: '#ffffff',
-            opacity: star.opacity,
-            boxShadow: `0 0 ${star.size}px rgba(255, 255, 255, ${star.opacity * 0.5})`
+            boxShadow: `0 0 ${star.size}px rgba(255, 255, 255, 0.5)`
           }}
         />
       ))}
