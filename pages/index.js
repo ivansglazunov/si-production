@@ -149,6 +149,7 @@ function Clapperboard({ isActive, isVisible, onClose }) {
   
   return (
         <motion.div
+      className="clapperboard-container"
       initial={false}
       animate={{
         y: isVisible 
@@ -187,18 +188,60 @@ function Clapperboard({ isActive, isVisible, onClose }) {
         position: 'relative',
         width: width,
         height: height,
+        minHeight: height,
         pointerEvents: 'auto',
         transformOrigin: 'top right',
         cursor: isDragging ? 'grabbing' : 'grab'
       }}
     >
+      {/* Верхняя створка - черная с текстом SI-PRODUCTION */}
+        <motion.div
+        className="clapperboard-top"
+        initial={false}
+        animate={{ rotate: isActive ? 90 : 0 }}
+        transition={{ 
+          duration: 0.6,
+          ease: [0.25, 0.46, 0.45, 0.94] // Плавная анимация без spring эффекта
+        }}
+          style={{
+            position: 'absolute',
+            top: 0,
+          right: 0,
+            width: '100%',
+          height: '40%', // Уменьшено с 50% до 40% чтобы освободить место для нижней зоны
+          backgroundColor: '#000000',
+          border: '2px solid #333',
+          transformOrigin: 'bottom right',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+                  color: '#ffffff',
+          fontSize: 'clamp(20px, 4vw, 48px)',
+                  fontFamily: "'Science Gothic', monospace",
+                        fontWeight: 'bold',
+          zIndex: 2
+        }}
+      >
+            <span style={{
+          fontFamily: "'Slovic', sans-serif",
+          color: '#ff0000',
+          transform: 'translateY(-3px)'
+        }}>SI</span>
+        <span style={{
+          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+        }}>-PRODUCTION</span>
+      </motion.div>
+
       {/* Нижний блок - контакты с фейковыми данными */}
-      <div style={{
+      <div 
+        className="clapperboard-contacts"
+        style={{
         position: 'absolute',
         bottom: 0,
         right: 0,
         width: '100%',
-        height: '60%', // Увеличено с 50% до 60% для лучшего размещения контактов
+        minHeight: '60%', // Минимальная высота 60%, но может расширяться
+        height: 'auto', // Высота адаптируется под содержимое
         backgroundColor: '#000000',
         border: '2px solid #333',
         display: 'flex',
@@ -209,7 +252,8 @@ function Clapperboard({ isActive, isVisible, onClose }) {
         color: '#ffffff',
         zIndex: 1,
         gap: '1rem',
-        overflowY: 'auto' // Добавляем скролл если контент не вписывается
+        overflowY: 'auto', // Добавляем скролл если контент не вписывается
+        boxSizing: 'border-box' // Учитываем padding в высоте
       }}>
         <div style={{ 
           display: 'flex', 
@@ -295,43 +339,6 @@ function Clapperboard({ isActive, isVisible, onClose }) {
           </div>
         </div>
         </div>
-
-      {/* Верхняя створка - черная с текстом SI-PRODUCTION */}
-        <motion.div
-        initial={false}
-        animate={{ rotate: isActive ? 90 : 0 }}
-        transition={{ 
-          duration: 0.6,
-          ease: [0.25, 0.46, 0.45, 0.94] // Плавная анимация без spring эффекта
-        }}
-          style={{
-            position: 'absolute',
-            top: 0,
-          right: 0,
-            width: '100%',
-          height: '40%', // Уменьшено с 50% до 40% чтобы освободить место для нижней зоны
-          backgroundColor: '#000000',
-          border: '2px solid #333',
-          transformOrigin: 'bottom right',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-                  color: '#ffffff',
-          fontSize: 'clamp(20px, 4vw, 48px)',
-                  fontFamily: "'Science Gothic', monospace",
-                        fontWeight: 'bold',
-          zIndex: 2
-        }}
-      >
-            <span style={{
-          fontFamily: "'Slovic', sans-serif",
-          color: '#ff0000',
-          transform: 'translateY(-3px)'
-        }}>SI</span>
-        <span style={{
-          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
-        }}>-PRODUCTION</span>
-      </motion.div>
     </motion.div>
   )
 }

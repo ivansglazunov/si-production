@@ -121,5 +121,36 @@ section div[style*="overflowX"]::-webkit-scrollbar {
   }
 }
 
+/* Адаптивная высота хлопушки на мобильных устройствах */
+@media (max-width: 768px) {
+  .clapperboard-container {
+    height: auto !important;
+    min-height: calc(80vw / 1.333) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+  }
+  
+  .clapperboard-top {
+    position: relative !important;
+    height: calc(80vw / 1.333 * 0.4) !important;
+    min-height: calc(80vw / 1.333 * 0.4) !important;
+    max-height: calc(80vw / 1.333 * 0.4) !important;
+    flex-shrink: 0 !important;
+    top: auto !important;
+    right: auto !important;
+  }
+  
+  .clapperboard-contacts {
+    position: relative !important;
+    min-height: 60% !important;
+    height: auto !important;
+    flex: 1 !important;
+    bottom: auto !important;
+    right: auto !important;
+    margin-top: 0 !important;
+  }
+}
+
 
 
