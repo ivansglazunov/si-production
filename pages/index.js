@@ -945,7 +945,7 @@ function RadialBarChartComponent({ progressMotionValue }) {
 }
 
 // Компонент карусели с постерами фильмов (вращающаяся карусель)
-function MoviesCarousel({ movies }) {
+function MoviesCarousel({ movies, mouseParallaxValues = null }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [wasDragging, setWasDragging] = useState(false)
@@ -1077,7 +1077,36 @@ function MoviesCarousel({ movies }) {
         onMouseLeave={handleMouseLeave}
       >
         {movies.map((movie, index) => {
-          const style = getTransform(index)
+          const baseStyle = getTransform(index)
+          const offset = Math.abs(index - currentIndex)
+          
+          // Определяем параллакс в зависимости от расстояния от центра
+          let parallaxX, parallaxY, rotateX, rotateY
+          if (offset === 0) {
+            // Центральная карточка - сильный параллакс
+            parallaxX = mouseParallaxValues?.centerX || 0
+            parallaxY = mouseParallaxValues?.centerY || 0
+            rotateX = mouseParallaxValues?.centerRotateX || 0
+            rotateY = mouseParallaxValues?.centerRotateY || 0
+          } else if (offset === 1) {
+            // Близкие карточки - средний параллакс
+            parallaxX = mouseParallaxValues?.nearX || 0
+            parallaxY = mouseParallaxValues?.nearY || 0
+            rotateX = mouseParallaxValues?.nearRotateX || 0
+            rotateY = mouseParallaxValues?.nearRotateY || 0
+          } else if (offset === 2) {
+            // Дальние карточки - слабый параллакс
+            parallaxX = mouseParallaxValues?.farX || 0
+            parallaxY = mouseParallaxValues?.farY || 0
+            rotateX = mouseParallaxValues?.farRotateX || 0
+            rotateY = mouseParallaxValues?.farRotateY || 0
+          } else {
+            // Очень дальние карточки - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          }
           
           const handleClick = (e) => {
             // Не открываем ссылку, если был drag
@@ -1101,10 +1130,26 @@ function MoviesCarousel({ movies }) {
                 gap: '0.5rem',
                 cursor: 'pointer',
                 transition: 'all 0.6s ease',
-                ...style
+                ...baseStyle
               }}
               onClick={handleClick}
             >
+              {/* Внутренний элемент для параллакса, чтобы не ломать существующий transform */}
+              <motion.div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  x: parallaxX,
+                  y: parallaxY,
+                  rotateX: rotateX,
+                  rotateY: rotateY,
+                  perspective: '1000px',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
               <div style={{
                 width: '100%',
                 height: '300px',
@@ -1152,6 +1197,7 @@ function MoviesCarousel({ movies }) {
               }}>
                 {movie.title}
               </div>
+              </motion.div>
             </motion.div>
           )
         })}
@@ -1183,7 +1229,7 @@ function MoviesCarousel({ movies }) {
 }
 
 // Компонент текстуры с закругленными прямоугольниками для границ экрана
-function PerforatedBorderTexture({ scrollProgress, position = 'top' }) {
+function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset = null }) {
   // Параметры текстуры - увеличенные размеры
   const rectWidth = 20
   const rectHeight = 16 // Увеличено с 8 до 16
@@ -1198,7 +1244,30 @@ function PerforatedBorderTexture({ scrollProgress, position = 'top' }) {
     damping: 20,
     mass: 1
   })
-  const backgroundPosition = useTransform(scrollOffset, (value) => `${value}px 0`)
+  
+  // Комбинируем скролл и накопленное смещение от мыши (всегда в одну сторону)
+  const combinedOffset = useMotionValue(0)
+  
+  useEffect(() => {
+    const updateOffset = () => {
+      const scroll = scrollOffset.get()
+      const mouse = mouseOffset ? mouseOffset.get() : 0
+      // Мышь всегда добавляет смещение в одну сторону (вправо)
+      combinedOffset.set(scroll + mouse)
+    }
+    
+    const unsubscribeScroll = scrollOffset.on('change', updateOffset)
+    const unsubscribeMouse = mouseOffset ? mouseOffset.on('change', updateOffset) : null
+    
+    updateOffset()
+    
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouse) unsubscribeMouse()
+    }
+  }, [scrollOffset, mouseOffset, combinedOffset])
+  
+  const backgroundPosition = useTransform(combinedOffset, (value) => `${value}px 0`)
 
   // Создаем SVG паттерн с закругленными прямоугольниками
   const createPattern = () => {
@@ -1225,6 +1294,107 @@ function PerforatedBorderTexture({ scrollProgress, position = 'top' }) {
         backgroundPosition: backgroundPosition,
         pointerEvents: 'none',
         zIndex: 25
+      }}
+    />
+  )
+}
+
+// Компонент для горизонтальных царапин, которые перерисовываются при движении мыши
+function ScratchesComponent({ count = 15, scratchRedrawTrigger }) {
+  const [scratches, setScratches] = useState([])
+  const [renderKey, setRenderKey] = useState(0)
+  
+  // Перерисовываем царапины при изменении триггера
+  useMotionValueEvent(scratchRedrawTrigger, 'change', () => {
+    // Генерируем новые позиции и параметры для всех царапин
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+    // Меняем key для полной перерисовки элементов
+    setRenderKey(prev => prev + 1)
+  })
+  
+  // Инициализация при монтировании
+  useEffect(() => {
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+  }, [count])
+  
+  return (
+    <>
+      {scratches.map((scratch) => (
+        <div
+          key={`${scratch.id}-${renderKey}`} // Меняем key для полной перерисовки
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '2px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: scratch.opacity,
+            transform: `rotate(${scratch.rotate}deg)`,
+            boxShadow: '0 0 3px rgba(255, 255, 255, 0.2)'
+            // Убрали transition - элементы появляются мгновенно в новых местах
+          }}
+        />
+      ))}
+    </>
+  )
+}
+
+// Компонент слоя помех с поддержкой скролла и мыши (без движения, только изменение параметров)
+function GrainLayerComponent({ zIndex, opacity, backgroundImage, backgroundSize, mixBlendMode, filter, grainBackgroundPosition, grainNoiseOpacity = null }) {
+  const layerRef = useRef(null)
+  
+  useMotionValueEvent(grainBackgroundPosition, 'change', (latest) => {
+    if (layerRef.current) {
+      layerRef.current.style.backgroundPosition = latest
+    }
+  })
+  
+  // Изменяем opacity на основе мыши и скролла
+  useEffect(() => {
+    if (!grainNoiseOpacity) return
+    
+    const unsubscribe = grainNoiseOpacity.on('change', (latest) => {
+      if (layerRef.current) {
+        layerRef.current.style.opacity = latest * opacity
+      }
+    })
+    
+    return () => unsubscribe()
+  }, [grainNoiseOpacity, opacity])
+  
+  return (
+    <div
+      ref={layerRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex,
+        opacity: grainNoiseOpacity ? undefined : opacity,
+        backgroundImage,
+        backgroundSize,
+        mixBlendMode,
+        filter
       }}
     />
   )
@@ -1817,6 +1987,81 @@ export default function Home() {
   const chartTopY = useTransform(chartBackParallaxY, (py) => `calc(2rem + ${py}px)`)
   const chartBottomX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
   const chartBottomY = useTransform(chartBackParallaxY, (py) => `calc(-2rem + ${py}px)`)
+  
+  // Для помех на втором экране: комбинируем скролл и мышь
+  // Параллакс от мыши для помех
+  const grainMouseX = useTransform(mouseX, [0, 100], [-30, 30]) // -30px до +30px
+  const grainMouseY = useTransform(mouseY, [0, 100], [-30, 30]) // -30px до +30px
+  
+  // Комбинированные motion values для backgroundPosition
+  const grainBackgroundXValue = useMotionValue(0)
+  const grainBackgroundYValue = useMotionValue(0)
+  
+  // Transform для backgroundPosition (комбинированная строка)
+  const grainBackgroundPosition = useTransform(
+    [grainBackgroundXValue, grainBackgroundYValue],
+    ([x, y]) => `${x}px ${y}px`
+  )
+  
+  // Transform для движения самого элемента (x, y) - комбинируем скролл и мышь
+  const grainTransformXValue = useMotionValue(0)
+  const grainTransformYValue = useMotionValue(0)
+  
+  const grainTransformX = grainTransformXValue
+  const grainTransformY = grainTransformYValue
+  
+  // Для лент перфорации: накапливаем смещение при движении мыши (как вращение пленки)
+  const perforationMouseOffset = useMotionValue(0)
+  const lastMouseX = useRef(50) // Начальная позиция мыши (центр)
+  
+  useEffect(() => {
+    const updatePerforationOffset = () => {
+      const currentMouseX = mouseX.get()
+      const delta = Math.abs(currentMouseX - lastMouseX.current)
+      
+      // Если мышь движется, добавляем смещение в одну сторону (вправо)
+      if (delta > 0.1) { // Порог для определения движения
+        // Скорость зависит от скорости движения мыши
+        const speed = Math.min(delta * 2, 5) // Ограничиваем максимальную скорость
+        perforationMouseOffset.set(perforationMouseOffset.get() + speed)
+        lastMouseX.current = currentMouseX
+      }
+    }
+    
+    // Небольшое затухание накопленного смещения (имитация трения пленки)
+    const decayInterval = setInterval(() => {
+      const current = perforationMouseOffset.get()
+      if (current > 0) {
+        perforationMouseOffset.set(Math.max(0, current - 0.5)) // Медленное затухание
+      }
+    }, 100) // Каждые 100мс уменьшаем на 0.5
+    
+    const unsubscribe = mouseX.on('change', updatePerforationOffset)
+    
+    return () => {
+      unsubscribe()
+      clearInterval(decayInterval)
+    }
+  }, [mouseX, perforationMouseOffset])
+  
+  // Для карточек проектов: разная сила параллакса в зависимости от расстояния от центра
+  // Центральная карточка (выбранная) - сильный параллакс
+  const movieCardCenterParallaxX = useTransform(mouseX, [0, 100], [-15, 15]) // -15px до +15px
+  const movieCardCenterParallaxY = useTransform(mouseY, [0, 100], [-15, 15]) // -15px до +15px
+  const movieCardCenterRotateX = useTransform(mouseY, [0, 100], [3, -3]) // градусы
+  const movieCardCenterRotateY = useTransform(mouseX, [0, 100], [-3, 3]) // градусы
+  
+  // Близкие карточки (offset 1) - средний параллакс
+  const movieCardNearParallaxX = useTransform(mouseX, [0, 100], [-10, 10]) // -10px до +10px
+  const movieCardNearParallaxY = useTransform(mouseY, [0, 100], [-10, 10]) // -10px до +10px
+  const movieCardNearRotateX = useTransform(mouseY, [0, 100], [2, -2]) // градусы
+  const movieCardNearRotateY = useTransform(mouseX, [0, 100], [-2, 2]) // градусы
+  
+  // Дальние карточки (offset 2) - слабый параллакс
+  const movieCardFarParallaxX = useTransform(mouseX, [0, 100], [-5, 5]) // -5px до +5px
+  const movieCardFarParallaxY = useTransform(mouseY, [0, 100], [-5, 5]) // -5px до +5px
+  const movieCardFarRotateX = useTransform(mouseY, [0, 100], [1, -1]) // градусы
+  const movieCardFarRotateY = useTransform(mouseX, [0, 100], [-1, 1]) // градусы
 
   // 6 популярных российских кинопродакшенов/киностудий, принимающих госзаказы
   const partners = [
@@ -1979,6 +2224,63 @@ export default function Home() {
       unsubscribe3()
     }
   }, [firstScreenScrollProgress, secondScreenScrollProgress, thirdScreenScrollProgress, firstScreenProgressMotionValue, secondScreenProgressMotionValue, thirdScreenProgressMotionValue])
+  
+  // Motion values для изменения параметров шума (не движения, а изменения свойств)
+  const grainNoiseIntensity = useMotionValue(0.5) // Интенсивность шума
+  const grainNoiseOpacity = useMotionValue(0.6) // Прозрачность шума
+  
+  // Обновляем параметры шума при изменении скролла или мыши (не движение, а изменение)
+  useEffect(() => {
+    const updateNoise = () => {
+      const scroll = secondScreenScrollProgress.get()
+      const mouseXVal = mouseX.get() / 100 // 0-1
+      const mouseYVal = mouseY.get() / 100 // 0-1
+      
+      // Изменяем backgroundPosition на основе скролла и мыши (движение фона)
+      grainBackgroundXValue.set(scroll * 200 + (mouseXVal - 0.5) * 50)
+      grainBackgroundYValue.set(scroll * 200 + (mouseYVal - 0.5) * 50)
+      
+      // Изменяем интенсивность шума на основе мыши и скролла (не движение, а изменение)
+      const noiseIntensity = 0.4 + scroll * 0.3 + (mouseXVal + mouseYVal) * 0.1
+      grainNoiseIntensity.set(Math.min(1, Math.max(0.3, noiseIntensity)))
+      
+      const noiseOpacity = 0.5 + scroll * 0.2 + (mouseXVal + mouseYVal) * 0.15
+      grainNoiseOpacity.set(Math.min(1, Math.max(0.3, noiseOpacity)))
+    }
+    
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateNoise)
+    const unsubscribeMouseX = mouseX.on('change', updateNoise)
+    const unsubscribeMouseY = mouseY.on('change', updateNoise)
+    
+    // Инициализация
+    updateNoise()
+    
+    return () => {
+      unsubscribeScroll()
+      unsubscribeMouseX()
+      unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, grainBackgroundXValue, grainBackgroundYValue, grainNoiseIntensity, grainNoiseOpacity])
+  
+  // Motion values для перерисовки царапин (изменение их позиций)
+  const scratchRedrawTrigger = useMotionValue(0) // Триггер для перерисовки
+  
+  useEffect(() => {
+    const updateScratches = () => {
+      // Просто обновляем триггер, чтобы вызвать перерисовку
+      scratchRedrawTrigger.set(Date.now())
+    }
+    
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateScratches)
+    const unsubscribeMouseX = mouseX.on('change', updateScratches)
+    const unsubscribeMouseY = mouseY.on('change', updateScratches)
+    
+    return () => {
+      unsubscribeScroll()
+      unsubscribeMouseX()
+      unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, scratchRedrawTrigger])
   
   // UI обновления - синхронные для плавной работы (дебаунсинг только для тяжелых диаграмм)
   useMotionValueEvent(progressMotionValue, "change", (latest) => {
@@ -2176,75 +2478,56 @@ export default function Home() {
         }}
       >
         {/* Статические помехи как на старой пленке - зернистость */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 100,
-          opacity: 0.6,
-          backgroundImage: `
+        <GrainLayerComponent
+          zIndex={100}
+          opacity={0.6}
+          backgroundImage={`
             radial-gradient(circle at 0 0, rgba(255,255,255,0.15) 1px, transparent 1px),
             radial-gradient(circle at 2px 2px, rgba(0,0,0,0.15) 1px, transparent 1px),
             radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 0.5px, transparent 0.5px)
-          `,
-          backgroundSize: '4px 4px, 4px 4px, 2px 2px',
-          backgroundPosition: '0 0, 2px 2px, 1px 1px',
-          mixBlendMode: 'overlay',
-          filter: 'contrast(2) brightness(0.85)'
-        }} />
+          `}
+          backgroundSize="4px 4px, 4px 4px, 2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2) brightness(0.85)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
         
         {/* Дополнительный слой зернистости - точки */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 101,
-          opacity: 0.5,
-          backgroundImage: `
+        <GrainLayerComponent
+          zIndex={101}
+          opacity={0.5}
+          backgroundImage={`
             repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(255,255,255,0.1) 1px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 3px),
             repeating-linear-gradient(90deg, transparent 0px, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 3px)
-          `,
-          backgroundSize: '2px 2px',
-          mixBlendMode: 'screen',
-          filter: 'contrast(1.8)'
-        }} />
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="screen"
+          filter="contrast(1.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
         
         {/* Третий слой - более крупная зернистость */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 102,
-          opacity: 0.4,
-          background: `
+        <GrainLayerComponent
+          zIndex={102}
+          opacity={0.4}
+          backgroundImage={`
             repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px),
             repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px)
-          `,
-          backgroundSize: '3px 3px',
-          mixBlendMode: 'multiply',
-          filter: 'contrast(1.5)'
-        }} />
+          `}
+          backgroundSize="3px 3px"
+          mixBlendMode="multiply"
+          filter="contrast(1.5)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
         
         {/* Четвертый слой - очень заметная зернистость с точками */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 103,
-          opacity: 0.7,
-          backgroundImage: `
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.7}
+          backgroundImage={`
             repeating-conic-gradient(from 0deg at 50% 50%, 
               rgba(255,255,255,0.2) 0deg, 
               transparent 1deg, 
@@ -2254,43 +2537,22 @@ export default function Home() {
               transparent 3deg, 
               transparent 4deg
             )
-          `,
-          backgroundSize: '2px 2px',
-          mixBlendMode: 'overlay',
-          filter: 'contrast(2.5) brightness(0.8)'
-        }} />
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2.5) brightness(0.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
         
-        {/* Горизонтальные царапины */}
-        {Array.from({ length: 15 }, (_, i) => (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              width: `${Math.random() * 400 + 200}px`,
-              height: '2px',
-              background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent)',
-              pointerEvents: 'none',
-              zIndex: 102,
-              opacity: 0.3 + Math.random() * 0.3,
-              transform: `rotate(${Math.random() * 2 - 1}deg)`,
-              boxShadow: '0 0 3px rgba(255, 255, 255, 0.2)'
-            }}
-          />
-        ))}
+        {/* Горизонтальные царапины - перерисовываются при движении мыши */}
+        <ScratchesComponent count={15} scratchRedrawTrigger={scratchRedrawTrigger} />
         
         {/* Вертикальные полосы повреждений */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 103,
-          opacity: 0.25,
-          backgroundImage: `
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.25}
+          backgroundImage={`
             repeating-linear-gradient(
               90deg,
               transparent 0px,
@@ -2300,14 +2562,16 @@ export default function Home() {
               transparent 3px,
               transparent 8px
             )
-          `,
-          backgroundSize: '60px 100%',
-          mixBlendMode: 'overlay'
-        }} />
+          `}
+          backgroundSize="60px 100%"
+          mixBlendMode="overlay"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
 
         {/* Движущиеся ленты перфорации по границам экрана */}
-        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" />
-        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" />
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" mouseOffset={perforationMouseOffset} />
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" mouseOffset={perforationMouseOffset} />
         
         {/* Индикатор прогресса второго экрана */}
         <div style={{
@@ -2605,19 +2869,25 @@ export default function Home() {
           </div>
 
           {/* Карусель с фильмами */}
-          <motion.div 
-            style={{ 
-              minHeight: '500px',
-              x: chartCenterParallaxX,
-              y: chartCenterParallaxY,
-              rotateX: chartCenterRotateX,
-              rotateY: chartCenterRotateY,
-              perspective: '1000px',
-              transformStyle: 'preserve-3d'
-            }}
-          >
-            <MoviesCarousel movies={topMovies} />
-          </motion.div>
+          <div style={{ minHeight: '500px' }}>
+            <MoviesCarousel 
+              movies={topMovies}
+              mouseParallaxValues={{
+                centerX: movieCardCenterParallaxX,
+                centerY: movieCardCenterParallaxY,
+                centerRotateX: movieCardCenterRotateX,
+                centerRotateY: movieCardCenterRotateY,
+                nearX: movieCardNearParallaxX,
+                nearY: movieCardNearParallaxY,
+                nearRotateX: movieCardNearRotateX,
+                nearRotateY: movieCardNearRotateY,
+                farX: movieCardFarParallaxX,
+                farY: movieCardFarParallaxY,
+                farRotateX: movieCardFarRotateX,
+                farRotateY: movieCardFarRotateY
+              }}
+            />
+          </div>
         </div>
 
         {/* Секция ПАРТНЕРЫ */}
@@ -2649,18 +2919,7 @@ export default function Home() {
           </div>
 
           {/* Сетка с логотипами партнеров */}
-          <motion.div
-            style={{
-              x: chartCenterParallaxX,
-              y: chartCenterParallaxY,
-              rotateX: chartCenterRotateX,
-              rotateY: chartCenterRotateY,
-              perspective: '1000px',
-              transformStyle: 'preserve-3d'
-            }}
-          >
-            <PartnersGrid partners={partners} />
-          </motion.div>
+          <PartnersGrid partners={partners} />
         </div>
       </section>
     </div>
