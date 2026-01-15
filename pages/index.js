@@ -1,9 +1,10 @@
 import React, { useRef, useState, useEffect, Suspense, memo, useMemo, useCallback } from 'react'
 import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
+import { useParallaxStore } from '../store/parallaxStore'
 
 // Компонент пункта договора с галочкой
-function ContractItem({ text, progress, threshold, textColor }) {
+const ContractItem = memo(function ContractItem({ text, progress, threshold, textColor }) {
   // progress может быть motion value или числом
   const [progressValue, setProgressValue] = useState(typeof progress === 'number' ? progress : 0)
   
@@ -72,7 +73,7 @@ function ContractItem({ text, progress, threshold, textColor }) {
       )}
     </div>
   )
-}
+})
 
 // Компонент Вспышка
 function Flash({ isActive, onComplete }) {
@@ -112,7 +113,7 @@ function Flash({ isActive, onComplete }) {
         top: 0,
         left: 0,
           width: '100vw', 
-          height: '100vh', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
         backgroundColor: '#ffffff',
         zIndex: 100000,
         pointerEvents: 'none'
@@ -154,9 +155,9 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
       className="clapperboard-container"
       initial={false}
       animate={{
-        y: isVisible 
-          ? ['-100vh', 0, -30, 0, -15, 0, -8, 0] // Падение сверху с отскоками
-          : '-100vh',
+        y: isVisible
+          ? ['calc(var(--vh, 1vh) * -100)', 0, -30, 0, -15, 0, -8, 0] // Падение сверху с отскоками
+          : 'calc(var(--vh, 1vh) * -100)',
         x: isVisible ? 0 : '100vw', // При показе x=0, при скрытии улетает вправо
         opacity: isVisible ? 1 : 0
       }}
@@ -417,7 +418,7 @@ function Gallery({ frames, initialIndex, onClose }) {
           top: 0,
           left: 0,
           width: '100vw',
-          height: '100vh',
+          height: 'calc(var(--vh, 1vh) * 100)',
           backgroundColor: 'rgba(0, 0, 0, 0.95)',
           zIndex: 100000,
           cursor: 'pointer'
@@ -437,7 +438,7 @@ function Gallery({ frames, initialIndex, onClose }) {
           top: 0,
           left: 0,
           width: '100vw',
-          height: '100vh',
+          height: 'calc(var(--vh, 1vh) * 100)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -450,7 +451,7 @@ function Gallery({ frames, initialIndex, onClose }) {
           style={{
             position: 'relative',
             width: '90vw',
-            height: '90vh',
+            height: 'calc(var(--vh, 1vh) * 90)',
             maxWidth: '1400px',
             maxHeight: '900px'
           }}
@@ -505,7 +506,7 @@ function Gallery({ frames, initialIndex, onClose }) {
           })}
         </div>
 
-        {/* Кнопка "Назад" в левом верхнем углу */}
+        {/* Кнопка закрытия в левом верхнем углу */}
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -515,17 +516,17 @@ function Gallery({ frames, initialIndex, onClose }) {
             position: 'absolute',
             top: '32px',
             left: '32px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '12px 20px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
             backgroundColor: 'rgba(255, 255, 255, 0.2)',
             border: '2px solid rgba(255, 255, 255, 0.3)',
-            borderRadius: '8px',
             color: '#ffffff',
-            fontSize: '18px',
-            fontFamily: "'Science Gothic', monospace",
+            fontSize: '24px',
             cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             zIndex: 100002,
             transition: 'all 0.2s ease',
             backdropFilter: 'blur(10px)'
@@ -537,8 +538,7 @@ function Gallery({ frames, initialIndex, onClose }) {
             e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
           }}
         >
-          <span style={{ fontSize: '24px' }}>←</span>
-          <span>Назад</span>
+          ×
         </button>
 
         {/* Кнопки навигации */}
@@ -916,6 +916,7 @@ const RadialBarChartComponent = memo(function RadialBarChartComponent({ progress
 
 // Компонент карусели с постерами фильмов (вращающаяся карусель)
 const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValues = null }) {
+  const { isParallaxEnabled } = useParallaxStore()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [wasDragging, setWasDragging] = useState(false)
@@ -1077,10 +1078,10 @@ const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValue
           const offset = Math.abs(index - currentIndex)
           
           // Определяем параллакс в зависимости от расстояния от центра
-          // Параллакс работает только когда компонент в viewport
+          // Параллакс работает только когда компонент в viewport и параллакс включен
           let parallaxX, parallaxY, rotateX, rotateY
-          if (!isInViewport) {
-            // Если не в viewport - без параллакса
+          if (!isInViewport || !isParallaxEnabled) {
+            // Если не в viewport или параллакс отключен - без параллакса
             parallaxX = 0
             parallaxY = 0
             rotateX = 0
@@ -1407,6 +1408,100 @@ function GrainLayerComponent({ zIndex, opacity, backgroundImage, backgroundSize,
     />
   )
 }
+
+// Мемоизированный контейнер для диаграмм с параллаксом
+const ChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      left: '50%',
+      top: '2rem', // default top
+      zIndex: 12,
+      width: '25vw',
+      height: '25vw',
+      maxWidth: '300px',
+      maxHeight: '300px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный контейнер для центральной большой диаграммы
+const CenterChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      zIndex: 18,
+      width: '80vw',
+      height: '80vw',
+      maxWidth: '1000px',
+      maxHeight: '1000px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный индикатор прогресса
+const ProgressIndicator = memo(({ progressText }) => (
+  <div style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+    pointerEvents: 'none',
+    zIndex: 1000
+  }}>
+    <div style={{
+      position: 'sticky',
+      top: '45px',
+      width: 'fit-content',
+      marginLeft: 'auto',
+      marginRight: '16px',
+      color: '#ffffff',
+      fontSize: 'clamp(14px, 2vw, 18px)',
+      fontFamily: "'Science Gothic', monospace",
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      padding: '8px 16px',
+      borderRadius: '4px',
+      backdropFilter: 'blur(4px)',
+      pointerEvents: 'none'
+    }}>
+      Запуск процессов: {progressText}%
+    </div>
+  </div>
+))
+
+// Мемоизированный список пунктов договора
+const ContractItemsList = memo(({ progressMotionValue }) => (
+  <div style={{
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 'clamp(16px, 3vw, 2em)',
+    paddingRight: 'clamp(16px, 3vw, 2em)'
+  }}>
+    <ContractItem text="Организуем пре-продакшн и локации" progress={progressMotionValue} threshold={35} textColor="#ffffff" />
+    <ContractItem text="Согласуем все договоренности и разрешения" progress={progressMotionValue} threshold={40} textColor="#ffffff" />
+    <ContractItem text="Проводим съемочный процесс и постпродакшн" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
+    <ContractItem text="Соберем результаты и финальный монтаж" progress={progressMotionValue} threshold={60} textColor="#ffffff" />
+    <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={progressMotionValue} threshold={65} textColor="#ffffff" />
+  </div>
+))
 
 // Компонент эффекта помех/повреждения пленки для второго экрана
 function FilmGrainEffect({ scrollProgress }) {
@@ -1796,6 +1891,7 @@ function LentaPerforationTexture({ width, height, position = 'top', scale = 1 })
 }
 
 function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
+  const { isParallaxEnabled } = useParallaxStore()
   // Генерируем случайные цвета для каждого кадра один раз при монтировании
   const [frames] = useState(() => {
     return Array.from({ length: frameCount }, () => {
@@ -1851,10 +1947,10 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
         rotate: `${angle}deg`,
         transformOrigin: 'center center',
         pointerEvents: 'none',
-        x: parallaxX || 0,
-        y: parallaxY || 0,
-        rotateX: rotateX || 0,
-        rotateY: rotateY || 0,
+        x: isParallaxEnabled ? (parallaxX || 0) : 0,
+        y: isParallaxEnabled ? (parallaxY || 0) : 0,
+        rotateX: isParallaxEnabled ? (rotateX || 0) : 0,
+        rotateY: isParallaxEnabled ? (rotateY || 0) : 0,
         perspective: '1000px'
       }}>
         {/* Контейнер движения - двигается по повернутой оси X */}
@@ -1981,9 +2077,32 @@ export default function Home() {
   const firstScreenRef = useRef(null)
   const secondScreenRef = useRef(null)
   const thirdScreenRef = useRef(null)
+
+  // Zustand store для управления эффектами
+  const { isParallaxEnabled, toggleParallax, isGrainEnabled } = useParallaxStore()
   
   // Motion values для progress - без перерендеров
   const progressMotionValue = useMotionValue(0)
+
+  // Spring версии progress для эластичной анимации лент с разными характеристиками
+  // Все ленты слушают один progressMotionValue, но с разными spring эффектами
+  const springProgressFast = useSpring(progressMotionValue, {
+    stiffness: 200, // Высокая жесткость - быстрый отклик
+    damping: 25,   // Низкое затухание - больше "пружинистости"
+    mass: 0.3      // Малая масса - легкость
+  })
+
+  const springProgressMedium = useSpring(progressMotionValue, {
+    stiffness: 150, // Средняя жесткость
+    damping: 30,   // Среднее затухание
+    mass: 0.5      // Средняя масса
+  })
+
+  const springProgressSlow = useSpring(progressMotionValue, {
+    stiffness: 100, // Низкая жесткость - медленный отклик
+    damping: 35,   // Высокое затухание - меньше "пружинистости"
+    mass: 0.8      // Большая масса - инертность
+  })
   const firstScreenProgressMotionValue = useMotionValue(0)
   const secondScreenProgressMotionValue = useMotionValue(0)
   const thirdScreenProgressMotionValue = useMotionValue(0)
@@ -2021,6 +2140,28 @@ export default function Home() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Фикс для нестабильных vh и vw единиц - устанавливаем CSS переменные
+  useEffect(() => {
+    const setViewportUnits = () => {
+      const vh = window.innerHeight * 0.01
+      const vw = window.innerWidth * 0.01
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
+      document.documentElement.style.setProperty('--vw', `${vw}px`)
+    }
+
+    // Устанавливаем сразу
+    setViewportUnits()
+
+    // Обновляем при изменении размера окна и ориентации
+    window.addEventListener('resize', setViewportUnits)
+    window.addEventListener('orientationchange', setViewportUnits)
+
+    return () => {
+      window.removeEventListener('resize', setViewportUnits)
+      window.removeEventListener('orientationchange', setViewportUnits)
+    }
+  }, [])
+
   // Отслеживание позиции мыши для параллакса - без перерендеров
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -2036,34 +2177,74 @@ export default function Home() {
 
   // Transforms для параллакса - преобразуем позицию мыши в значения перспективы
   // Для крупных лент (scale >= 1.5): сильный эффект
-  const lentaLargeParallaxX = useTransform(mouseX, [0, 100], [-30, 30]) // -30px до +30px
-  const lentaLargeParallaxY = useTransform(mouseY, [0, 100], [-30, 30]) // -30px до +30px
-  const lentaLargeRotateX = useTransform(mouseY, [0, 100], [8, -8]) // градусы
-  const lentaLargeRotateY = useTransform(mouseX, [0, 100], [-8, 8]) // градусы
+  const lentaLargeParallaxX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeParallaxY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeRotateX = useTransform(mouseY, [0, 100], [8, -8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaLargeRotateY = useTransform(mouseX, [0, 100], [-8, 8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
 
   // Для средних лент (scale < 1.5): средний эффект
-  const lentaMediumParallaxX = useTransform(mouseX, [0, 100], [-20, 20]) // -20px до +20px
-  const lentaMediumParallaxY = useTransform(mouseY, [0, 100], [-20, 20]) // -20px до +20px
-  const lentaMediumRotateX = useTransform(mouseY, [0, 100], [5, -5]) // градусы
-  const lentaMediumRotateY = useTransform(mouseX, [0, 100], [-5, 5]) // градусы
+  const lentaMediumParallaxX = useTransform(mouseX, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumParallaxY = useTransform(mouseY, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumRotateX = useTransform(mouseY, [0, 100], [5, -5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaMediumRotateY = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
 
   // Для маленьких лент: слабый эффект
-  const lentaSmallParallaxX = useTransform(mouseX, [0, 100], [-15, 15]) // -15px до +15px
-  const lentaSmallParallaxY = useTransform(mouseY, [0, 100], [-15, 15]) // -15px до +15px
-  const lentaSmallRotateX = useTransform(mouseY, [0, 100], [3, -3]) // градусы
-  const lentaSmallRotateY = useTransform(mouseX, [0, 100], [-3, 3]) // градусы
+  const lentaSmallParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaSmallRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
 
   // Для крупной круговой диаграммы в центре: СЛАБЫЙ эффект (она на переднем плане)
-  const chartCenterParallaxX = useTransform(mouseX, [0, 100], [-5, 5]) // -5px до +5px
-  const chartCenterParallaxY = useTransform(mouseY, [0, 100], [-5, 5]) // -5px до +5px
-  const chartCenterRotateX = useTransform(mouseY, [0, 100], [1, -1]) // градусы
-  const chartCenterRotateY = useTransform(mouseX, [0, 100], [-1, 1]) // градусы
+  const chartCenterParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartCenterRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
 
   // Для маленьких диаграмм на заднем плане: СИЛЬНЫЙ эффект (они дальше)
-  const chartBackParallaxX = useTransform(mouseX, [0, 100], [-25, 25]) // -25px до +25px
-  const chartBackParallaxY = useTransform(mouseY, [0, 100], [-25, 25]) // -25px до +25px
-  const chartBackRotateX = useTransform(mouseY, [0, 100], [6, -6]) // градусы
-  const chartBackRotateY = useTransform(mouseX, [0, 100], [-6, 6]) // градусы
+  const chartBackParallaxX = useTransform(mouseX, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackParallaxY = useTransform(mouseY, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackRotateX = useTransform(mouseY, [0, 100], [6, -6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartBackRotateY = useTransform(mouseX, [0, 100], [-6, 6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
 
   // Комбинированные transforms для центрирования + параллакс
   const chartCenterX = useTransform(chartCenterParallaxX, (px) => `calc(-50% + ${px}px)`)
@@ -2075,8 +2256,12 @@ export default function Home() {
   
   // Для помех на втором экране: комбинируем скролл и мышь
   // Параллакс от мыши для помех
-  const grainMouseX = useTransform(mouseX, [0, 100], [-30, 30]) // -30px до +30px
-  const grainMouseY = useTransform(mouseY, [0, 100], [-30, 30]) // -30px до +30px
+  const grainMouseX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const grainMouseY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
   
   // Комбинированные motion values для backgroundPosition
   const grainBackgroundXValue = useMotionValue(0)
@@ -2101,9 +2286,11 @@ export default function Home() {
   
   useEffect(() => {
     const updatePerforationOffset = () => {
+      if (!isParallaxEnabled) return
+
       const currentMouseX = mouseX.get()
       const delta = Math.abs(currentMouseX - lastMouseX.current)
-      
+
       // Если мышь движется, добавляем смещение в одну сторону (вправо)
       if (delta > 0.1) { // Порог для определения движения
         // Скорость зависит от скорости движения мыши
@@ -2112,7 +2299,7 @@ export default function Home() {
         lastMouseX.current = currentMouseX
       }
     }
-    
+
     // Небольшое затухание накопленного смещения (имитация трения пленки)
     const decayInterval = setInterval(() => {
       const current = perforationMouseOffset.get()
@@ -2120,33 +2307,57 @@ export default function Home() {
         perforationMouseOffset.set(Math.max(0, current - 0.5)) // Медленное затухание
       }
     }, 100) // Каждые 100мс уменьшаем на 0.5
-    
-    const unsubscribe = mouseX.on('change', updatePerforationOffset)
-    
+
+    const unsubscribe = isParallaxEnabled ? mouseX.on('change', updatePerforationOffset) : null
+
     return () => {
-      unsubscribe()
+      if (unsubscribe) unsubscribe()
       clearInterval(decayInterval)
     }
-  }, [mouseX, perforationMouseOffset])
+  }, [mouseX, perforationMouseOffset, isParallaxEnabled])
   
   // Для карточек проектов: разная сила параллакса в зависимости от расстояния от центра
   // Центральная карточка (выбранная) - сильный параллакс
-  const movieCardCenterParallaxX = useTransform(mouseX, [0, 100], [-15, 15]) // -15px до +15px
-  const movieCardCenterParallaxY = useTransform(mouseY, [0, 100], [-15, 15]) // -15px до +15px
-  const movieCardCenterRotateX = useTransform(mouseY, [0, 100], [3, -3]) // градусы
-  const movieCardCenterRotateY = useTransform(mouseX, [0, 100], [-3, 3]) // градусы
+  const movieCardCenterParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardCenterRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
   
   // Близкие карточки (offset 1) - средний параллакс
-  const movieCardNearParallaxX = useTransform(mouseX, [0, 100], [-10, 10]) // -10px до +10px
-  const movieCardNearParallaxY = useTransform(mouseY, [0, 100], [-10, 10]) // -10px до +10px
-  const movieCardNearRotateX = useTransform(mouseY, [0, 100], [2, -2]) // градусы
-  const movieCardNearRotateY = useTransform(mouseX, [0, 100], [-2, 2]) // градусы
-  
+  const movieCardNearParallaxX = useTransform(mouseX, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearParallaxY = useTransform(mouseY, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearRotateX = useTransform(mouseY, [0, 100], [2, -2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardNearRotateY = useTransform(mouseX, [0, 100], [-2, 2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
   // Дальние карточки (offset 2) - слабый параллакс
-  const movieCardFarParallaxX = useTransform(mouseX, [0, 100], [-5, 5]) // -5px до +5px
-  const movieCardFarParallaxY = useTransform(mouseY, [0, 100], [-5, 5]) // -5px до +5px
-  const movieCardFarRotateX = useTransform(mouseY, [0, 100], [1, -1]) // градусы
-  const movieCardFarRotateY = useTransform(mouseX, [0, 100], [-1, 1]) // градусы
+  const movieCardFarParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardFarRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
 
   // Стабилизируем объект mouseParallaxValues через useMemo, чтобы не вызывать перерисовки MoviesCarousel
   const movieParallaxValues = useMemo(() => ({
@@ -2250,106 +2461,6 @@ export default function Home() {
     }, 600) // Время на анимацию закрытия
   }, [])
 
-  // Кастомный скролл - синхронизируем customScrollTop с реальным scrollY
-  const isUpdatingScroll = useRef(false)
-  
-  useEffect(() => {
-    if (!containerRef.current) return
-    
-    const container = containerRef.current
-    
-    // Синхронизируем customScrollTop -> scrollTop
-    const unsubscribe = customScrollTop.on('change', (value) => {
-      if (!isUpdatingScroll.current && container.scrollTop !== value) {
-        isUpdatingScroll.current = true
-        container.scrollTop = value
-        requestAnimationFrame(() => {
-          isUpdatingScroll.current = false
-        })
-      }
-    })
-    
-    // Обновляем customScrollTop при изменении реального scrollTop (на случай внешних изменений)
-    const updateCustomScroll = () => {
-      if (!isUpdatingScroll.current) {
-        const currentScroll = container.scrollTop
-        if (Math.abs(customScrollTop.get() - currentScroll) > 1) {
-          customScrollTop.set(currentScroll)
-        }
-      }
-    }
-    
-    container.addEventListener('scroll', updateCustomScroll, { passive: true })
-    
-    return () => {
-      unsubscribe()
-      container.removeEventListener('scroll', updateCustomScroll)
-    }
-  }, [customScrollTop])
-  
-  // Обработка wheel событий для кастомного скролла (десктоп)
-  useEffect(() => {
-    if (!containerRef.current) return
-    
-    const container = containerRef.current
-    const handleWheel = (e) => {
-      e.preventDefault()
-      const delta = e.deltaY
-      const currentScroll = customScrollTop.get()
-      const maxScroll = container.scrollHeight - container.clientHeight
-      const newScroll = Math.max(0, Math.min(maxScroll, currentScroll + delta))
-      customScrollTop.set(newScroll)
-    }
-    
-    container.addEventListener('wheel', handleWheel, { passive: false })
-    
-    return () => {
-      container.removeEventListener('wheel', handleWheel)
-    }
-  }, [customScrollTop])
-  
-  // Обработка touch событий для мобильных устройств
-  useEffect(() => {
-    if (!containerRef.current) return
-    
-    const container = containerRef.current
-    let touchStartY = 0
-    let touchStartScroll = 0
-    let isTouching = false
-    
-    const handleTouchStart = (e) => {
-      touchStartY = e.touches[0].clientY
-      touchStartScroll = customScrollTop.get()
-      isTouching = true
-    }
-    
-    const handleTouchMove = (e) => {
-      if (!isTouching) return
-      
-      const touchCurrentY = e.touches[0].clientY
-      const deltaY = touchStartY - touchCurrentY
-      const maxScroll = container.scrollHeight - container.clientHeight
-      const newScroll = Math.max(0, Math.min(maxScroll, touchStartScroll + deltaY))
-      customScrollTop.set(newScroll)
-    }
-    
-    const handleTouchEnd = () => {
-      isTouching = false
-    }
-    
-    container.addEventListener('touchstart', handleTouchStart, { passive: true })
-    container.addEventListener('touchmove', handleTouchMove, { passive: true })
-    container.addEventListener('touchend', handleTouchEnd, { passive: true })
-    container.addEventListener('touchcancel', handleTouchEnd, { passive: true })
-    
-    return () => {
-      container.removeEventListener('touchstart', handleTouchStart)
-      container.removeEventListener('touchmove', handleTouchMove)
-      container.removeEventListener('touchend', handleTouchEnd)
-      container.removeEventListener('touchcancel', handleTouchEnd)
-    }
-  }, [customScrollTop])
-  
   // Отслеживаем скролл контейнера с помощью framer-motion
   const { scrollYProgress, scrollY } = useScroll({
     container: containerRef,
@@ -2440,16 +2551,23 @@ export default function Home() {
       const scroll = secondScreenScrollProgress.get()
       const mouseXVal = mouseX.get() / 100 // 0-1
       const mouseYVal = mouseY.get() / 100 // 0-1
-      
+
       // Изменяем backgroundPosition на основе скролла и мыши (движение фона)
-      grainBackgroundXValue.set(scroll * 200 + (mouseXVal - 0.5) * 50)
-      grainBackgroundYValue.set(scroll * 200 + (mouseYVal - 0.5) * 50)
-      
+      if (isParallaxEnabled) {
+        grainBackgroundXValue.set(scroll * 200 + (mouseXVal - 0.5) * 50)
+        grainBackgroundYValue.set(scroll * 200 + (mouseYVal - 0.5) * 50)
+      } else {
+        grainBackgroundXValue.set(scroll * 200) // Только скролл, без мыши
+        grainBackgroundYValue.set(scroll * 200)
+      }
+
       // Изменяем интенсивность шума на основе мыши и скролла (не движение, а изменение)
-      const noiseIntensity = 0.4 + scroll * 0.3 + (mouseXVal + mouseYVal) * 0.1
+      const mouseInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.1 : 0
+      const noiseIntensity = 0.4 + scroll * 0.3 + mouseInfluence
       grainNoiseIntensity.set(Math.min(1, Math.max(0.3, noiseIntensity)))
-      
-      const noiseOpacity = 0.5 + scroll * 0.2 + (mouseXVal + mouseYVal) * 0.15
+
+      const mouseOpacityInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.15 : 0
+      const noiseOpacity = 0.5 + scroll * 0.2 + mouseOpacityInfluence
       grainNoiseOpacity.set(Math.min(1, Math.max(0.3, noiseOpacity)))
     }
     
@@ -2475,17 +2593,17 @@ export default function Home() {
       // Просто обновляем триггер, чтобы вызвать перерисовку
       scratchRedrawTrigger.set(Date.now())
     }
-    
+
     const unsubscribeScroll = secondScreenScrollProgress.on('change', updateScratches)
-    const unsubscribeMouseX = mouseX.on('change', updateScratches)
-    const unsubscribeMouseY = mouseY.on('change', updateScratches)
-    
+    const unsubscribeMouseX = isParallaxEnabled ? mouseX.on('change', updateScratches) : null
+    const unsubscribeMouseY = isParallaxEnabled ? mouseY.on('change', updateScratches) : null
+
     return () => {
       unsubscribeScroll()
-      unsubscribeMouseX()
-      unsubscribeMouseY()
+      if (unsubscribeMouseX) unsubscribeMouseX()
+      if (unsubscribeMouseY) unsubscribeMouseY()
     }
-  }, [secondScreenScrollProgress, mouseX, mouseY, scratchRedrawTrigger])
+  }, [secondScreenScrollProgress, mouseX, mouseY, scratchRedrawTrigger, isParallaxEnabled])
   
   // UI обновления - синхронные для плавной работы (дебаунсинг только для тяжелых диаграмм)
   useMotionValueEvent(progressMotionValue, "change", (latest) => {
@@ -2577,7 +2695,7 @@ export default function Home() {
         left: 0,
         width: '100vw',
         height: '100vh',
-        overflow: 'hidden', // Отключаем нативный скролл на десктопе
+        overflowY: 'auto', // Нативный скролл
         overflowX: 'hidden',
         touchAction: 'pan-y' // Разрешаем вертикальный touch-скролл на мобильных
       }}
@@ -2587,27 +2705,27 @@ export default function Home() {
       {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
       {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
       {/* Первая лента: когда Составление плана 60%, лента по центру экрана, размер вдвое */}
-      <KinoLenta lentaId="lenta-1" frameCount={8} progress={progressMotionValue} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      {/* Центральные крупные ленты - быстрый spring для максимального эффекта */}
+      {/* Эти ленты самые заметные и должны реагировать мгновенно */}
+      <KinoLenta lentaId="lenta-1" frameCount={8} progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-6" frameCount={8} progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-9" frameCount={8} progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
 
-      {/* Вторая лента: inverse (справа налево), центр при 90%, topOffset 25vh, противоположный угол */}
-      <KinoLenta lentaId="lenta-2" frameCount={8} progress={progressMotionValue} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      {/* Промежуточные ленты - средний spring */}
+      {/* Баланс между скоростью и плавностью */}
+      <KinoLenta lentaId="lenta-2" frameCount={8} progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-3" frameCount={8} progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-4" frameCount={8} progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-7" frameCount={8} progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-8" frameCount={8} progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-12" frameCount={8} progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
 
-      {/* Ленты сверху - распределены пониже */}
-      <KinoLenta lentaId="lenta-3" frameCount={8} progress={progressMotionValue} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
-      <KinoLenta lentaId="lenta-4" frameCount={8} progress={progressMotionValue} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-5" frameCount={8} progress={progressMotionValue} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-6" frameCount={8} progress={progressMotionValue} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
-      <KinoLenta lentaId="lenta-7" frameCount={8} progress={progressMotionValue} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-8" frameCount={8} progress={progressMotionValue} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-9" frameCount={8} progress={progressMotionValue} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
-      <KinoLenta lentaId="lenta-10" frameCount={8} progress={progressMotionValue} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-
-      {/* Дополнительные ленты в центре */}
-      <KinoLenta lentaId="lenta-11" frameCount={8} progress={progressMotionValue} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-
-      {/* Дополнительные ленты снизу - меньше лент */}
-      <KinoLenta lentaId="lenta-12" frameCount={8} progress={progressMotionValue} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
-      <KinoLenta lentaId="lenta-13" frameCount={8} progress={progressMotionValue} center={0.85 * 0.6 / 3} topOffset={38} speed={1.1} angle={-20} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      {/* Фоновые ленты - медленный spring для subtle эффекта */}
+      {/* Эти ленты создают глубину и не должны отвлекать внимание */}
+      <KinoLenta lentaId="lenta-5" frameCount={8} progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-10" frameCount={8} progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-11" frameCount={8} progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-13" frameCount={8} progress={springProgressSlow} center={0.85 * 0.6 / 3} topOffset={38} speed={1.1} angle={-20} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
       
       {/* Индикатор прогресса в левом верхнем углу */}
       <div style={{
@@ -2632,7 +2750,7 @@ export default function Home() {
         ref={firstScreenRef}
         style={{ 
           width: '100vw', 
-          height: '100vh', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
           backgroundColor: '#0a0a0a', // Чуть светлее черного
           position: 'relative'
         }}
@@ -2678,7 +2796,7 @@ export default function Home() {
         ref={secondScreenRef}
         style={{ 
         width: '100vw', 
-          height: '100vh', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
           backgroundColor: '#0a0a0a',
           position: 'relative',
           display: 'flex',
@@ -2689,36 +2807,13 @@ export default function Home() {
         }}
       >
         {/* Индикатор прогресса второго экрана - обертка для правильной работы sticky */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 1000
-        }}>
-          <div style={{
-            position: 'sticky',
-            top: '45px',
-            width: 'fit-content',
-            marginLeft: 'auto',
-            marginRight: '16px',
-            color: '#ffffff',
-            fontSize: 'clamp(14px, 2vw, 18px)',
-            fontFamily: "'Science Gothic', monospace",
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            padding: '8px 16px',
-            borderRadius: '4px',
-            backdropFilter: 'blur(4px)',
-            pointerEvents: 'none'
-          }}>
-            Запуск процессов: {secondScreenProgressText}%
-          </div>
-        </div>
+        <ProgressIndicator progressText={secondScreenProgressText} />
         
-        {/* Статические помехи как на старой пленке - зернистость */}
-        <GrainLayerComponent
+        {/* Эффекты помех - только если включены */}
+        {isGrainEnabled && (
+          <>
+            {/* Статические помехи как на старой пленке - зернистость */}
+            <GrainLayerComponent
           zIndex={100}
           opacity={0.6}
           backgroundImage={`
@@ -2808,82 +2903,54 @@ export default function Home() {
           grainBackgroundPosition={grainBackgroundPosition}
           grainNoiseOpacity={grainNoiseOpacity}
         />
+          </>
+        )}
 
         {/* Движущиеся ленты перфорации по границам экрана */}
         <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" mouseOffset={perforationMouseOffset} />
         <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" mouseOffset={perforationMouseOffset} />
         
         {/* Линейная диаграмма на весь экран */}
-        <LineChartComponent progressMotionValue={secondScreenScrollProgress} />
+        <LineChartComponent key="line-chart-main" progressMotionValue={secondScreenScrollProgress} />
         
         {/* Радарная диаграмма - сверху с отступом, задний план, СИЛЬНЫЙ параллакс */}
-        <motion.div
+        <ChartContainer
           style={{
-            position: 'absolute',
             top: '2rem',
-            left: '50%',
-            zIndex: 12,
-            width: '25vw',
-            height: '25vw',
-            maxWidth: '300px',
-            maxHeight: '300px',
-            pointerEvents: 'none',
             x: chartTopX,
             y: chartTopY,
             rotateX: chartBackRotateX,
             rotateY: chartBackRotateY,
-            perspective: '1000px',
-            transformStyle: 'preserve-3d'
           }}
         >
-          <RadarChartComponent progressMotionValue={secondScreenScrollProgress} />
-        </motion.div>
+          <RadarChartComponent key="radar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
         
         {/* Радиальная столбчатая диаграмма - снизу с отступом, задний план, СИЛЬНЫЙ параллакс */}
-        <motion.div
+        <ChartContainer
           style={{
-            position: 'absolute',
             bottom: '2rem',
-            left: '50%',
-            zIndex: 12,
-            width: '25vw',
-            height: '25vw',
-            maxWidth: '300px',
-            maxHeight: '300px',
-            pointerEvents: 'none',
+            top: 'auto',
             x: chartBottomX,
             y: chartBottomY,
             rotateX: chartBackRotateX,
             rotateY: chartBackRotateY,
-            perspective: '1000px',
-            transformStyle: 'preserve-3d'
           }}
         >
-          <RadialBarChartComponent progressMotionValue={secondScreenScrollProgress} />
-        </motion.div>
+          <RadialBarChartComponent key="radial-bar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
 
         {/* Круговая диаграмма прогресса - по центру, передний план, СЛАБЫЙ параллакс */}
-        <motion.div
+        <CenterChartContainer
           style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            zIndex: 18,
-            width: '80vw',
-            height: '80vw',
-            maxWidth: '1000px',
-            maxHeight: '1000px',
-            pointerEvents: 'none',
             x: chartCenterX,
             y: chartCenterY,
             rotateX: chartCenterRotateX,
             rotateY: chartCenterRotateY,
-            perspective: '1000px',
-            transformStyle: 'preserve-3d'
           }}
         >
-          <ProgressChart progressMotionValue={secondScreenScrollProgress} />
-        </motion.div>
+          <ProgressChart key="progress-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </CenterChartContainer>
         
           {/* Контейнер для договора */}
           <div style={{
@@ -2893,7 +2960,7 @@ export default function Home() {
             transform: 'translate(-50%, -50%)',
             width: 'min(210mm, 90vw)',
             height: 'min(297mm, calc(90vw * 1.414))',
-            maxHeight: '90vh',
+            maxHeight: 'calc(var(--vh, 1vh) * 90)',
             zIndex: 20
           }}>
             {/* Сетчатый лист A4 - фон с сеткой */}
@@ -2922,7 +2989,7 @@ export default function Home() {
                 left: 0,
                 width: '100%',
                 height: '100%',
-                padding: 'clamp(1rem, 3vw, 2rem)',
+                padding: 'clamp(16px, 3vw, 2rem)',
                 display: 'flex',
                 flexDirection: 'column',
                 fontSize: 'clamp(24px, 3vw, 36px)',
@@ -2949,21 +3016,7 @@ export default function Home() {
             </div>
 
             {/* Список услуг с галочками в центре */}
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'flex-start',
-              paddingLeft: '2em',
-              paddingRight: '2em'
-            }}>
-              <ContractItem text="Организуем пре-продакшн и локации" progress={secondScreenProgressMotionValue} threshold={35} textColor="#ffffff" />
-              <ContractItem text="Согласуем все договоренности и разрешения" progress={secondScreenProgressMotionValue} threshold={40} textColor="#ffffff" />
-              <ContractItem text="Проводим съемочный процесс и постпродакшн" progress={secondScreenProgressMotionValue} threshold={50} textColor="#ffffff" />
-              <ContractItem text="Соберем результаты и финальный монтаж" progress={secondScreenProgressMotionValue} threshold={60} textColor="#ffffff" />
-              <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={secondScreenProgressMotionValue} threshold={65} textColor="#ffffff" />
-            </div>
+            <ContractItemsList progressMotionValue={secondScreenProgressMotionValue} />
 
             {/* Кнопка Подписать снизу */}
             <div style={{
@@ -3031,7 +3084,7 @@ export default function Home() {
         ref={thirdScreenRef}
         style={{
         width: '100vw',
-          minHeight: '100vh',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
           background: 'linear-gradient(to bottom, #000000 0%, #0a0a2e 50%, #1a1a3e 100%)',
           position: 'relative',
           overflow: 'hidden'
@@ -3170,6 +3223,7 @@ export default function Home() {
           </footer>
         </div>
       </section>
+
     </div>
     </>
   )

@@ -45,6 +45,12 @@ html {
   height: 100%;
 }
 
+/* Фикс для нестабильных vh и vw единиц */
+html {
+  --vh: 1vh; /* fallback */
+  --vw: 1vw; /* fallback */
+}
+
 body {
   max-width: 100vw;
   overflow-x: hidden;
