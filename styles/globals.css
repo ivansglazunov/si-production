@@ -79,6 +79,19 @@ section div[style*="overflowX"]::-webkit-scrollbar {
   display: none;
 }
 
+/* Скрытие скроллбара везде */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE и Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
 /* Адаптивный логотип SI-PRODUCTION для планшетов и меньше */
 @media (max-width: 768px) {
   .si-production-logo {

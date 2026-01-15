@@ -3113,61 +3113,49 @@ export default function Home() {
 
           {/* Сетка с логотипами партнеров */}
           <PartnersGrid partners={partners} />
-        </div>
-        
-        {/* Футер - Made in Zvenigorod на звездном фоне */}
-        <footer style={{
-          position: 'absolute',
-          bottom: '2rem',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '100%',
-          textAlign: 'center',
-          zIndex: 1000,
-          pointerEvents: 'none'
-        }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
-            fontFamily: "'Slovic', sans-serif",
-            fontWeight: 'bold'
+          
+          {/* Футер - Made in Zvenigorod на звездном фоне */}
+          <footer style={{
+            width: '100%',
+            textAlign: 'center',
+            marginTop: '4rem',
+            marginBottom: '150px',
+            pointerEvents: 'none'
           }}>
-            <span>Made in</span>
-            <span style={{
+            <div style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.3rem',
+              gap: '0.5rem',
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
               fontFamily: "'Slovic', sans-serif",
               fontWeight: 'bold'
             }}>
-              {/* Иконка православного купола из SVG файла */}
-              <img 
-                src="/tampls.svg" 
-                alt="Zvenigorod dome" 
-                style={{ 
-                  display: 'inline-block',
-                  verticalAlign: 'middle',
-                  width: '24px',
-                  height: '24px'
-                }}
-              />
-              <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
-            </span>
-          </div>
-        </footer>
+              <span>Made in</span>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontFamily: "'Slovic', sans-serif",
+                fontWeight: 'bold'
+              }}>
+                {/* Иконка православного купола из SVG файла */}
+                <img 
+                  src="/tampls.svg" 
+                  alt="Zvenigorod dome" 
+                  style={{ 
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    width: '24px',
+                    height: '24px'
+                  }}
+                />
+                <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
+              </span>
+            </div>
+          </footer>
+        </div>
       </section>
-      
-      {/* Кастомный скроллбар */}
-      <CustomScrollbar 
-        containerRef={containerRef}
-        scrollTop={customScrollTop}
-        isDragging={isDraggingScrollbar}
-        setIsDragging={setIsDraggingScrollbar}
-        scrollbarRef={scrollbarRef}
-      />
     </div>
     </>
   )
