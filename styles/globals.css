@@ -121,6 +121,14 @@ section div[style*="overflowX"]::-webkit-scrollbar {
   }
 }
 
+/* Разрешаем скролл на мобильных устройствах */
+@media (max-width: 768px) {
+  .main-scroll-container {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
 /* Адаптивная высота хлопушки на мобильных устройствах */
 @media (max-width: 768px) {
   .clapperboard-container {

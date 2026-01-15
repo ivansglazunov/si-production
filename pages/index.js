@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, Suspense, memo, useMemo } from 'react'
+import React, { useRef, useState, useEffect, Suspense, memo, useMemo, useCallback } from 'react'
 import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
 
@@ -122,13 +122,15 @@ function Flash({ isActive, onComplete }) {
 }
 
 // Компонент Хлопушка (Clapperboard) - теперь окно контактов
-function Clapperboard({ isActive, isVisible, onClose }) {
+const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
   const [isDragging, setIsDragging] = useState(false)
   const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
-  
-  // Вычисляем пропорциональную высоту на основе ширины 80vw
-  const width = '80vw'
-  const height = 'calc(80vw / 1.333)'
+
+  // Оптимизируем вычисления размеров с useMemo
+  const dimensions = useMemo(() => ({
+    width: '80vw',
+    height: 'calc(80vw / 1.333)'
+  }), [])
   
   const handleDragStart = () => {
     setIsDragging(true)
@@ -186,9 +188,9 @@ function Clapperboard({ isActive, isVisible, onClose }) {
       onDragEnd={handleDragEnd}
           style={{
         position: 'relative',
-        width: width,
-        height: height,
-        minHeight: height,
+        width: dimensions.width,
+        height: dimensions.height,
+        minHeight: dimensions.height,
         pointerEvents: 'auto',
         transformOrigin: 'top right',
         cursor: isDragging ? 'grabbing' : 'grab'
@@ -341,7 +343,7 @@ function Clapperboard({ isActive, isVisible, onClose }) {
         </div>
     </motion.div>
   )
-}
+})
 
 // Компонент Галерея для активированной ленты (слайдер)
 function Gallery({ frames, initialIndex, onClose }) {
@@ -664,21 +666,8 @@ function Gallery({ frames, initialIndex, onClose }) {
   )
 }
 
-function ProgressChart({ progressMotionValue }) {
+const ProgressChart = memo(function ProgressChart({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
-  const lastUpdateRef = useRef(0)
-
-  // Оптимизация: дебаунсинг обновлений диаграммы (обновляем каждые 100ms вместо каждого кадра)
-  useMotionValueEvent(progressMotionValue, "change", (latest) => {
-    const now = Date.now()
-    const progressPercent = Math.min(Math.max(latest * 100, 0), 100)
-
-    // Обновляем только если прошло 100ms и значимое изменение (>1%)
-    if (now - lastUpdateRef.current > 100 && Math.abs(progressPercent - progress) > 1) {
-      setProgress(progressPercent)
-      lastUpdateRef.current = now
-    }
-  })
 
   // Внешний круг - больше элементов, зависящих от скролла
   const outerData = [
@@ -706,8 +695,8 @@ function ProgressChart({ progressMotionValue }) {
   ]
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <PieChart width={600} height={600}>
+    <div key="progress-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <PieChart key="pie-chart" width={600} height={600}>
         {/* Внешний круг */}
         <Pie
           data={outerData}
@@ -759,26 +748,14 @@ function ProgressChart({ progressMotionValue }) {
       </PieChart>
     </div>
   )
-}
+})
 
 // Компонент линейной диаграммы с точками, зависящими от скролла
-function LineChartComponent({ progressMotionValue }) {
+const LineChartComponent = memo(function LineChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
-  const lastUpdateRef = useRef(0)
 
-  // Оптимизация: дебаунсинг обновлений диаграммы
-  useMotionValueEvent(progressMotionValue, "change", (latest) => {
-    const now = Date.now()
-    const progressPercent = Math.min(Math.max(latest * 100, 0), 100)
-
-    if (now - lastUpdateRef.current > 100 && Math.abs(progressPercent - progress) > 1) {
-      setProgress(progressPercent)
-      lastUpdateRef.current = now
-    }
-  })
-
-  // Создаем данные для диаграммы - точки двигаются вверх и вниз в зависимости от скролла
-  const data = [
+  // Мемоизация данных для предотвращения перерисовки точек (Dots)
+  const data = useMemo(() => [
     { name: 'A', value: 20 + progress * 0.3, value2: 30 - progress * 0.2 }, // Первая линия вверх, вторая вниз
     { name: 'B', value: 50 - progress * 0.2, value2: 40 + progress * 0.3 }, // Первая вниз, вторая вверх
     { name: 'C', value: 30 + progress * 0.4, value2: 50 - progress * 0.25 }, // Первая вверх, вторая вниз
@@ -789,12 +766,14 @@ function LineChartComponent({ progressMotionValue }) {
     { name: 'H', value: 55 - progress * 0.15, value2: 45 + progress * 0.2 }, // Первая вниз, вторая вверх
     { name: 'I', value: 35 + progress * 0.3, value2: 50 - progress * 0.35 }, // Первая вверх, вторая вниз
     { name: 'J', value: 65 - progress * 0.4, value2: 30 + progress * 0.45 }  // Первая вниз, вторая вверх
-  ]
+  ], [progress])
 
   return (
-    <div style={{ 
-      width: '100%', 
-      height: '100%', 
+    <div
+      key="line-chart-container"
+      style={{
+      width: '100%',
+      height: '100%',
       position: 'absolute',
       top: 0,
       left: 0,
@@ -802,7 +781,7 @@ function LineChartComponent({ progressMotionValue }) {
       zIndex: 1,
       pointerEvents: 'none'
     }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer key="line-responsive-container" width="100%" height="100%">
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
           <XAxis 
@@ -817,27 +796,32 @@ function LineChartComponent({ progressMotionValue }) {
             domain={[0, 100]}
             hide={true}
           />
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+          <Tooltip
+            key="line-tooltip"
+            cursor={false}
+            isAnimationActive={false}
+            contentStyle={{
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
               border: '1px solid rgba(255, 255, 255, 0.3)',
               color: '#ffffff'
             }}
           />
           {/* Старая линия с точками */}
-          <Line 
-            type="monotone" 
-            dataKey="value" 
-            stroke="#ffffff" 
+          <Line
+            key="line1"
+            type="monotone"
+            dataKey="value"
+            stroke="#ffffff"
             strokeWidth={3}
             dot={{ fill: '#ffffff', r: 6 }}
             activeDot={{ r: 8 }}
           />
           {/* Новая угловатая линия без точек */}
-          <Line 
-            type="step" 
-            dataKey="value2" 
-            stroke="#ffffff" 
+          <Line
+            key="line2"
+            type="step"
+            dataKey="value2"
+            stroke="#ffffff"
             strokeWidth={2}
             dot={false}
             strokeOpacity={0.7}
@@ -846,23 +830,11 @@ function LineChartComponent({ progressMotionValue }) {
       </ResponsiveContainer>
     </div>
   )
-}
+})
 
 // Компонент радарной диаграммы
-function RadarChartComponent({ progressMotionValue }) {
+const RadarChartComponent = memo(function RadarChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
-  const lastUpdateRef = useRef(0)
-
-  // Оптимизация: дебаунсинг обновлений диаграммы
-  useMotionValueEvent(progressMotionValue, "change", (latest) => {
-    const now = Date.now()
-    const progressPercent = Math.min(Math.max(latest * 100, 0), 100)
-
-    if (now - lastUpdateRef.current > 100 && Math.abs(progressPercent - progress) > 1) {
-      setProgress(progressPercent)
-      lastUpdateRef.current = now
-    }
-  })
 
   const data = [
     { subject: 'A', value: 50 + progress * 0.3, fullMark: 100 },
@@ -874,9 +846,9 @@ function RadarChartComponent({ progressMotionValue }) {
   ]
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RadarChart data={data}>
+    <div key="radar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radar-responsive-container" width="100%" height="100%">
+        <RadarChart key="radar-chart" data={data}>
           <PolarGrid stroke="#ffffff" strokeOpacity={0.3} />
           <PolarAngleAxis 
             dataKey="subject" 
@@ -899,37 +871,27 @@ function RadarChartComponent({ progressMotionValue }) {
       </ResponsiveContainer>
     </div>
   )
-}
+})
 
 // Компонент радиальной столбчатой диаграммы, зависимый от скролла
-function RadialBarChartComponent({ progressMotionValue }) {
+const RadialBarChartComponent = memo(function RadialBarChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
-  const lastUpdateRef = useRef(0)
 
-  // Оптимизация: дебаунсинг обновлений диаграммы
-  useMotionValueEvent(progressMotionValue, "change", (latest) => {
-    const now = Date.now()
-    const progressPercent = Math.min(Math.max(latest * 100, 0), 100)
-
-    if (now - lastUpdateRef.current > 100 && Math.abs(progressPercent - progress) > 1) {
-      setProgress(progressPercent)
-      lastUpdateRef.current = now
-    }
-  })
-
-  const data = [
+  // Мемоизация данных для предотвращения перерисовки секторов (RadialBarSectors)
+  const data = useMemo(() => [
     { name: 'A', value: 20 + progress * 0.3, fill: '#ffffff' },
     { name: 'B', value: 40 - progress * 0.2, fill: '#ffffff' },
     { name: 'C', value: 60 + progress * 0.4, fill: '#ffffff' },
     { name: 'D', value: 30 - progress * 0.3, fill: '#ffffff' },
     { name: 'E', value: 50 + progress * 0.25, fill: '#ffffff' },
     { name: 'F', value: 70 - progress * 0.35, fill: '#ffffff' }
-  ]
+  ], [progress])
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <RadialBarChart 
+    <div key="radial-bar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radial-responsive-container" width="100%" height="100%">
+        <RadialBarChart
+          key="radial-bar-chart" 
           cx="50%" 
           cy="50%" 
           innerRadius="20%" 
@@ -938,8 +900,9 @@ function RadialBarChartComponent({ progressMotionValue }) {
           startAngle={90}
           endAngle={-270}
         >
-          <RadialBar 
-            dataKey="value" 
+          <RadialBar
+            key="radial-bar"
+            dataKey="value"
             cornerRadius={4}
             fill="rgba(255, 255, 255, 0.3)"
             stroke="#ffffff"
@@ -949,7 +912,7 @@ function RadialBarChartComponent({ progressMotionValue }) {
       </ResponsiveContainer>
     </div>
   )
-}
+})
 
 // Компонент карусели с постерами фильмов (вращающаяся карусель)
 const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValues = null }) {
@@ -2280,12 +2243,12 @@ export default function Home() {
     // Убираем else блок - окно остается видимым до ручного закрытия
   }, [flashActive])
   
-  const handleClapperboardClose = () => {
+  const handleClapperboardClose = useCallback(() => {
     setClapperboardActive(false)
     setTimeout(() => {
       setClapperboardVisible(false)
     }, 600) // Время на анимацию закрытия
-  }
+  }, [])
 
   // Кастомный скролл - синхронизируем customScrollTop с реальным scrollY
   const isUpdatingScroll = useRef(false)
@@ -2324,7 +2287,7 @@ export default function Home() {
     }
   }, [customScrollTop])
   
-  // Обработка wheel событий для кастомного скролла
+  // Обработка wheel событий для кастомного скролла (десктоп)
   useEffect(() => {
     if (!containerRef.current) return
     
@@ -2342,6 +2305,48 @@ export default function Home() {
     
     return () => {
       container.removeEventListener('wheel', handleWheel)
+    }
+  }, [customScrollTop])
+  
+  // Обработка touch событий для мобильных устройств
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const container = containerRef.current
+    let touchStartY = 0
+    let touchStartScroll = 0
+    let isTouching = false
+    
+    const handleTouchStart = (e) => {
+      touchStartY = e.touches[0].clientY
+      touchStartScroll = customScrollTop.get()
+      isTouching = true
+    }
+    
+    const handleTouchMove = (e) => {
+      if (!isTouching) return
+      
+      const touchCurrentY = e.touches[0].clientY
+      const deltaY = touchStartY - touchCurrentY
+      const maxScroll = container.scrollHeight - container.clientHeight
+      const newScroll = Math.max(0, Math.min(maxScroll, touchStartScroll + deltaY))
+      customScrollTop.set(newScroll)
+    }
+    
+    const handleTouchEnd = () => {
+      isTouching = false
+    }
+    
+    container.addEventListener('touchstart', handleTouchStart, { passive: true })
+    container.addEventListener('touchmove', handleTouchMove, { passive: true })
+    container.addEventListener('touchend', handleTouchEnd, { passive: true })
+    container.addEventListener('touchcancel', handleTouchEnd, { passive: true })
+    
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart)
+      container.removeEventListener('touchmove', handleTouchMove)
+      container.removeEventListener('touchend', handleTouchEnd)
+      container.removeEventListener('touchcancel', handleTouchEnd)
     }
   }, [customScrollTop])
   
@@ -2565,14 +2570,16 @@ export default function Home() {
 
     <div 
       ref={containerRef} 
+      className="main-scroll-container"
       style={{ 
         position: 'fixed',
         top: 0,
         left: 0,
         width: '100vw',
         height: '100vh',
-        overflow: 'hidden', // Отключаем нативный скролл
-        overflowX: 'hidden'
+        overflow: 'hidden', // Отключаем нативный скролл на десктопе
+        overflowX: 'hidden',
+        touchAction: 'pan-y' // Разрешаем вертикальный touch-скролл на мобильных
       }}
     >
       {/* Ленты размещены внутри скроллящейся зоны */}
