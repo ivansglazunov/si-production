@@ -2616,10 +2616,9 @@ export default function Home() {
         {/* Индикатор прогресса первого экрана */}
         <div style={{
           position: 'sticky',
-          top: '16px',
+          top: '70px',
           width: 'fit-content',
-          marginLeft: 'auto',
-          marginRight: '16px',
+          left: '16px',
           color: '#ffffff',
           fontSize: 'clamp(14px, 2vw, 18px)',
           fontFamily: "'Science Gothic', monospace",
@@ -2665,6 +2664,35 @@ export default function Home() {
           overflowX: 'hidden'
         }}
       >
+        {/* Индикатор прогресса второго экрана - обертка для правильной работы sticky */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 1000
+        }}>
+          <div style={{
+            position: 'sticky',
+            top: '45px',
+            width: 'fit-content',
+            marginLeft: 'auto',
+            marginRight: '16px',
+            color: '#ffffff',
+            fontSize: 'clamp(14px, 2vw, 18px)',
+            fontFamily: "'Science Gothic', monospace",
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            backdropFilter: 'blur(4px)',
+            pointerEvents: 'none'
+          }}>
+            Запуск процессов: {secondScreenProgressText}%
+          </div>
+        </div>
+        
         {/* Статические помехи как на старой пленке - зернистость */}
         <GrainLayerComponent
           zIndex={100}
@@ -2760,26 +2788,6 @@ export default function Home() {
         {/* Движущиеся ленты перфорации по границам экрана */}
         <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" mouseOffset={perforationMouseOffset} />
         <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" mouseOffset={perforationMouseOffset} />
-        
-        {/* Индикатор прогресса второго экрана */}
-        <div style={{
-          position: 'sticky',
-          top: '16px',
-          width: 'fit-content',
-          marginLeft: 'auto',
-          marginRight: '16px',
-              color: '#ffffff',
-          fontSize: 'clamp(14px, 2vw, 18px)',
-          fontFamily: "'Science Gothic', monospace",
-          zIndex: 1000,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          padding: '8px 16px',
-          borderRadius: '4px',
-          backdropFilter: 'blur(4px)',
-          pointerEvents: 'none'
-        }}>
-          Запуск процессов: {secondScreenProgressText}%
-        </div>
         
         {/* Линейная диаграмма на весь экран */}
         <LineChartComponent progressMotionValue={secondScreenScrollProgress} />
