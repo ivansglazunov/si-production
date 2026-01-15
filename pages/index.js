@@ -1140,6 +1140,256 @@ function MoviesCarousel({ movies }) {
   )
 }
 
+// Компонент эффекта помех/повреждения пленки для второго экрана
+function FilmGrainEffect({ scrollProgress }) {
+  const [grainIntensity, setGrainIntensity] = useState(0)
+  const [scratchOffset, setScratchOffset] = useState(0)
+  const [rgbSplit, setRgbSplit] = useState(0)
+  const [flicker, setFlicker] = useState(1)
+
+  // Обновляем интенсивность эффектов на основе скролла
+  useMotionValueEvent(scrollProgress, "change", (latest) => {
+    const progress = Math.min(Math.max(latest, 0), 1)
+    setGrainIntensity(progress)
+    setScratchOffset(progress * 200)
+    setRgbSplit(progress * 8) // Максимальное смещение RGB каналов 8px
+    // Flicker эффект - случайные вспышки при скролле
+    setFlicker(1 - (Math.random() * 0.15 * progress))
+  })
+
+  // Генерируем случайные царапины
+  const scratches = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    top: Math.random() * 100,
+    left: Math.random() * 100,
+    width: Math.random() * 300 + 100,
+    opacity: Math.random() * 0.5 + 0.2,
+    delay: Math.random() * 2
+  }))
+
+  return (
+    <>
+      {/* Основной слой зернистости - более заметный */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 100,
+          opacity: Math.max(0.3, grainIntensity * 0.8),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.3) 3px),
+            repeating-linear-gradient(90deg, rgba(0,0,0,0.2) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.2) 3px),
+            repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.05) 3px)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.3) brightness(0.85)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 100}% ${Math.random() * 100}%`,
+            `${Math.random() * 100}% ${Math.random() * 100}%`
+          ]
+        }}
+        transition={{
+          duration: 0.05,
+          repeat: Infinity,
+          repeatType: 'reverse'
+        }}
+      />
+
+      {/* RGB Split эффект - смещение цветовых каналов */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 101,
+          opacity: Math.max(0.2, grainIntensity * 0.7),
+          background: `
+            linear-gradient(to right, 
+              rgba(255, 0, 0, 0.2) 0%, 
+              transparent ${rgbSplit}px,
+              transparent calc(100% - ${rgbSplit}px),
+              rgba(0, 0, 255, 0.2) 100%)
+          `,
+          mixBlendMode: 'screen',
+          transform: `translateX(${rgbSplit * 0.3}px)`,
+          filter: `blur(${rgbSplit * 0.1}px)`
+        }}
+      />
+
+      {/* Горизонтальные царапины */}
+      {scratches.map((scratch) => (
+        <motion.div
+          key={scratch.id}
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '3px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.6), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity)),
+            transform: `translateX(${scratchOffset * 0.5}px)`,
+            boxShadow: '0 0 4px rgba(255, 255, 255, 0.3)'
+          }}
+          animate={{
+            x: [0, scratchOffset * 0.5, 0],
+            opacity: [
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5),
+              Math.max(0.2, scratch.opacity * Math.max(0.3, grainIntensity)),
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5)
+            ]
+          }}
+          transition={{
+            duration: 1.5 + Math.random() * 2,
+            repeat: Infinity,
+            delay: scratch.delay,
+            ease: 'linear'
+          }}
+        />
+      ))}
+
+      {/* Вертикальные полосы повреждений */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 103,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          backgroundImage: `
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.1) 2px,
+              rgba(255, 255, 255, 0.1) 3px,
+              transparent 3px,
+              transparent 5px
+            )
+          `,
+          backgroundSize: '80px 100%',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          backgroundPosition: [`${scratchOffset * 0.3}px 0`, `${scratchOffset * 0.3 + 80}px 0`]
+        }}
+        transition={{
+          duration: 0.3,
+          repeat: Infinity,
+          ease: 'linear'
+        }}
+      />
+
+      {/* Flicker эффект - мерцание */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 104,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          opacity: [flicker * 0.4, flicker * 0.8, flicker * 0.4]
+        }}
+        transition={{
+          duration: 0.08 + Math.random() * 0.15,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+
+      {/* Дополнительный шум через canvas-like эффект */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 99,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          background: `
+            radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.04) 0%, transparent 40%),
+            radial-gradient(circle at 90% 20%, rgba(0, 0, 0, 0.04) 0%, transparent 40%)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'difference',
+          filter: 'blur(1px)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 50}% ${Math.random() * 50}%`,
+            `${Math.random() * 50 + 50}% ${Math.random() * 50 + 50}%`
+          ]
+        }}
+        transition={{
+          duration: 2 + Math.random() * 1.5,
+          repeat: Infinity,
+          repeatType: 'reverse',
+          ease: 'easeInOut'
+        }}
+      />
+      
+      {/* Дополнительный слой статического шума */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 105,
+          opacity: Math.max(0.15, grainIntensity * 0.5),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px)
+          `,
+          backgroundSize: '4px 4px',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.5)'
+        }}
+        animate={{
+          opacity: [
+            Math.max(0.15, grainIntensity * 0.5),
+            Math.max(0.25, grainIntensity * 0.7),
+            Math.max(0.15, grainIntensity * 0.5)
+          ]
+        }}
+        transition={{
+          duration: 0.1,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+    </>
+  )
+}
+
 // Компонент звездного неба с мерцающими звездами
 // Компонент сетки с названиями партнеров
 function PartnersGrid({ partners }) {
@@ -1677,9 +1927,13 @@ export default function Home() {
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          overflow: 'hidden'
         }}
       >
+        {/* Эффект помех/повреждения пленки */}
+        <FilmGrainEffect scrollProgress={secondScreenScrollProgress} />
+        
         {/* Индикатор прогресса второго экрана */}
         <div style={{
           position: 'sticky',
