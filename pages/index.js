@@ -347,37 +347,71 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
 })
 
 // Компонент Галерея для активированной ленты (слайдер)
-function Gallery({ frames, initialIndex, onClose }) {
-  const [currentIndex, setCurrentIndex] = useState(initialIndex)
+function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(initialIndex)
+  const [currentLentaIndex, setCurrentLentaIndex] = useState(lentaIndex || 0)
   const [isDragging, setIsDragging] = useState(false)
   const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
   
-  // Обновляем индекс при изменении initialIndex
+  // Получаем текущую ленту и её frames
+  const currentLenta = allLentas && allLentas[currentLentaIndex] ? allLentas[currentLentaIndex] : null
+  const currentFrames = currentLenta ? currentLenta.frames : frames
+  
+  // Обновляем индексы при изменении initialIndex или lentaIndex
   useEffect(() => {
-    setCurrentIndex(initialIndex)
-  }, [initialIndex])
+    setCurrentFrameIndex(initialIndex)
+    if (lentaIndex !== undefined) {
+      setCurrentLentaIndex(lentaIndex)
+    }
+  }, [initialIndex, lentaIndex])
 
   // Обработка клавиатуры для навигации
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowLeft') {
-        handlePrev()
+        handlePrevFrame()
       } else if (e.key === 'ArrowRight') {
-        handleNext()
+        handleNextFrame()
+      } else if (e.key === 'ArrowUp') {
+        handlePrevLenta()
+      } else if (e.key === 'ArrowDown') {
+        handleNextLenta()
       } else if (e.key === 'Escape') {
         onClose()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentIndex])
+  }, [currentFrameIndex, currentLentaIndex, currentFrames, allLentas])
 
-  const handlePrev = () => {
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : frames.length - 1))
+  // Навигация по кадрам (горизонтально)
+  const handlePrevFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev > 0 ? prev - 1 : currentFrames.length - 1))
   }
 
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev < frames.length - 1 ? prev + 1 : 0))
+  const handleNextFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev < currentFrames.length - 1 ? prev + 1 : 0))
+  }
+
+  // Навигация по лентам (вертикально)
+  const handlePrevLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev > 0 ? prev - 1 : allLentas.length - 1
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleNextLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev < allLentas.length - 1 ? prev + 1 : 0
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
   }
 
   const handleVerticalDragStart = () => {
@@ -385,10 +419,16 @@ function Gallery({ frames, initialIndex, onClose }) {
   }
 
   const handleVerticalDragEnd = (event, info) => {
-    // Вертикальный drag - закрытие слайдера
-    const threshold = window.innerHeight * 0.25 // 25% от высоты экрана
-    if (Math.abs(info.offset.y) > threshold) {
-      onClose()
+    // Вертикальный drag - переключение между лентами
+    if (!allLentas || allLentas.length === 0) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены ленты
+    if (info.offset.y > threshold) {
+      handlePrevLenta()
+    } else if (info.offset.y < -threshold) {
+      handleNextLenta()
     }
     setIsDragging(false)
   }
@@ -398,12 +438,16 @@ function Gallery({ frames, initialIndex, onClose }) {
   }
 
   const handleHorizontalDragEnd = (event, info) => {
-    // Горизонтальный drag - смена слайдов
-    const threshold = 50 // Минимальное расстояние для смены слайда
+    // Горизонтальный drag - смена кадров в ленте
+    if (!currentFrames) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены кадра
     if (info.offset.x > threshold) {
-      handlePrev()
+      handlePrevFrame()
     } else if (info.offset.x < -threshold) {
-      handleNext()
+      handleNextFrame()
     }
     setIsDragging(false)
   }
@@ -446,65 +490,160 @@ function Gallery({ frames, initialIndex, onClose }) {
           overflow: 'hidden'
         }}
       >
-        {/* Контейнер слайдов */}
-        <div
-          style={{
-            position: 'relative',
-            width: '90vw',
-            height: 'calc(var(--vh, 1vh) * 90)',
-            maxWidth: '1400px',
-            maxHeight: '900px'
-          }}
-        >
-          {frames.map((color, index) => {
-            const isActive = index === currentIndex
-            return (
-              <motion.div
-                key={index}
-                initial={false}
-                animate={{
-                  opacity: isActive ? 1 : 0,
-                  scale: isActive ? 1 : 0.8,
-                  x: isActive ? 0 : (index < currentIndex ? -100 : 100)
-                }}
-                transition={{
-                  duration: 0.4,
-                  ease: [0.25, 0.46, 0.45, 0.94]
-                }}
-                drag="x"
-                dragConstraints={dragConstraints}
-                dragElastic={0.2}
-                onDragStart={handleHorizontalDragStart}
-                onDragEnd={handleHorizontalDragEnd}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  pointerEvents: isActive ? 'auto' : 'none',
-                  cursor: isDragging ? 'grabbing' : 'grab'
-                }}
-              >
-                <div
+        {/* Вертикальная карусель всех лент */}
+        {allLentas && allLentas.length > 0 ? (
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Все ленты вертикально */}
+            {allLentas.map((lenta, lentaIdx) => {
+              const isLentaActive = lentaIdx === currentLentaIndex
+              return (
+                <motion.div
+                  key={lenta.id}
+                  initial={false}
+                  animate={{
+                    opacity: isLentaActive ? 1 : 0,
+                    y: isLentaActive ? 0 : (lentaIdx < currentLentaIndex ? -100 : 100),
+                    scale: isLentaActive ? 1 : 0.8
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
                   style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
                     width: '100%',
                     height: '100%',
-                    backgroundColor: color,
-                    borderRadius: '12px',
-                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    pointerEvents: isLentaActive ? 'auto' : 'none'
                   }}
-                />
-              </motion.div>
-            )
-          })}
-        </div>
+                >
+                  {/* Кадры текущей ленты горизонтально */}
+                  {isLentaActive && lenta.frames.map((color, frameIdx) => {
+                    const isFrameActive = frameIdx === currentFrameIndex
+                    return (
+                      <motion.div
+                        key={`${lenta.id}-${frameIdx}`}
+                        initial={false}
+                        animate={{
+                          opacity: isFrameActive ? 1 : 0,
+                          scale: isFrameActive ? 1 : 0.8,
+                          x: isFrameActive ? 0 : (frameIdx < currentFrameIndex ? -100 : 100)
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          ease: [0.25, 0.46, 0.45, 0.94]
+                        }}
+                        drag="x"
+                        dragConstraints={dragConstraints}
+                        dragElastic={0.2}
+                        onDragStart={handleHorizontalDragStart}
+                        onDragEnd={handleHorizontalDragEnd}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          pointerEvents: isFrameActive ? 'auto' : 'none',
+                          cursor: isDragging ? 'grabbing' : 'grab'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: color,
+                            borderRadius: '12px',
+                            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        />
+                      </motion.div>
+                    )
+                  })}
+                </motion.div>
+              )
+            })}
+          </div>
+        ) : (
+          /* Fallback для старого режима без всех лент */
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px'
+            }}
+          >
+            {currentFrames && currentFrames.map((color, index) => {
+              const isActive = index === currentFrameIndex
+              return (
+                <motion.div
+                  key={index}
+                  initial={false}
+                  animate={{
+                    opacity: isActive ? 1 : 0,
+                    scale: isActive ? 1 : 0.8,
+                    x: isActive ? 0 : (index < currentFrameIndex ? -100 : 100)
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  drag="x"
+                  dragConstraints={dragConstraints}
+                  dragElastic={0.2}
+                  onDragStart={handleHorizontalDragStart}
+                  onDragEnd={handleHorizontalDragEnd}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isActive ? 'auto' : 'none',
+                    cursor: isDragging ? 'grabbing' : 'grab'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: color,
+                      borderRadius: '12px',
+                      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  />
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Кнопка закрытия в левом верхнем углу */}
         <button
@@ -541,11 +680,11 @@ function Gallery({ frames, initialIndex, onClose }) {
           ×
         </button>
 
-        {/* Кнопки навигации */}
+        {/* Кнопки навигации по кадрам (горизонтально) */}
         <button
           onClick={(e) => {
             e.stopPropagation()
-            handlePrev()
+            handlePrevFrame()
           }}
           style={{
             position: 'absolute',
@@ -580,7 +719,7 @@ function Gallery({ frames, initialIndex, onClose }) {
         <button
           onClick={(e) => {
             e.stopPropagation()
-            handleNext()
+            handleNextFrame()
           }}
           style={{
             position: 'absolute',
@@ -612,46 +751,92 @@ function Gallery({ frames, initialIndex, onClose }) {
           ›
         </button>
 
-        {/* Индикатор текущего слайда */}
+        {/* Кнопки навигации по лентам (вертикально) - только если есть все ленты */}
+        {allLentas && allLentas.length > 0 && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePrevLenta()
+              }}
+              style={{
+                position: 'absolute',
+                top: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↑
+            </button>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleNextLenta()
+              }}
+              style={{
+                position: 'absolute',
+                bottom: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↓
+            </button>
+          </>
+        )}
+
+        {/* Индикатор текущего кадра и ленты */}
         <div
           style={{
             position: 'absolute',
-            bottom: '32px',
+            bottom: allLentas && allLentas.length > 0 ? '100px' : '32px',
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
             gap: '8px',
-            zIndex: 100002
-          }}
-        >
-          {frames.map((_, index) => (
-            <div
-              key={index}
-              onClick={(e) => {
-                e.stopPropagation()
-                setCurrentIndex(index)
-              }}
-              style={{
-                width: index === currentIndex ? '32px' : '8px',
-                height: '8px',
-                borderRadius: '4px',
-                backgroundColor: index === currentIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Счетчик слайдов */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '32px',
-            right: '32px',
-            color: '#ffffff',
-            fontSize: '18px',
-            fontFamily: "'Science Gothic', monospace",
             zIndex: 100002,
             backgroundColor: 'rgba(0, 0, 0, 0.5)',
             padding: '8px 16px',
@@ -659,8 +844,50 @@ function Gallery({ frames, initialIndex, onClose }) {
             backdropFilter: 'blur(10px)'
           }}
         >
-          {currentIndex + 1} / {frames.length}
+          {allLentas && allLentas.length > 0 && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '14px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              Лента {currentLentaIndex + 1} / {allLentas.length}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              display: 'flex',
+              gap: '8px'
+            }}>
+              {currentFrames.map((_, index) => (
+                <div
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCurrentFrameIndex(index)
+                  }}
+                  style={{
+                    width: index === currentFrameIndex ? '32px' : '8px',
+                    height: '8px',
+                    borderRadius: '4px',
+                    backgroundColor: index === currentFrameIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '12px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              {currentFrameIndex + 1} / {currentFrames.length}
+            </div>
+          )}
         </div>
+
       </motion.div>
     </>
   )
@@ -2413,8 +2640,51 @@ export default function Home() {
     { title: 'Вызов', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 }
   ]
   
+  // Генерация frames для ленты на основе lentaId (для стабильности)
+  const generateFramesForLenta = (lentaId, frameCount) => {
+    // Используем lentaId как seed для генерации стабильных цветов
+    const seed = lentaId.split('-')[1] // Извлекаем номер из "lenta-1" -> "1"
+    const seedNum = parseInt(seed) || 0
+    
+    return Array.from({ length: frameCount }, (_, i) => {
+      // Простая детерминированная генерация на основе seed и индекса
+      const r = (seedNum * 17 + i * 23) % 256
+      const g = (seedNum * 31 + i * 37) % 256
+      const b = (seedNum * 41 + i * 43) % 256
+      return `rgb(${r}, ${g}, ${b})`
+    })
+  }
+
+  // Массив всех лент с их данными
+  const allLentas = useMemo(() => [
+    { id: 'lenta-1', frameCount: 8 },
+    { id: 'lenta-2', frameCount: 8 },
+    { id: 'lenta-3', frameCount: 8 },
+    { id: 'lenta-4', frameCount: 8 },
+    { id: 'lenta-5', frameCount: 8 },
+    { id: 'lenta-6', frameCount: 8 },
+    { id: 'lenta-7', frameCount: 8 },
+    { id: 'lenta-8', frameCount: 8 },
+    { id: 'lenta-9', frameCount: 8 },
+    { id: 'lenta-10', frameCount: 8 },
+    { id: 'lenta-11', frameCount: 8 },
+    { id: 'lenta-12', frameCount: 8 },
+    { id: 'lenta-13', frameCount: 8 },
+  ].map(lenta => ({
+    ...lenta,
+    frames: generateFramesForLenta(lenta.id, lenta.frameCount)
+  })), [])
+
   const handleFrameClick = (lentaId, frameIndex, frames) => {
-    setActiveGallery({ lentaId, frameIndex, frames })
+    // Находим индекс ленты в массиве
+    const lentaIndex = allLentas.findIndex(l => l.id === lentaId)
+    setActiveGallery({ 
+      lentaId, 
+      frameIndex, 
+      frames,
+      lentaIndex: lentaIndex >= 0 ? lentaIndex : 0,
+      allLentas 
+    })
   }
   
   const handleCloseGallery = () => {
@@ -2630,6 +2900,8 @@ export default function Home() {
           frames={activeGallery.frames}
           initialIndex={activeGallery.frameIndex}
           onClose={handleCloseGallery}
+          lentaIndex={activeGallery.lentaIndex}
+          allLentas={activeGallery.allLentas}
         />
       )}
       
