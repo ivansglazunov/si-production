@@ -4,8 +4,23 @@ import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 
 // Компонент пункта договора с галочкой
 function ContractItem({ text, progress, threshold, textColor }) {
+  // progress может быть motion value или числом
+  const [progressValue, setProgressValue] = useState(typeof progress === 'number' ? progress : 0)
+  
+  // Если progress - motion value, подписываемся на изменения
+  useEffect(() => {
+    if (typeof progress === 'object' && 'on' in progress) {
+      const unsubscribe = progress.on('change', (latest) => {
+        setProgressValue(latest * 100)
+      })
+      return unsubscribe
+    } else if (typeof progress === 'number') {
+      setProgressValue(progress)
+    }
+  }, [progress])
+  
   // Галочка ставится когда progress >= threshold
-  const isChecked = progress >= threshold
+  const isChecked = progressValue >= threshold
 
   return (
     <div style={{
@@ -183,7 +198,7 @@ function Clapperboard({ isActive, isVisible, onClose }) {
         bottom: 0,
         right: 0,
         width: '100%',
-        height: '50%',
+        height: '60%', // Увеличено с 50% до 60% для лучшего размещения контактов
         backgroundColor: '#000000',
         border: '2px solid #333',
         display: 'flex',
@@ -193,7 +208,8 @@ function Clapperboard({ isActive, isVisible, onClose }) {
         fontFamily: "'Science Gothic', monospace",
         color: '#ffffff',
         zIndex: 1,
-        gap: '1rem'
+        gap: '1rem',
+        overflowY: 'auto' // Добавляем скролл если контент не вписывается
       }}>
         <div style={{ 
           display: 'flex', 
@@ -293,7 +309,7 @@ function Clapperboard({ isActive, isVisible, onClose }) {
             top: 0,
           right: 0,
             width: '100%',
-          height: '50%',
+          height: '40%', // Уменьшено с 50% до 40% чтобы освободить место для нижней зоны
           backgroundColor: '#000000',
           border: '2px solid #333',
           transformOrigin: 'bottom right',
@@ -1541,7 +1557,7 @@ function StarrySky({ starCount = 100 }) {
   )
 }
 
-function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId }) {
+function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef }) {
   // Генерируем случайные цвета для каждого кадра один раз при монтировании
   const [frames] = useState(() => {
     return Array.from({ length: frameCount }, () => {
@@ -1555,45 +1571,41 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
   // Состояние для отслеживания hover на каждом кадре
   const [hoveredIndex, setHoveredIndex] = useState(null)
 
-  // progress - текущий прогресс скролла (0-1 или 0-100%)
-  // center - значение прогресса, при котором лента должна быть в центре (0-1)
-  // Нормализуем progress к диапазону 0-1, если передан в процентах
-  const progressNormalized = progress > 1 ? progress / 100 : progress
+  // progress может быть motion value или числом
+  // Прямое преобразование progress в позицию без spring - синхронно со скроллом
+  // Если progress - motion value, используем его напрямую, иначе создаем из числа
+  const progressMotion = typeof progress === 'object' && 'get' in progress 
+    ? progress 
+    : useMotionValue(typeof progress === 'number' ? (progress > 1 ? progress / 100 : progress) : 0)
   
-  // Вычисляем целевую позицию ленты
-  let targetLeftPosition = (progressNormalized - center) * 500 * speed
-  if (inverse) {
-    targetLeftPosition = -targetLeftPosition
-  }
-  
-  // Создаем motion value для позиции
-  const motionValue = useMotionValue(targetLeftPosition)
-  
-  // Обновляем motion value при изменении целевой позиции
+  // Если progress - число, обновляем motion value
   useEffect(() => {
-    motionValue.set(targetLeftPosition)
-  }, [targetLeftPosition, motionValue])
+    if (typeof progress === 'number') {
+      const normalized = progress > 1 ? progress / 100 : progress
+      progressMotion.set(normalized)
+    }
+  }, [progress, progressMotion])
   
-  // Используем useSpring для плавной анимации с spring эффектом
-  const springPosition = useSpring(motionValue, {
-    stiffness: 50,
-    damping: 20,
-    mass: 1
+  // Прямое преобразование progress в позицию - без задержки, синхронно
+  const xPosition = useTransform(progressMotion, (prog) => {
+    let targetLeftPosition = (prog - center) * 500 * speed
+    if (inverse) {
+      targetLeftPosition = -targetLeftPosition
+    }
+    return `${targetLeftPosition}vw`
   })
-  
-  // Преобразуем spring значение в vw единицы для x transform
-  const xPosition = useTransform(springPosition, (value) => `${value}vw`)
 
   return (
-    // Внешний контейнер - позиционирование
+    // Внешний контейнер - позиционирование внутри скроллящейся области
+    // Используем position: absolute для позиционирования относительно скроллящегося контейнера
           <div style={{
-      position: 'fixed',
-      top: `calc(50% + ${topOffset}vh)`,
+      position: 'absolute',
+      top: `calc(50vh + ${topOffset}vh)`,
       left: '50%',
       transform: 'translate(-50%, -50%)',
       transformOrigin: 'center center',
       zIndex: 1000,
-      pointerEvents: 'none' // Пропускаем события мыши для скролла
+      pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
           }}>
       {/* Контейнер поворота - поворачивается на angle градусов */}
             <motion.div 
@@ -1609,9 +1621,18 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
             gap: 0, // Убираем отступы между кадрами для цельной ленты
             alignItems: 'stretch',
             justifyContent: 'center',
-            pointerEvents: 'none', // Пропускаем события мыши
+            pointerEvents: 'none', // Контейнер не перехватывает события - скролл проходит сквозь
             x: xPosition
-          }}>
+          }}
+          onWheel={(e) => {
+            // Пробрасываем скролл событие - не блокируем его
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            // Не блокируем события мыши для скролла
+            e.stopPropagation()
+          }}
+        >
           {/* Кадры ленты */}
           {frames.map((color, index) => {
             const isHovered = hoveredIndex === index
@@ -1626,7 +1647,30 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
                 key={index}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}
-                onClick={() => onFrameClick && onFrameClick(lentaId, index, frames)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onFrameClick) onFrameClick(lentaId, index, frames)
+                }}
+                onWheel={(e) => {
+                  // Пробрасываем скролл событие родителю - не блокируем скролл
+                  if (containerRef && containerRef.current) {
+                    // Не вызываем preventDefault, чтобы скролл работал естественно
+                    // Просто пробрасываем событие
+                    const scrollEvent = new WheelEvent('wheel', {
+                      deltaY: e.deltaY,
+                      deltaX: e.deltaX,
+                      bubbles: true,
+                      cancelable: true
+                    })
+                    containerRef.current.dispatchEvent(scrollEvent)
+                  }
+                }}
+                onTouchMove={(e) => {
+                  // Для touch устройств тоже пробрасываем скролл
+                  if (containerRef && containerRef.current) {
+                    e.stopPropagation()
+                  }
+                }}
                 style={{
                   width: `${frameWidth}px`,
                   height: `${frameHeight + borderWidth * 2}px`,
@@ -1639,7 +1683,8 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
                   transform: isHovered ? 'scale(1.1)' : 'scale(1)',
                   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                   cursor: 'pointer',
-                  pointerEvents: 'auto' // Кадры остаются кликабельными
+                  pointerEvents: 'auto', // Кадры кликабельны
+                  touchAction: 'pan-y' // Разрешаем вертикальный скролл на touch устройствах
                 }}
               >
                 {/* Контейнер для перфорации сверху */}
@@ -1747,10 +1792,17 @@ export default function Home() {
   const secondScreenRef = useRef(null)
   const thirdScreenRef = useRef(null)
   
-  const [progress, setProgress] = useState(0)
-  const [firstScreenProgress, setFirstScreenProgress] = useState(0)
-  const [secondScreenProgress, setSecondScreenProgress] = useState(0)
-  const [thirdScreenProgress, setThirdScreenProgress] = useState(0)
+  // Motion values для progress - без перерендеров
+  const progressMotionValue = useMotionValue(0)
+  const firstScreenProgressMotionValue = useMotionValue(0)
+  const secondScreenProgressMotionValue = useMotionValue(0)
+  const thirdScreenProgressMotionValue = useMotionValue(0)
+  
+  // Для отображения в UI (только для текста) - используем useState только для индикаторов
+  const [progressText, setProgressText] = useState(0)
+  const [firstScreenProgressText, setFirstScreenProgressText] = useState(0)
+  const [secondScreenProgressText, setSecondScreenProgressText] = useState(0)
+  const [thirdScreenProgressText, setThirdScreenProgressText] = useState(0)
   const [flashActive, setFlashActive] = useState(false)
   const [clapperboardActive, setClapperboardActive] = useState(true) // Изначально открыта
   const [clapperboardVisible, setClapperboardVisible] = useState(false) // Изначально скрыта
@@ -1870,39 +1922,68 @@ export default function Home() {
     layoutEffect: false
   })
 
-  // Вычисляем прогресс: full = all page - 1 page
-  // 0% когда scroll = 0
-  // 100% когда scroll = full
-  useMotionValueEvent(scrollY, "change", (latest) => {
+  // Вычисляем прогресс через useTransform - без перерендеров, прямое обновление DOM
+  // Используем useTransform для преобразования scrollY в progress (0-1)
+  useEffect(() => {
     if (!containerRef.current) return
     
     const container = containerRef.current
-    const viewportHeight = container.clientHeight // высота видимой области контейнера (1 page)
-    const containerHeight = container.scrollHeight // общая высота контейнера (all page)
-    const full = containerHeight - viewportHeight // all page - 1 page
-    
-    if (full <= 0) {
-      setProgress(0)
-      return
+    const updateProgress = () => {
+      const viewportHeight = container.clientHeight
+      const containerHeight = container.scrollHeight
+      const full = containerHeight - viewportHeight
+      
+      if (full <= 0) {
+        progressMotionValue.set(0)
+        return
+      }
+      
+      // Подписываемся на изменения scrollY и обновляем progressMotionValue
+      const unsubscribe = scrollY.on("change", (latest) => {
+        const progressValue = Math.min(Math.max((latest / full) * 100, 0), 100) / 100
+        progressMotionValue.set(progressValue)
+      })
+      
+      return unsubscribe
     }
     
-    // Прогресс = (scroll / full) * 100
-    const progressValue = (latest / full) * 100
-    setProgress(Math.min(Math.max(Math.round(progressValue), 0), 100))
-  })
-
-  // Обновляем прогресс каждого экрана
-  useMotionValueEvent(firstScreenScrollProgress, "change", (latest) => {
-    setFirstScreenProgress(Math.min(Math.max(Math.round(latest * 100), 0), 100))
-  })
-
-  useMotionValueEvent(secondScreenScrollProgress, "change", (latest) => {
-    setSecondScreenProgress(Math.min(Math.max(Math.round(latest * 100), 0), 100))
-  })
+    const unsubscribe = updateProgress()
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [scrollY, progressMotionValue])
   
-
-  useMotionValueEvent(thirdScreenScrollProgress, "change", (latest) => {
-    setThirdScreenProgress(Math.min(Math.max(Math.round(latest * 100), 0), 100))
+  // Преобразуем scrollYProgress в motion value напрямую
+  useEffect(() => {
+    const unsubscribe1 = firstScreenScrollProgress.on("change", (latest) => {
+      firstScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe2 = secondScreenScrollProgress.on("change", (latest) => {
+      secondScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe3 = thirdScreenScrollProgress.on("change", (latest) => {
+      thirdScreenProgressMotionValue.set(latest)
+    })
+    
+    return () => {
+      unsubscribe1()
+      unsubscribe2()
+      unsubscribe3()
+    }
+  }, [firstScreenScrollProgress, secondScreenScrollProgress, thirdScreenScrollProgress, firstScreenProgressMotionValue, secondScreenProgressMotionValue, thirdScreenProgressMotionValue])
+  
+  // Для отображения текста - обновляем редко (только для UI)
+  useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    setProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(firstScreenProgressMotionValue, "change", (latest) => {
+    setFirstScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(secondScreenProgressMotionValue, "change", (latest) => {
+    setSecondScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(thirdScreenProgressMotionValue, "change", (latest) => {
+    setThirdScreenProgressText(Math.round(latest * 100))
   })
 
   return (
@@ -1960,32 +2041,19 @@ export default function Home() {
         <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
             </div>
 
-      {/* Ленты размещены снаружи экранов с fixed позиционированием */}
-      {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
-      {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
-      {/* Первая лента: когда Составление плана 60%, лента по центру экрана, размер вдвое */}
-      <KinoLenta lentaId="lenta-1" frameCount={8} progress={progress / 100} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} />
-      
-      {/* Вторая лента: inverse (справа налево), центр при 90%, topOffset 25vh, противоположный угол */}
-      <KinoLenta lentaId="lenta-2" frameCount={8} progress={progress / 100} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} />
-      
-      {/* Ленты сверху - распределены пониже */}
-      <KinoLenta lentaId="lenta-3" frameCount={8} progress={progress / 100} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} />
-      <KinoLenta lentaId="lenta-4" frameCount={8} progress={progress / 100} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} />
-      <KinoLenta lentaId="lenta-5" frameCount={8} progress={progress / 100} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} />
-      <KinoLenta lentaId="lenta-6" frameCount={8} progress={progress / 100} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} />
-      <KinoLenta lentaId="lenta-7" frameCount={8} progress={progress / 100} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} />
-      <KinoLenta lentaId="lenta-8" frameCount={8} progress={progress / 100} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} />
-      <KinoLenta lentaId="lenta-9" frameCount={8} progress={progress / 100} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} />
-      <KinoLenta lentaId="lenta-10" frameCount={8} progress={progress / 100} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} />
-      
-      {/* Дополнительные ленты в центре */}
-      <KinoLenta lentaId="lenta-11" frameCount={8} progress={progress / 100} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} />
-      
-      {/* Дополнительные ленты снизу - меньше лент */}
-      <KinoLenta lentaId="lenta-12" frameCount={8} progress={progress / 100} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} />
-      <KinoLenta lentaId="lenta-13" frameCount={8} progress={progress / 100} center={0.85 * 0.6 / 3} topOffset={38} speed={1.1} angle={-20} inverse={true} onFrameClick={handleFrameClick} />
-      
+      {/* Линейная диаграмма для третьего экрана - fixed на весь экран, под контентом, но над фоном */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 5, // Под контентом третьего экрана (10), но выше звездного неба (1)
+        pointerEvents: 'none'
+      }}>
+        <LineChartComponent progressMotionValue={thirdScreenScrollProgress} />
+      </div>
+
     <div 
       ref={containerRef} 
       style={{ 
@@ -1998,7 +2066,38 @@ export default function Home() {
         overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch'
       }}
+      onWheel={(e) => {
+        // Убеждаемся, что скролл работает даже если курсор над лентами
+        // Событие уже обрабатывается контейнером, просто не блокируем его
+      }}
     >
+      {/* Ленты размещены внутри скроллящейся зоны */}
+      {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
+      {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
+      {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
+      {/* Первая лента: когда Составление плана 60%, лента по центру экрана, размер вдвое */}
+      <KinoLenta lentaId="lenta-1" frameCount={8} progress={progressMotionValue} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      
+      {/* Вторая лента: inverse (справа налево), центр при 90%, topOffset 25vh, противоположный угол */}
+      <KinoLenta lentaId="lenta-2" frameCount={8} progress={progressMotionValue} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      
+      {/* Ленты сверху - распределены пониже */}
+      <KinoLenta lentaId="lenta-3" frameCount={8} progress={progressMotionValue} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-4" frameCount={8} progress={progressMotionValue} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-5" frameCount={8} progress={progressMotionValue} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-6" frameCount={8} progress={progressMotionValue} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-7" frameCount={8} progress={progressMotionValue} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-8" frameCount={8} progress={progressMotionValue} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-9" frameCount={8} progress={progressMotionValue} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-10" frameCount={8} progress={progressMotionValue} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      
+      {/* Дополнительные ленты в центре */}
+      <KinoLenta lentaId="lenta-11" frameCount={8} progress={progressMotionValue} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      
+      {/* Дополнительные ленты снизу - меньше лент */}
+      <KinoLenta lentaId="lenta-12" frameCount={8} progress={progressMotionValue} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      <KinoLenta lentaId="lenta-13" frameCount={8} progress={progressMotionValue} center={0.85 * 0.6 / 3} topOffset={38} speed={1.1} angle={-20} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} />
+      
       {/* Индикатор прогресса в левом верхнем углу */}
       <div style={{
         position: 'fixed',
@@ -2014,7 +2113,7 @@ export default function Home() {
         backdropFilter: 'blur(4px)',
         pointerEvents: 'none'
       }}>
-        Прогресс кинопроизводства: {progress}%
+        Прогресс кинопроизводства: {progressText}%
             </div>
 
       {/* Первый экран */}
@@ -2044,7 +2143,7 @@ export default function Home() {
           backdropFilter: 'blur(4px)',
           pointerEvents: 'none'
         }}>
-          Составление плана: {firstScreenProgress}%
+          Составление плана: {firstScreenProgressText}%
             </div>
 
         {/* Надпись ПЕРВЫЙ ЭКРАН */}
@@ -2105,7 +2204,7 @@ export default function Home() {
           backdropFilter: 'blur(4px)',
           pointerEvents: 'none'
         }}>
-          Запуск процессов: {secondScreenProgress}%
+          Запуск процессов: {secondScreenProgressText}%
         </div>
         
         {/* Линейная диаграмма на весь экран */}
@@ -2232,11 +2331,11 @@ export default function Home() {
               paddingLeft: '2em',
               paddingRight: '2em'
             }}>
-              <ContractItem text="Согласен с условиями" progress={secondScreenProgress} threshold={35} textColor="#ffffff" />
-              <ContractItem text="Принимаю обязательства" progress={secondScreenProgress} threshold={40} textColor="#ffffff" />
-              <ContractItem text="Подтверждаю ознакомление" progress={secondScreenProgress} threshold={50} textColor="#ffffff" />
-              <ContractItem text="Готов к сотрудничеству" progress={secondScreenProgress} threshold={60} textColor="#ffffff" />
-              <ContractItem text="Принимаю ответственность" progress={secondScreenProgress} threshold={65} textColor="#ffffff" />
+              <ContractItem text="Согласен с условиями" progress={secondScreenProgressMotionValue} threshold={35} textColor="#ffffff" />
+              <ContractItem text="Принимаю обязательства" progress={secondScreenProgressMotionValue} threshold={40} textColor="#ffffff" />
+              <ContractItem text="Подтверждаю ознакомление" progress={secondScreenProgressMotionValue} threshold={50} textColor="#ffffff" />
+              <ContractItem text="Готов к сотрудничеству" progress={secondScreenProgressMotionValue} threshold={60} textColor="#ffffff" />
+              <ContractItem text="Принимаю ответственность" progress={secondScreenProgressMotionValue} threshold={65} textColor="#ffffff" />
             </div>
 
             {/* Кнопка Подписать снизу */}
@@ -2316,7 +2415,7 @@ export default function Home() {
           backdropFilter: 'blur(4px)',
           pointerEvents: 'none'
         }}>
-          Монтаж: {thirdScreenProgress}%
+          Монтаж: {thirdScreenProgressText}%
         </div>
 
         {/* Секция ПРОЕКТЫ */}
