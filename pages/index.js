@@ -2504,28 +2504,38 @@ export default function Home() {
       )}
       
       {/* Логотип SI-PRODUCTION в правом нижнем углу */}
-      <div style={{
-        position: 'fixed',
-        bottom: '32px',
-        right: '32px',
-        color: '#ffffff',
-        fontSize: 'clamp(32px, 6vw, 72px)',
-        fontFamily: "'Science Gothic', monospace",
-        fontWeight: 'bold',
-        zIndex: 10000,
-        pointerEvents: 'none',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px'
-      }}>
-        <span style={{
-          fontFamily: "'Slovic', sans-serif",
-          color: '#ff0000',
-          transform: 'translateY(-3px)'
-        }}>SI</span>
-        <span style={{
-          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
-        }}>-PRODUCTION</span>
+      <div 
+        className="si-production-logo"
+        style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          color: '#ffffff',
+          fontSize: 'clamp(32px, 6vw, 72px)',
+          fontFamily: "'Science Gothic', monospace",
+          fontWeight: 'bold',
+          zIndex: 10000,
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}
+      >
+        <span 
+          className="si-text"
+          style={{
+            fontFamily: "'Slovic', sans-serif",
+            color: '#ff0000',
+            transform: 'translateY(-3px)'
+          }}
+        >SI</span>
+        <span className="dash-text">-</span>
+        <span 
+          className="production-text"
+          style={{
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+          }}
+        >PRODUCTION</span>
       </div>
       
       {/* Контейнер для хлопушки - fixed с overflow hidden */}

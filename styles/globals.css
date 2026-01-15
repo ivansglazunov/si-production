@@ -79,5 +79,34 @@ section div[style*="overflowX"]::-webkit-scrollbar {
   display: none;
 }
 
+/* Адаптивный логотип SI-PRODUCTION для планшетов и меньше */
+@media (max-width: 768px) {
+  .si-production-logo {
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 0 !important;
+  }
+  
+  .si-production-logo .si-text {
+    font-size: clamp(64px, 12vw, 144px) !important;
+    transform: translateY(0) !important;
+    line-height: 1;
+    margin-bottom: -0.2em;
+  }
+  
+  .si-production-logo .dash-text {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  .si-production-logo .production-text {
+    font-size: clamp(32px, 6vw, 72px) !important;
+  }
+}
+
 
 
