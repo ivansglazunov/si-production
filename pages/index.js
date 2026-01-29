@@ -1222,6 +1222,7 @@ const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValue
   const [wasDragging, setWasDragging] = useState(false)
   const [startX, setStartX] = useState(0)
   const [dragOffset, setDragOffset] = useState(0)
+  const [touchStartX, setTouchStartX] = useState(0)
   const carouselRef = useRef(null)
   const autoPlayRef = useRef(null)
   const [isInViewport, setIsInViewport] = useState(false)
@@ -1315,6 +1316,97 @@ const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValue
     }
   }
 
+  // Обработчик клика на контейнер для навигации слева/справа
+  const handleContainerClick = (e) => {
+    // Не обрабатываем клик, если был drag
+    if (wasDragging || isDragging || Math.abs(dragOffset) > 5) {
+      return
+    }
+
+    // Проверяем, что клик не был на самой карточке
+    const target = e.target
+    const clickedOnCard = target.closest('[data-movie-card]')
+    if (clickedOnCard) {
+      return // Клик был на карточке, обработается handleClick
+    }
+
+    // Получаем позицию клика относительно контейнера
+    if (!carouselRef.current) return
+    const rect = carouselRef.current.getBoundingClientRect()
+    const clickX = e.clientX - rect.left
+    const centerX = rect.width / 2
+
+    // Определяем, слева или справа от центра был клик
+    if (clickX < centerX) {
+      // Клик слева - переходим к предыдущему
+      setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length)
+    } else {
+      // Клик справа - переходим к следующему
+      setCurrentIndex((prev) => (prev + 1) % movies.length)
+    }
+  }
+
+  // Обработчики для touch событий (мобильные устройства)
+  const handleTouchStart = (e) => {
+    setIsDragging(true)
+    setTouchStartX(e.touches[0].clientX)
+    setDragOffset(0)
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current)
+    }
+  }
+
+  const handleTouchMove = (e) => {
+    if (!isDragging) return
+    const diff = e.touches[0].clientX - touchStartX
+    setDragOffset(diff)
+  }
+
+  const handleTouchEnd = (e) => {
+    if (!isDragging) return
+    
+    const hadDrag = Math.abs(dragOffset) > 10
+    setWasDragging(hadDrag)
+    
+    // Если перетащили достаточно далеко, меняем слайд
+    if (Math.abs(dragOffset) > 100) {
+      if (dragOffset > 0) {
+        setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length)
+      } else {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }
+    } else if (Math.abs(dragOffset) <= 5) {
+      // Если не было драга, обрабатываем как клик для навигации
+      if (!carouselRef.current) {
+        setIsDragging(false)
+        setDragOffset(0)
+        setTimeout(() => setWasDragging(false), 100)
+        return
+      }
+
+      const rect = carouselRef.current.getBoundingClientRect()
+      const touchX = e.changedTouches[0].clientX - rect.left
+      const centerX = rect.width / 2
+
+      // Проверяем, что тач не был на карточке
+      const touchTarget = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
+      const touchedOnCard = touchTarget?.closest('[data-movie-card]')
+      
+      if (!touchedOnCard) {
+        // Тач был не на карточке - навигация
+        if (touchX < centerX) {
+          setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length)
+        } else {
+          setCurrentIndex((prev) => (prev + 1) % movies.length)
+        }
+      }
+    }
+    
+    setIsDragging(false)
+    setDragOffset(0)
+    setTimeout(() => setWasDragging(false), 100)
+  }
+
   // Вычисляем позиции для карусели (3D эффект)
   const getTransform = (index) => {
     const offset = index - currentIndex
@@ -1372,6 +1464,10 @@ const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValue
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onClick={handleContainerClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {movies.map((movie, index) => {
           const baseStyle = getTransform(index)
@@ -1413,6 +1509,9 @@ const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValue
           }
           
           const handleClick = (e) => {
+            // Останавливаем всплытие, чтобы не сработал handleContainerClick
+            e.stopPropagation()
+            
             // Не открываем ссылку, если был drag
             if (wasDragging || isDragging) {
               e.preventDefault()
@@ -1426,6 +1525,7 @@ const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValue
           return (
             <motion.div
               key={index}
+              data-movie-card
               style={{
                 position: 'absolute',
                 width: '200px',

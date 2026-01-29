@@ -8,7 +8,13 @@
     "start": "next start",
     "lint": "next lint",
     "build:filmography": "node scripts/convert_filmography.js",
-    "download:posters": "node scripts/download_posters.js"
+    "download:posters": "node scripts/download_posters.js",
+    "service:install": "sudo cp scripts/si-production.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable si-production.service",
+    "service:uninstall": "sudo systemctl stop si-production.service && sudo systemctl disable si-production.service && sudo rm /etc/systemd/system/si-production.service && sudo systemctl daemon-reload",
+    "service:start": "sudo systemctl start si-production.service",
+    "service:stop": "sudo systemctl stop si-production.service",
+    "service:restart": "sudo systemctl restart si-production.service",
+    "service:status": "sudo systemctl status si-production.service"
   },
   "dependencies": {
     "@headlessui/react": "^2.1.0",

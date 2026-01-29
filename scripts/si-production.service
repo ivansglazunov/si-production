@@ -1,0 +1,27 @@
+[Unit]
+Description=SI Production Next.js Server
+After=network.target
+
+[Service]
+Type=simple
+User=ae
+WorkingDirectory=/home/ae/si-production
+Environment="NODE_ENV=development"
+# Загружаем nvm для доступа к npm
+Environment="NVM_DIR=/home/ae/.nvm"
+# ВАЖНО: При разработке используем dev режим
+# После завершения разработки:
+# 1. Выполните: npm run build
+# 2. Раскомментируйте строку ниже и закомментируйте ExecStart с npm run dev
+# 3. Скопируйте файл: sudo cp scripts/si-production.service /etc/systemd/system/
+# 4. Перезагрузите: sudo systemctl daemon-reload
+# 5. Перезапустите: sudo systemctl restart si-production.service
+# ExecStart=/bin/bash -c 'source /home/ae/.nvm/nvm.sh && cd /home/ae/si-production && npm start'
+ExecStart=/bin/bash -c 'source /home/ae/.nvm/nvm.sh && cd /home/ae/si-production && npm run dev'
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
