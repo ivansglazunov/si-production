@@ -1,0 +1,24350 @@
+# Данные Excel для списка проектов и партнеров
+_Exported on 29.01.2026 at 0:34:46 GMT+3 from Cursor (2.3.23)_
+
+---
+
+**User**
+
+Ты можешь в Загрузках Фильмография_Щербаков.xlsx файл распарсить и использовать для последнего экрана на сайте - список проектов и список партнеров?
+
+---
+
+**Cursor**
+
+Ищу файл Excel в Загрузках и изучаю структуру проекта, чтобы понять, как интегрировать данные на последний экран.
+
+
+Ищу файл Excel в стандартных папках загрузок и проверяю структуру последнего экрана:
+
+
+Изучаю, где определены `topMovies` и `partners`, и читаю Excel-файл:
+
+
+Устанавливаю pandas и openpyxl для чтения Excel, затем прочитаю файл:
+
+
+Создаю скрипт для чтения Excel и преобразования в JSON:
+
+
+Читаю Excel-файл:
+
+
+Читаю файл с правильными заголовками:
+
+
+Проверяю реальные названия колонок:
+
+
+Создаю скрипт для правильного чтения и преобразования данных:
+
+
+```python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import pandas as pd
+import json
+
+# Читаем Excel файл
+df = pd.read_excel('/home/ae/Загрузки/si_production_files/Фильмография_Щербаков.xlsx', header=None)
+
+# Заголовки находятся в строке 4 (индекс 4)
+# Переименовываем колонки
+df.columns = df.iloc[4].values
+df = df.iloc[5:].reset_index(drop=True)
+
+# Удаляем строки, где все значения NaN
+df = df.dropna(how='all')
+
+# Заполняем пропущенные значения в колонке Период и Студия предыдущими значениями
+df['Период'] = df['Период'].fillna(method='ffill')
+df['Студия'] = df['Студия'].fillna(method='ffill')
+
+# Удаляем строки, где нет названия проекта
+df = df.dropna(subset=['Проект'])
+
+# Очищаем данные от лишних пробелов
+df['Проект'] = df['Проект'].astype(str).str.strip()
+df['Студия'] = df['Студия'].astype(str).str.strip()
+df['Период'] = df['Период'].astype(str).str.strip()
+df['Формат'] = df['Формат'].astype(str).str.strip()
+
+# Удаляем строки с 'nan' как текстом
+df = df[df['Проект'] != 'nan']
+df = df[df['Студия'] != 'nan']
+
+# Получаем уникальные студии (партнеры)
+partners = df['Студия'].unique().tolist()
+partners = [p for p in partners if p and p != 'nan']
+partners = sorted(partners)
+
+# Получаем проекты
+projects = []
+for _, row in df.iterrows():
+    project = {
+        'title': str(row['Проект']),
+        'studio': str(row['Студия']),
+        'period': str(row['Период']),
+        'format': str(row['Формат']) if pd.notna(row['Формат']) else ''
+    }
+    projects.append(project)
+
+# Создаем JSON структуру
+output = {
+    'partners': [{'name': p} for p in partners],
+    'projects': projects
+}
+
+# Сохраняем в JSON файл
+with open('/home/ae/si-production/data/filmography.json', 'w', encoding='utf-8') as f:
+    json.dump(output, f, ensure_ascii=False, indent=2)
+
+print(f"Обработано {len(projects)} проектов")
+print(f"Найдено {len(partners)} партнеров")
+print("\nПартнеры:")
+for p in partners[:10]:
+    print(f"  - {p}")
+if len(partners) > 10:
+    print(f"  ... и еще {len(partners) - 10}")
+
+print("\nПервые 5 проектов:")
+for p in projects[:5]:
+    print(f"  - {p['title']} ({p['studio']}, {p['period']})")
+
+print("\nДанные сохранены в data/filmography.json")
+
+```
+
+Исправляю скрипт: заменяю `fillna(method='ffill')` на `ffill()`.
+
+
+```python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import pandas as pd
+import json
+
+# Читаем Excel файл
+df = pd.read_excel('/home/ae/Загрузки/si_production_files/Фильмография_Щербаков.xlsx', header=None)
+
+# Заголовки находятся в строке 4 (индекс 4)
+# Переименовываем колонки
+df.columns = df.iloc[4].values
+df = df.iloc[5:].reset_index(drop=True)
+
+# Удаляем строки, где все значения NaN
+df = df.dropna(how='all')
+
+# Заполняем пропущенные значения в колонке Период и Студия предыдущими значениями
+df['Период'] = df['Период'].ffill()
+df['Студия'] = df['Студия'].ffill()
+
+# Удаляем строки, где нет названия проекта
+df = df.dropna(subset=['Проект'])
+
+# Очищаем данные от лишних пробелов
+df['Проект'] = df['Проект'].astype(str).str.strip()
+df['Студия'] = df['Студия'].astype(str).str.strip()
+df['Период'] = df['Период'].astype(str).str.strip()
+df['Формат'] = df['Формат'].astype(str).str.strip()
+
+# Удаляем строки с 'nan' как текстом
+df = df[df['Проект'] != 'nan']
+df = df[df['Студия'] != 'nan']
+
+# Получаем уникальные студии (партнеры)
+partners = df['Студия'].unique().tolist()
+partners = [p for p in partners if p and p != 'nan']
+partners = sorted(partners)
+
+# Получаем проекты
+projects = []
+for _, row in df.iterrows():
+    project = {
+        'title': str(row['Проект']),
+        'studio': str(row['Студия']),
+        'period': str(row['Период']),
+        'format': str(row['Формат']) if pd.notna(row['Формат']) else ''
+    }
+    projects.append(project)
+
+# Создаем JSON структуру
+output = {
+    'partners': [{'name': p} for p in partners],
+    'projects': projects
+}
+
+# Сохраняем в JSON файл
+with open('/home/ae/si-production/data/filmography.json', 'w', encoding='utf-8') as f:
+    json.dump(output, f, ensure_ascii=False, indent=2)
+
+print(f"Обработано {len(projects)} проектов")
+print(f"Найдено {len(partners)} партнеров")
+print("\nПартнеры:")
+for p in partners[:10]:
+    print(f"  - {p}")
+if len(partners) > 10:
+    print(f"  ... и еще {len(partners) - 10}")
+
+print("\nПервые 5 проектов:")
+for p in projects[:5]:
+    print(f"  - {p['title']} ({p['studio']}, {p['period']})")
+
+print("\nДанные сохранены в data/filmography.json")
+
+```
+
+Проверяю структуру JSON и обновляю код для использования этих данных:
+
+
+Изучаю компонент MoviesCarousel, чтобы понять, какие поля он использует:
+
+
+Проверяю, как MoviesCarousel отображает карточки фильмов:
+
+
+Ищу, где используются поля фильма:
+
+
+Обновляю код для использования данных из JSON. Сначала копирую JSON в public, затем обновляю страницу:
+
+
+Обновляю код для загрузки данных из JSON. Ищу начало функции Home и место, где определяются partners и topMovies:
+
+
+Создаю todo и обновляю код для использования данных из Excel:
+
+
+```javascript
+import React, { useRef, useState, useEffect, Suspense, memo, useMemo, useCallback } from 'react'
+import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
+import { useParallaxStore } from '../store/parallaxStore'
+
+// Компонент пункта договора с галочкой
+const ContractItem = memo(function ContractItem({ text, progress, threshold, textColor }) {
+  // progress может быть motion value или числом
+  const [progressValue, setProgressValue] = useState(typeof progress === 'number' ? progress : 0)
+  
+  // Если progress - motion value, подписываемся на изменения
+  useEffect(() => {
+    if (typeof progress === 'object' && 'on' in progress) {
+      const unsubscribe = progress.on('change', (latest) => {
+        setProgressValue(latest * 100)
+      })
+      return unsubscribe
+    } else if (typeof progress === 'number') {
+      setProgressValue(progress)
+    }
+  }, [progress])
+  
+  // Галочка ставится когда progress >= threshold
+  const isChecked = progressValue >= threshold
+
+  return (
+    <div style={{
+          display: 'flex',
+          alignItems: 'center',
+      gap: '0.8em',
+      fontSize: '0.7em',
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      marginBottom: '0.8em'
+    }}>
+      <div style={{
+          width: '1.2em',
+          height: '1.2em',
+          minWidth: '1.2em',
+          minHeight: '1.2em',
+          border: '0.1em solid #ff0000',
+          borderRadius: '0.2em',
+          flexShrink: 0,
+          backgroundColor: isChecked ? '#ff0000' : 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+          justifyContent: 'center',
+            position: 'relative',
+          transition: 'background-color 0.3s ease'
+        }}>
+        {isChecked && (
+          <svg
+            width="0.8em"
+            height="0.8em"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ flexShrink: 0 }}
+          >
+            <path
+              d="M3 8L6 11L13 4"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+        </div>
+      {textColor ? (
+        <motion.span style={{ color: textColor, fontWeight: 'bold' }}>{text}</motion.span>
+      ) : (
+        <span style={{ color: '#000000', fontWeight: 'bold' }}>{text}</span>
+      )}
+    </div>
+  )
+})
+
+// Компонент Вспышка
+function Flash({ isActive, onComplete }) {
+  if (!isActive) return null
+
+  // Несколько вспышек для калибровки (как на современных телефонах)
+  // Финальная вспышка длится столько же, сколько хлопушка на экране (~2.6 сек)
+  // Хлопушка появляется на 1/3 времени всех вспышек раньше (~1 сек)
+  const totalDuration = 4.5 // Общая длительность: 0.5 сек калибровка + 2.6 сек финальная вспышка + 1.4 сек затухание
+  const clapperboardShowTime = 1.0 // Хлопушка появляется на 1 сек (на 1/3 времени всех вспышек раньше)
+  const finalFlashStart = 0.22 // Финальная вспышка начинается на 0.22 (~1 сек) - синхронизировано с хлопушкой
+  const finalFlashPeak = 0.25 // Максимум финальной вспышки на 0.25 (~1.125 сек)
+  const finalFlashEnd = 0.78 // Финальная вспышка заканчивается на 0.78 (~3.51 сек) - примерно когда хлопушка скрывается
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ 
+        opacity: [
+          0, 1, 0,      // Первая вспышка (быстрая)
+          0, 0.8, 0,    // Вторая вспышка (средняя)
+          0, 0.6, 0,    // Третья вспышка (слабая)
+          0, 1, 1, 0    // Финальная длинная вспышка (длится столько же, сколько хлопушка на экране)
+        ]
+      }}
+      transition={{ 
+        duration: totalDuration,
+        times: [
+          0, 0.05, 0.1,           // Первая вспышка (0-0.45 сек)
+          0.12, 0.15, 0.18,       // Вторая вспышка (0.54-0.81 сек)
+          finalFlashStart, finalFlashPeak, finalFlashEnd, 1  // Финальная вспышка начинается раньше (~1 сек) и длится до ~3.51 сек
+        ],
+        onComplete: onComplete
+      }}
+        style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+        backgroundColor: '#ffffff',
+        zIndex: 100000,
+        pointerEvents: 'none'
+      }}
+    />
+  )
+}
+
+// Компонент Хлопушка (Clapperboard) - теперь окно контактов
+const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
+  const [isDragging, setIsDragging] = useState(false)
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+
+  // Оптимизируем вычисления размеров с useMemo
+  const dimensions = useMemo(() => ({
+    width: '80vw',
+    height: 'calc(80vw / 1.333)'
+  }), [])
+  
+  const handleDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleDragEnd = (event, info) => {
+    // Закрытие окна при смахивании в любую сторону
+    const threshold = Math.min(window.innerHeight, window.innerWidth) * 0.25 // 25% от меньшей стороны экрана
+    const distance = Math.sqrt(info.offset.x ** 2 + info.offset.y ** 2)
+    
+    if (distance > threshold) {
+      if (onClose) {
+        onClose()
+      }
+    }
+    setIsDragging(false)
+  }
+  
+  return (
+        <motion.div
+      className="clapperboard-container"
+      initial={false}
+      animate={{
+        y: isVisible
+          ? ['calc(var(--vh, 1vh) * -100)', 0, -30, 0, -15, 0, -8, 0] // Падение сверху с отскоками
+          : 'calc(var(--vh, 1vh) * -100)',
+        x: isVisible ? 0 : '100vw', // При показе x=0, при скрытии улетает вправо
+        opacity: isVisible ? 1 : 0
+      }}
+      transition={{
+        y: isVisible ? {
+          duration: 1.5,
+          times: [0, 0.4, 0.5, 0.65, 0.75, 0.85, 0.92, 1],
+          ease: [0.25, 0.46, 0.45, 0.94] // Ease out для падения
+        } : {
+          type: "spring",
+          stiffness: 200,
+          damping: 15,
+          bounce: 0.6
+        },
+        x: {
+          type: "spring",
+          stiffness: 150,
+          damping: 18,
+          bounce: 0.4
+        },
+        opacity: {
+          duration: 0.3
+        }
+      }}
+      drag={true}
+      dragConstraints={dragConstraints}
+      dragElastic={0.3}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+          style={{
+        position: 'relative',
+        width: dimensions.width,
+        height: dimensions.height,
+        minHeight: dimensions.height,
+        pointerEvents: 'auto',
+        transformOrigin: 'top right',
+        cursor: isDragging ? 'grabbing' : 'grab'
+      }}
+    >
+      {/* Верхняя створка - черная с текстом SI-PRODUCTION */}
+        <motion.div
+        className="clapperboard-top"
+        initial={false}
+        animate={{ rotate: isActive ? 90 : 0 }}
+        transition={{ 
+          duration: 0.6,
+          ease: [0.25, 0.46, 0.45, 0.94] // Плавная анимация без spring эффекта
+        }}
+          style={{
+            position: 'absolute',
+            top: 0,
+          right: 0,
+            width: '100%',
+          height: '40%', // Уменьшено с 50% до 40% чтобы освободить место для нижней зоны
+          backgroundColor: '#000000',
+          border: '2px solid #333',
+          transformOrigin: 'bottom right',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+                  color: '#ffffff',
+          fontSize: 'clamp(20px, 4vw, 48px)',
+                  fontFamily: "'Science Gothic', monospace",
+                        fontWeight: 'bold',
+          zIndex: 2
+        }}
+      >
+            <span style={{
+          fontFamily: "'Slovic', sans-serif",
+          color: '#ff0000',
+          transform: 'translateY(-3px)'
+        }}>SI</span>
+        <span style={{
+          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+        }}>-PRODUCTION</span>
+      </motion.div>
+
+      {/* Нижний блок - контакты с фейковыми данными */}
+      <div 
+        className="clapperboard-contacts"
+        style={{
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: '100%',
+        minHeight: '60%', // Минимальная высота 60%, но может расширяться
+        height: 'auto', // Высота адаптируется под содержимое
+        backgroundColor: '#000000',
+        border: '2px solid #333',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 'clamp(16px, 3vw, 32px)',
+        fontSize: 'clamp(14px, 2.5vw, 24px)',
+        fontFamily: "'Science Gothic', monospace",
+        color: '#ffffff',
+        zIndex: 1,
+        gap: '1rem',
+        overflowY: 'auto', // Добавляем скролл если контент не вписывается
+        boxSizing: 'border-box' // Учитываем padding в высоте
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '1rem'
+        }}>
+          <div style={{ fontSize: 'clamp(18px, 3vw, 28px)', fontWeight: 'bold' }}>КОНТАКТЫ</div>
+          <button
+            onClick={onClose}
+            style={{
+              backgroundColor: 'transparent',
+              border: '2px solid #ffffff',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              fontSize: 'clamp(12px, 2vw, 18px)',
+              fontFamily: "'Science Gothic', monospace",
+              cursor: 'pointer',
+              borderRadius: '4px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff'
+              e.currentTarget.style.color = '#000000'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.color = '#ffffff'
+            }}
+          >
+            ЗАКРЫТЬ
+          </button>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '1rem',
+          flex: 1
+        }}>
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телеграм:</div>
+            <a 
+              href="https://t.me/example" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ 
+                color: '#00a8ff',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
+            >
+              @example_contact
+            </a>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Email:</div>
+            <div>contact@example.com</div>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телефон:</div>
+            <div>+7 (999) 123-45-67</div>
+          </div>
+        </div>
+        </div>
+    </motion.div>
+  )
+})
+
+// Компонент Галерея для активированной ленты (слайдер)
+function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(initialIndex)
+  const [currentLentaIndex, setCurrentLentaIndex] = useState(lentaIndex || 0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [loadedLentas, setLoadedLentas] = useState({}) // Кэш загруженных лент
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+  
+  // Загружаем изображения для всех лент
+  useEffect(() => {
+    if (!allLentas || allLentas.length === 0) return
+    
+    const loadLentaImages = async (lenta) => {
+      if (loadedLentas[lenta.id]) return // Уже загружена
+      
+      const folderId = lenta.folderId
+      if (!folderId) return
+      
+      // Проверяем все файлы в папке (до 20) и собираем список существующих
+      const maxCheck = 20
+      const existingFiles = []
+      
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      if (existingFiles.length > 0) {
+        const lentaFrames = existingFiles.map((fileNum) => ({
+          type: 'image',
+          src: `/photos/${folderId}/${fileNum}.webp`
+        }))
+        
+        setLoadedLentas(prev => ({
+          ...prev,
+          [lenta.id]: lentaFrames
+        }))
+      }
+    }
+    
+    // Загружаем изображения для всех лент параллельно
+    allLentas.forEach(lenta => {
+      loadLentaImages(lenta)
+    })
+  }, [allLentas, loadedLentas])
+  
+  // Получаем текущую ленту и её frames
+  const currentLenta = allLentas && allLentas[currentLentaIndex] ? allLentas[currentLentaIndex] : null
+  // Используем загруженные frames если есть, иначе переданные frames
+  const currentFrames = currentLenta && loadedLentas[currentLenta.id] 
+    ? loadedLentas[currentLenta.id] 
+    : (currentLenta ? currentLenta.frames : frames)
+  
+  // Обновляем индексы при изменении initialIndex или lentaIndex
+  useEffect(() => {
+    setCurrentFrameIndex(initialIndex)
+    if (lentaIndex !== undefined) {
+      setCurrentLentaIndex(lentaIndex)
+    }
+  }, [initialIndex, lentaIndex])
+
+  // Обработка клавиатуры для навигации
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        handlePrevFrame()
+      } else if (e.key === 'ArrowRight') {
+        handleNextFrame()
+      } else if (e.key === 'ArrowUp') {
+        handlePrevLenta()
+      } else if (e.key === 'ArrowDown') {
+        handleNextLenta()
+      } else if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentFrameIndex, currentLentaIndex, currentFrames, allLentas])
+
+  // Навигация по кадрам (горизонтально)
+  const handlePrevFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev > 0 ? prev - 1 : currentFrames.length - 1))
+  }
+
+  const handleNextFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev < currentFrames.length - 1 ? prev + 1 : 0))
+  }
+
+  // Навигация по лентам (вертикально)
+  const handlePrevLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev > 0 ? prev - 1 : allLentas.length - 1
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleNextLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev < allLentas.length - 1 ? prev + 1 : 0
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleVerticalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleVerticalDragEnd = (event, info) => {
+    // Вертикальный drag - переключение между лентами
+    if (!allLentas || allLentas.length === 0) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены ленты
+    if (info.offset.y > threshold) {
+      handlePrevLenta()
+    } else if (info.offset.y < -threshold) {
+      handleNextLenta()
+    }
+    setIsDragging(false)
+  }
+
+  const handleHorizontalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleHorizontalDragEnd = (event, info) => {
+    // Горизонтальный drag - смена кадров в ленте
+    if (!currentFrames) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены кадра
+    if (info.offset.x > threshold) {
+      handlePrevFrame()
+    } else if (info.offset.x < -threshold) {
+      handleNextFrame()
+    }
+    setIsDragging(false)
+  }
+
+  return (
+    <>
+      {/* Overlay с затемнением */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          zIndex: 100000,
+          cursor: 'pointer'
+        }}
+      />
+      
+      {/* Слайдер */}
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        drag="y"
+        dragConstraints={dragConstraints}
+        dragElastic={0.3}
+        onDragStart={handleVerticalDragStart}
+        onDragEnd={handleVerticalDragEnd}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100001,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Вертикальная карусель всех лент */}
+        {allLentas && allLentas.length > 0 ? (
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Все ленты вертикально */}
+            {allLentas.map((lenta, lentaIdx) => {
+              const isLentaActive = lentaIdx === currentLentaIndex
+              // Используем загруженные frames если есть, иначе генерируем пути
+              const lentaFrames = loadedLentas[lenta.id] || (lenta.folderId ? 
+                Array.from({ length: 20 }, (_, i) => ({
+                  type: 'image',
+                  src: `/photos/${lenta.folderId}/${i + 1}.webp`
+                })) : [])
+              
+              return (
+                <motion.div
+                  key={lenta.id}
+                  initial={false}
+                  animate={{
+                    opacity: isLentaActive ? 1 : 0,
+                    y: isLentaActive ? 0 : (lentaIdx < currentLentaIndex ? -100 : 100),
+                    scale: isLentaActive ? 1 : 0.8
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isLentaActive ? 'auto' : 'none'
+                  }}
+                >
+                  {/* Кадры текущей ленты горизонтально */}
+                  {isLentaActive && lentaFrames.map((frame, frameIdx) => {
+                    const isFrameActive = frameIdx === currentFrameIndex
+                    return (
+                      <motion.div
+                        key={`${lenta.id}-${frameIdx}`}
+                        initial={false}
+                        animate={{
+                          opacity: isFrameActive ? 1 : 0,
+                          scale: isFrameActive ? 1 : 0.8,
+                          x: isFrameActive ? 0 : (frameIdx < currentFrameIndex ? -100 : 100)
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          ease: [0.25, 0.46, 0.45, 0.94]
+                        }}
+                        drag="x"
+                        dragConstraints={dragConstraints}
+                        dragElastic={0.2}
+                        onDragStart={handleHorizontalDragStart}
+                        onDragEnd={handleHorizontalDragEnd}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          pointerEvents: isFrameActive ? 'auto' : 'none',
+                          cursor: isDragging ? 'grabbing' : 'grab'
+                        }}
+                      >
+                        {frame.type === 'image' ? (
+                          <img
+                            src={frame.src}
+                            alt={`Frame ${frameIdx}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                            }}
+                            onError={(e) => {
+                              // При ошибке показываем серый фон
+                              e.target.style.display = 'none'
+                              const parent = e.target.parentElement
+                              if (parent && !parent.querySelector('.fallback-bg')) {
+                                const fallback = document.createElement('div')
+                                fallback.className = 'fallback-bg'
+                                fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                                parent.appendChild(fallback)
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: frame.value || frame || '#333',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    )
+                  })}
+                </motion.div>
+              )
+            })}
+          </div>
+        ) : (
+          /* Fallback для старого режима без всех лент */
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px'
+            }}
+          >
+            {currentFrames && currentFrames.map((frame, index) => {
+              const isActive = index === currentFrameIndex
+              // Поддерживаем обратную совместимость: если frame - строка (старый формат), преобразуем в объект
+              const frameData = typeof frame === 'string' ? { type: 'color', value: frame } : frame
+              
+              return (
+                <motion.div
+                  key={index}
+                  initial={false}
+                  animate={{
+                    opacity: isActive ? 1 : 0,
+                    scale: isActive ? 1 : 0.8,
+                    x: isActive ? 0 : (index < currentFrameIndex ? -100 : 100)
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  drag="x"
+                  dragConstraints={dragConstraints}
+                  dragElastic={0.2}
+                  onDragStart={handleHorizontalDragStart}
+                  onDragEnd={handleHorizontalDragEnd}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isActive ? 'auto' : 'none',
+                    cursor: isDragging ? 'grabbing' : 'grab'
+                  }}
+                >
+                  {frameData.type === 'image' ? (
+                    <img
+                      src={frameData.src}
+                      alt={`Frame ${index}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                      }}
+                      onError={(e) => {
+                        // При ошибке показываем серый фон
+                        e.target.style.display = 'none'
+                        const parent = e.target.parentElement
+                        if (parent && !parent.querySelector('.fallback-bg')) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'fallback-bg'
+                          fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: frameData.value || frameData || '#333',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    />
+                  )}
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Кнопка закрытия в левом верхнем углу */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          style={{
+            position: 'absolute',
+            top: '32px',
+            left: '32px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ×
+        </button>
+
+        {/* Кнопки навигации по кадрам (горизонтально) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handlePrevFrame()
+          }}
+          style={{
+            position: 'absolute',
+            left: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ‹
+        </button>
+        
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleNextFrame()
+          }}
+          style={{
+            position: 'absolute',
+            right: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ›
+        </button>
+
+        {/* Кнопки навигации по лентам (вертикально) - только если есть все ленты */}
+        {allLentas && allLentas.length > 0 && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePrevLenta()
+              }}
+              style={{
+                position: 'absolute',
+                top: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↑
+            </button>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleNextLenta()
+              }}
+              style={{
+                position: 'absolute',
+                bottom: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↓
+            </button>
+          </>
+        )}
+
+        {/* Индикатор текущего кадра и ленты */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: allLentas && allLentas.length > 0 ? '100px' : '32px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            zIndex: 100002,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          {allLentas && allLentas.length > 0 && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '14px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              Лента {currentLentaIndex + 1} / {allLentas.length}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              display: 'flex',
+              gap: '8px'
+            }}>
+              {currentFrames.map((_, index) => (
+                <div
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCurrentFrameIndex(index)
+                  }}
+                  style={{
+                    width: index === currentFrameIndex ? '32px' : '8px',
+                    height: '8px',
+                    borderRadius: '4px',
+                    backgroundColor: index === currentFrameIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '12px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              {currentFrameIndex + 1} / {currentFrames.length}
+            </div>
+          )}
+        </div>
+
+      </motion.div>
+    </>
+  )
+}
+
+const ProgressChart = memo(function ProgressChart({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Внешний круг - больше элементов, зависящих от скролла
+  const outerData = [
+    { name: 'P1', value: progress }, // 0-100%
+    { name: 'P2', value: progress * 0.7 }, // 0-70%
+    { name: 'P3', value: progress * 0.5 }, // 0-50%
+    { name: 'P4', value: progress * 0.3 }, // 0-30%
+    { name: 'A', value: 25 + progress * 0.2 }, // Двигается вверх
+    { name: 'B', value: 30 - progress * 0.15 }, // Двигается вниз
+    { name: 'C', value: 20 + progress * 0.4 }, // Двигается вверх
+    { name: 'D', value: 35 - progress * 0.25 }, // Двигается вниз
+    { name: 'E', value: 15 + progress * 0.35 }, // Двигается вверх
+    { name: 'F', value: 40 - progress * 0.2 } // Двигается вниз
+  ]
+
+  // Внутренний круг - тоже с движущимися элементами
+  const innerData = [
+    { name: 'IP1', value: progress * 0.8 }, // 0-80%
+    { name: 'IP2', value: progress * 0.6 }, // 0-60%
+    { name: 'IP3', value: progress * 0.4 }, // 0-40%
+    { name: 'IA', value: 20 + progress * 0.3 }, // Двигается вверх
+    { name: 'IB', value: 25 - progress * 0.2 }, // Двигается вниз
+    { name: 'IC', value: 15 + progress * 0.5 }, // Двигается вверх
+    { name: 'ID', value: 30 - progress * 0.3 } // Двигается вниз
+  ]
+
+  return (
+    <div key="progress-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <PieChart key="pie-chart" width={600} height={600}>
+        {/* Внешний круг */}
+        <Pie
+          data={outerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={120}
+          outerRadius={200}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={3}
+          paddingAngle={2}
+        >
+          {outerData.map((entry, index) => (
+            <Cell 
+              key={`outer-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={3}
+            />
+          ))}
+        </Pie>
+        {/* Внутренний круг */}
+        <Pie
+          data={innerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={20}
+          outerRadius={110}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={2}
+          paddingAngle={1.5}
+        >
+          {innerData.map((entry, index) => (
+            <Cell 
+              key={`inner-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={2}
+            />
+          ))}
+        </Pie>
+      </PieChart>
+    </div>
+  )
+})
+
+// Компонент линейной диаграммы с точками, зависящими от скролла
+const LineChartComponent = memo(function LineChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки точек (Dots)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, value2: 30 - progress * 0.2 }, // Первая линия вверх, вторая вниз
+    { name: 'B', value: 50 - progress * 0.2, value2: 40 + progress * 0.3 }, // Первая вниз, вторая вверх
+    { name: 'C', value: 30 + progress * 0.4, value2: 50 - progress * 0.25 }, // Первая вверх, вторая вниз
+    { name: 'D', value: 60 - progress * 0.3, value2: 35 + progress * 0.4 }, // Первая вниз, вторая вверх
+    { name: 'E', value: 40 + progress * 0.25, value2: 55 - progress * 0.15 }, // Первая вверх, вторая вниз
+    { name: 'F', value: 70 - progress * 0.35, value2: 25 + progress * 0.5 }, // Первая вниз, вторая вверх
+    { name: 'G', value: 25 + progress * 0.5, value2: 60 - progress * 0.3 }, // Первая вверх, вторая вниз
+    { name: 'H', value: 55 - progress * 0.15, value2: 45 + progress * 0.2 }, // Первая вниз, вторая вверх
+    { name: 'I', value: 35 + progress * 0.3, value2: 50 - progress * 0.35 }, // Первая вверх, вторая вниз
+    { name: 'J', value: 65 - progress * 0.4, value2: 30 + progress * 0.45 }  // Первая вниз, вторая вверх
+  ], [progress])
+
+  return (
+    <div
+      key="line-chart-container"
+      style={{
+      width: '100%',
+      height: '100%',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      padding: 0,
+      zIndex: 1,
+      pointerEvents: 'none'
+    }}>
+      <ResponsiveContainer key="line-responsive-container" width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+          <XAxis 
+            dataKey="name" 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            hide={true}
+          />
+          <YAxis 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            domain={[0, 100]}
+            hide={true}
+          />
+          <Tooltip
+            key="line-tooltip"
+            cursor={false}
+            isAnimationActive={false}
+            contentStyle={{
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#ffffff'
+            }}
+          />
+          {/* Старая линия с точками */}
+          <Line
+            key="line1"
+            type="monotone"
+            dataKey="value"
+            stroke="#ffffff"
+            strokeWidth={3}
+            dot={{ fill: '#ffffff', r: 6 }}
+            activeDot={{ r: 8 }}
+          />
+          {/* Новая угловатая линия без точек */}
+          <Line
+            key="line2"
+            type="step"
+            dataKey="value2"
+            stroke="#ffffff"
+            strokeWidth={2}
+            dot={false}
+            strokeOpacity={0.7}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радарной диаграммы
+const RadarChartComponent = memo(function RadarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const data = [
+    { subject: 'A', value: 50 + progress * 0.3, fullMark: 100 },
+    { subject: 'B', value: 60 - progress * 0.2, fullMark: 100 },
+    { subject: 'C', value: 40 + progress * 0.4, fullMark: 100 },
+    { subject: 'D', value: 70 - progress * 0.3, fullMark: 100 },
+    { subject: 'E', value: 55 + progress * 0.25, fullMark: 100 },
+    { subject: 'F', value: 45 - progress * 0.35, fullMark: 100 }
+  ]
+
+  return (
+    <div key="radar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radar-responsive-container" width="100%" height="100%">
+        <RadarChart key="radar-chart" data={data}>
+          <PolarGrid stroke="#ffffff" strokeOpacity={0.3} />
+          <PolarAngleAxis 
+            dataKey="subject" 
+            tick={{ fill: '#ffffff', fontSize: 12 }}
+          />
+          <PolarRadiusAxis 
+            angle={90} 
+            domain={[0, 100]}
+            tick={{ fill: '#ffffff', fontSize: 10 }}
+          />
+          <Radar 
+            name="Value" 
+            dataKey="value" 
+            stroke="#ffffff" 
+            fill="#ffffff" 
+            fillOpacity={0.3}
+            strokeWidth={2}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радиальной столбчатой диаграммы, зависимый от скролла
+const RadialBarChartComponent = memo(function RadialBarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки секторов (RadialBarSectors)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, fill: '#ffffff' },
+    { name: 'B', value: 40 - progress * 0.2, fill: '#ffffff' },
+    { name: 'C', value: 60 + progress * 0.4, fill: '#ffffff' },
+    { name: 'D', value: 30 - progress * 0.3, fill: '#ffffff' },
+    { name: 'E', value: 50 + progress * 0.25, fill: '#ffffff' },
+    { name: 'F', value: 70 - progress * 0.35, fill: '#ffffff' }
+  ], [progress])
+
+  return (
+    <div key="radial-bar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radial-responsive-container" width="100%" height="100%">
+        <RadialBarChart
+          key="radial-bar-chart" 
+          cx="50%" 
+          cy="50%" 
+          innerRadius="20%" 
+          outerRadius="80%" 
+          data={data}
+          startAngle={90}
+          endAngle={-270}
+        >
+          <RadialBar
+            key="radial-bar"
+            dataKey="value"
+            cornerRadius={4}
+            fill="rgba(255, 255, 255, 0.3)"
+            stroke="#ffffff"
+            strokeWidth={2}
+          />
+        </RadialBarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент карусели с постерами фильмов (вращающаяся карусель)
+const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValues = null }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [wasDragging, setWasDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [dragOffset, setDragOffset] = useState(0)
+  const carouselRef = useRef(null)
+  const autoPlayRef = useRef(null)
+  const [isInViewport, setIsInViewport] = useState(false)
+
+  // Проверка видимости компонента в viewport
+  useEffect(() => {
+    if (!carouselRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsInViewport(entry.isIntersecting)
+        })
+      },
+      {
+        threshold: 0.1 // Компонент считается видимым, если видно хотя бы 10%
+      }
+    )
+
+    observer.observe(carouselRef.current)
+
+    return () => {
+      if (carouselRef.current) {
+        observer.unobserve(carouselRef.current)
+      }
+    }
+  }, [])
+
+  // Автоматическое вращение карусели (но не скролл страницы)
+  useEffect(() => {
+    // Автоплей работает только когда компонент виден
+    if (!isDragging && isInViewport) {
+      autoPlayRef.current = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }, 3000) // Меняем каждые 3 секунды
+    } else {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+
+    return () => {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+  }, [movies.length, isDragging, isInViewport])
+
+  // Обработчики для перетаскивания
+  const handleMouseDown = (e) => {
+    setIsDragging(true)
+    setStartX(e.clientX)
+    setDragOffset(0)
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current)
+    }
+  }
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return
+    const diff = e.clientX - startX
+    setDragOffset(diff)
+  }
+
+  const handleMouseUp = () => {
+    if (!isDragging) return
+    
+    const hadDrag = Math.abs(dragOffset) > 10
+    setWasDragging(hadDrag)
+    
+    // Если перетащили достаточно далеко, меняем слайд
+    if (Math.abs(dragOffset) > 100) {
+      if (dragOffset > 0) {
+        setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length)
+      } else {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }
+    }
+    
+    setIsDragging(false)
+    setDragOffset(0)
+    
+    // Сбрасываем флаг через небольшую задержку
+    setTimeout(() => setWasDragging(false), 100)
+  }
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false)
+      setDragOffset(0)
+    }
+  }
+
+  // Вычисляем позиции для карусели (3D эффект)
+  const getTransform = (index) => {
+    const offset = index - currentIndex
+    const absOffset = Math.abs(offset)
+    const direction = offset > 0 ? 1 : -1
+    
+    // Если элемент далеко, скрываем его
+    if (absOffset > 3) {
+      return {
+        transform: `translateX(${direction * 400}px) translateZ(-200px) scale(0.5)`,
+        opacity: 0,
+        zIndex: 0
+      }
+    }
+
+    // Близкие элементы видны
+    const scale = 1 - absOffset * 0.15
+    const translateX = offset * 220 + (isDragging ? dragOffset : 0)
+    const translateZ = -absOffset * 100
+    const opacity = 1 - absOffset * 0.3
+
+    return {
+      transform: `translateX(${translateX}px) translateZ(${translateZ}px) scale(${scale})`,
+      opacity: Math.max(0, opacity),
+      zIndex: movies.length - absOffset
+    }
+  }
+
+  return (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem 0',
+      perspective: '1000px',
+      perspectiveOrigin: 'center center'
+    }}>
+      <div 
+        ref={carouselRef}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '400px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transformStyle: 'preserve-3d',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
+        {movies.map((movie, index) => {
+          const baseStyle = getTransform(index)
+          const offset = Math.abs(index - currentIndex)
+          
+          // Определяем параллакс в зависимости от расстояния от центра
+          // Параллакс работает только когда компонент в viewport и параллакс включен
+          let parallaxX, parallaxY, rotateX, rotateY
+          if (!isInViewport || !isParallaxEnabled) {
+            // Если не в viewport или параллакс отключен - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          } else if (offset === 0) {
+            // Центральная карточка - сильный параллакс
+            parallaxX = mouseParallaxValues?.centerX || 0
+            parallaxY = mouseParallaxValues?.centerY || 0
+            rotateX = mouseParallaxValues?.centerRotateX || 0
+            rotateY = mouseParallaxValues?.centerRotateY || 0
+          } else if (offset === 1) {
+            // Близкие карточки - средний параллакс
+            parallaxX = mouseParallaxValues?.nearX || 0
+            parallaxY = mouseParallaxValues?.nearY || 0
+            rotateX = mouseParallaxValues?.nearRotateX || 0
+            rotateY = mouseParallaxValues?.nearRotateY || 0
+          } else if (offset === 2) {
+            // Дальние карточки - слабый параллакс
+            parallaxX = mouseParallaxValues?.farX || 0
+            parallaxY = mouseParallaxValues?.farY || 0
+            rotateX = mouseParallaxValues?.farRotateX || 0
+            rotateY = mouseParallaxValues?.farRotateY || 0
+          } else {
+            // Очень дальние карточки - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          }
+          
+          const handleClick = (e) => {
+            // Не открываем ссылку, если был drag
+            if (wasDragging || isDragging) {
+              e.preventDefault()
+              return
+            }
+            if (movie.kinopoiskId) {
+              window.open(`https://www.kinopoisk.ru/film/${movie.kinopoiskId}/`, '_blank')
+            }
+          }
+
+          return (
+            <motion.div
+              key={index}
+              style={{
+                position: 'absolute',
+                width: '200px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.6s ease',
+                ...baseStyle
+              }}
+              onClick={handleClick}
+            >
+              {/* Внутренний элемент для параллакса, чтобы не ломать существующий transform */}
+              <motion.div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  x: parallaxX,
+                  y: parallaxY,
+                  rotateX: rotateX,
+                  rotateY: rotateY,
+                  perspective: '1000px',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+              <div style={{
+                width: '100%',
+                height: '300px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                backgroundColor: '#333',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <img
+                  src={movie.poster}
+                  alt={movie.title}
+                  draggable={false}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    userSelect: 'none',
+                    pointerEvents: 'none'
+                  }}
+                  onError={(e) => {
+                    // При ошибке скрываем изображение и показываем название
+                    e.target.style.display = 'none'
+                    const parent = e.target.parentElement
+                    if (!parent.querySelector('.fallback-text')) {
+                      const fallback = document.createElement('div')
+                      fallback.className = 'fallback-text'
+                      fallback.style.cssText = 'color: #ffffff; font-family: "Slovic", sans-serif; font-size: 1.2rem; text-align: center; padding: 1rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%;'
+                      fallback.textContent = movie.title
+                      parent.appendChild(fallback)
+                    }
+                  }}
+                />
+              </div>
+              <div style={{
+                color: '#ffffff',
+                fontSize: '0.9rem',
+                fontFamily: "'Slovic', sans-serif",
+                textAlign: 'center',
+                padding: '0.5rem',
+                lineHeight: '1.3'
+              }}>
+                {movie.title}
+              </div>
+              </motion.div>
+            </motion.div>
+          )
+        })}
+      </div>
+      
+      {/* Индикаторы точек */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        marginTop: '2rem'
+      }}>
+        {movies.map((_, index) => (
+          <div
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            style={{
+              width: index === currentIndex ? '24px' : '8px',
+              height: '8px',
+              borderRadius: '4px',
+              backgroundColor: index === currentIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Кастомная функция сравнения - перерисовываем только если изменились movies
+  // mouseParallaxValues - это motion values, они не должны вызывать перерисовки
+  return prevProps.movies === nextProps.movies
+})
+
+// Компонент текстуры с закругленными прямоугольниками для границ экрана
+function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset = null }) {
+  // Параметры текстуры - одинаковые отступы
+  const gap = 5 // Отступ между элементами и от краев
+  const rectWidth = 20
+  const rectHeight = 16
+  const rectSpacing = rectWidth + gap * 2 // Ширина элемента + отступы с обеих сторон
+  const borderRadius = 2 // Меньше закругление
+  const edgeOffset = 20 // Отступ от края экрана
+
+  // Преобразуем scrollProgress в смещение текстуры с spring эффектом
+  const scrollOffsetRaw = useTransform(scrollProgress, [0, 1], [0, 600]) // Увеличено в 3 раза (200 -> 600)
+  const scrollOffset = useSpring(scrollOffsetRaw, {
+    stiffness: 50,
+    damping: 20,
+    mass: 1
+  })
+  
+  // Комбинируем скролл и накопленное смещение от мыши (всегда в одну сторону)
+  const combinedOffset = useMotionValue(0)
+  
+  useEffect(() => {
+    const updateOffset = () => {
+      const scroll = scrollOffset.get()
+      const mouse = mouseOffset ? mouseOffset.get() : 0
+      // Мышь всегда добавляет смещение в одну сторону (вправо)
+      combinedOffset.set(scroll + mouse)
+    }
+    
+    const unsubscribeScroll = scrollOffset.on('change', updateOffset)
+    const unsubscribeMouse = mouseOffset ? mouseOffset.on('change', updateOffset) : null
+    
+    updateOffset()
+    
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouse) unsubscribeMouse()
+    }
+  }, [scrollOffset, mouseOffset, combinedOffset])
+  
+  const backgroundPosition = useTransform(combinedOffset, (value) => `${value}px 0`)
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="${gap}" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.4"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        [position]: `${edgeOffset}px`, // Отступ от края
+        left: 0,
+        width: '100%',
+        height: `${rectHeight + 4}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: backgroundPosition,
+        pointerEvents: 'none',
+        zIndex: 25
+      }}
+    />
+  )
+}
+
+// Компонент для горизонтальных царапин, которые перерисовываются при движении мыши
+function ScratchesComponent({ count = 15, scratchRedrawTrigger }) {
+  const [scratches, setScratches] = useState([])
+  const [renderKey, setRenderKey] = useState(0)
+  
+  // Перерисовываем царапины при изменении триггера
+  useMotionValueEvent(scratchRedrawTrigger, 'change', () => {
+    // Генерируем новые позиции и параметры для всех царапин
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+    // Меняем key для полной перерисовки элементов
+    setRenderKey(prev => prev + 1)
+  })
+  
+  // Инициализация при монтировании
+  useEffect(() => {
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+  }, [count])
+  
+  return (
+    <>
+      {scratches.map((scratch) => (
+        <div
+          key={`${scratch.id}-${renderKey}`} // Меняем key для полной перерисовки
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '2px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: scratch.opacity,
+            transform: `rotate(${scratch.rotate}deg)`,
+            boxShadow: '0 0 3px rgba(255, 255, 255, 0.2)'
+            // Убрали transition - элементы появляются мгновенно в новых местах
+          }}
+        />
+      ))}
+    </>
+  )
+}
+
+// Компонент слоя помех с поддержкой скролла и мыши (без движения, только изменение параметров)
+function GrainLayerComponent({ zIndex, opacity, backgroundImage, backgroundSize, mixBlendMode, filter, grainBackgroundPosition, grainNoiseOpacity = null }) {
+  const layerRef = useRef(null)
+  
+  useMotionValueEvent(grainBackgroundPosition, 'change', (latest) => {
+    if (layerRef.current) {
+      layerRef.current.style.backgroundPosition = latest
+    }
+  })
+  
+  // Изменяем opacity на основе мыши и скролла
+  useEffect(() => {
+    if (!grainNoiseOpacity) return
+    
+    const unsubscribe = grainNoiseOpacity.on('change', (latest) => {
+      if (layerRef.current) {
+        layerRef.current.style.opacity = latest * opacity
+      }
+    })
+    
+    return () => unsubscribe()
+  }, [grainNoiseOpacity, opacity])
+  
+  return (
+    <div
+      ref={layerRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex,
+        opacity: grainNoiseOpacity ? undefined : opacity,
+        backgroundImage,
+        backgroundSize,
+        mixBlendMode,
+        filter
+      }}
+    />
+  )
+}
+
+// Мемоизированный контейнер для диаграмм с параллаксом
+const ChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      left: '50%',
+      top: '2rem', // default top
+      zIndex: 12,
+      width: '25vw',
+      height: '25vw',
+      maxWidth: '300px',
+      maxHeight: '300px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный контейнер для центральной большой диаграммы
+const CenterChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      zIndex: 18,
+      width: '80vw',
+      height: '80vw',
+      maxWidth: '1000px',
+      maxHeight: '1000px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный индикатор прогресса
+const ProgressIndicator = memo(({ progressText }) => (
+  <div style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+    pointerEvents: 'none',
+    zIndex: 1000
+  }}>
+    <div style={{
+      position: 'sticky',
+      top: '45px',
+      width: 'fit-content',
+      marginLeft: 'auto',
+      marginRight: '16px',
+      color: '#ffffff',
+      fontSize: 'clamp(14px, 2vw, 18px)',
+      fontFamily: "'Science Gothic', monospace",
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      padding: '8px 16px',
+      borderRadius: '4px',
+      backdropFilter: 'blur(4px)',
+      pointerEvents: 'none'
+    }}>
+      Запуск процессов: {progressText}%
+    </div>
+  </div>
+))
+
+// Мемоизированный список пунктов договора
+const ContractItemsList = memo(({ progressMotionValue }) => (
+  <div style={{
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 'clamp(16px, 3vw, 2em)',
+    paddingRight: 'clamp(16px, 3vw, 2em)'
+  }}>
+    <ContractItem text="Подбор и согласование локаций любой сложности по всей России" progress={progressMotionValue} threshold={35} textColor="#ffffff" />
+    <ContractItem text="Согласуем все договоренности и разрешения" progress={progressMotionValue} threshold={40} textColor="#ffffff" />
+    <ContractItem text="Полное сопровождение съемок и постродакшен" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
+    <ContractItem text="Кинопроизводство полного цикла" progress={progressMotionValue} threshold={60} textColor="#ffffff" />
+    <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={progressMotionValue} threshold={65} textColor="#ffffff" />
+  </div>
+))
+
+// Компонент эффекта помех/повреждения пленки для второго экрана
+function FilmGrainEffect({ scrollProgress }) {
+  const [grainIntensity, setGrainIntensity] = useState(0)
+  const [scratchOffset, setScratchOffset] = useState(0)
+  const [rgbSplit, setRgbSplit] = useState(0)
+  const [flicker, setFlicker] = useState(1)
+
+  // Обновляем интенсивность эффектов на основе скролла
+  useMotionValueEvent(scrollProgress, "change", (latest) => {
+    const progress = Math.min(Math.max(latest, 0), 1)
+    setGrainIntensity(progress)
+    setScratchOffset(progress * 200)
+    setRgbSplit(progress * 8) // Максимальное смещение RGB каналов 8px
+    // Flicker эффект - случайные вспышки при скролле
+    setFlicker(1 - (Math.random() * 0.15 * progress))
+  })
+
+  // Генерируем случайные царапины
+  const scratches = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    top: Math.random() * 100,
+    left: Math.random() * 100,
+    width: Math.random() * 300 + 100,
+    opacity: Math.random() * 0.5 + 0.2,
+    delay: Math.random() * 2
+  }))
+
+  return (
+    <>
+      {/* Основной слой зернистости - более заметный */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 100,
+          opacity: Math.max(0.3, grainIntensity * 0.8),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.3) 3px),
+            repeating-linear-gradient(90deg, rgba(0,0,0,0.2) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.2) 3px),
+            repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.05) 3px)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.3) brightness(0.85)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 100}% ${Math.random() * 100}%`,
+            `${Math.random() * 100}% ${Math.random() * 100}%`
+          ]
+        }}
+        transition={{
+          duration: 0.05,
+          repeat: Infinity,
+          repeatType: 'reverse'
+        }}
+      />
+
+      {/* RGB Split эффект - смещение цветовых каналов */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 101,
+          opacity: Math.max(0.2, grainIntensity * 0.7),
+          background: `
+            linear-gradient(to right, 
+              rgba(255, 0, 0, 0.2) 0%, 
+              transparent ${rgbSplit}px,
+              transparent calc(100% - ${rgbSplit}px),
+              rgba(0, 0, 255, 0.2) 100%)
+          `,
+          mixBlendMode: 'screen',
+          transform: `translateX(${rgbSplit * 0.3}px)`,
+          filter: `blur(${rgbSplit * 0.1}px)`
+        }}
+      />
+
+      {/* Горизонтальные царапины */}
+      {scratches.map((scratch) => (
+        <motion.div
+          key={scratch.id}
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '3px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.6), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity)),
+            transform: `translateX(${scratchOffset * 0.5}px)`,
+            boxShadow: '0 0 4px rgba(255, 255, 255, 0.3)'
+          }}
+          animate={{
+            x: [0, scratchOffset * 0.5, 0],
+            opacity: [
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5),
+              Math.max(0.2, scratch.opacity * Math.max(0.3, grainIntensity)),
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5)
+            ]
+          }}
+          transition={{
+            duration: 1.5 + Math.random() * 2,
+            repeat: Infinity,
+            delay: scratch.delay,
+            ease: 'linear'
+          }}
+        />
+      ))}
+
+      {/* Вертикальные полосы повреждений */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 103,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          backgroundImage: `
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.1) 2px,
+              rgba(255, 255, 255, 0.1) 3px,
+              transparent 3px,
+              transparent 5px
+            )
+          `,
+          backgroundSize: '80px 100%',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          backgroundPosition: [`${scratchOffset * 0.3}px 0`, `${scratchOffset * 0.3 + 80}px 0`]
+        }}
+        transition={{
+          duration: 0.3,
+          repeat: Infinity,
+          ease: 'linear'
+        }}
+      />
+
+      {/* Flicker эффект - мерцание */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 104,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          opacity: [flicker * 0.4, flicker * 0.8, flicker * 0.4]
+        }}
+        transition={{
+          duration: 0.08 + Math.random() * 0.15,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+
+      {/* Дополнительный шум через canvas-like эффект */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 99,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          background: `
+            radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.04) 0%, transparent 40%),
+            radial-gradient(circle at 90% 20%, rgba(0, 0, 0, 0.04) 0%, transparent 40%)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'difference',
+          filter: 'blur(1px)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 50}% ${Math.random() * 50}%`,
+            `${Math.random() * 50 + 50}% ${Math.random() * 50 + 50}%`
+          ]
+        }}
+        transition={{
+          duration: 2 + Math.random() * 1.5,
+          repeat: Infinity,
+          repeatType: 'reverse',
+          ease: 'easeInOut'
+        }}
+      />
+      
+      {/* Дополнительный слой статического шума */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 105,
+          opacity: Math.max(0.15, grainIntensity * 0.5),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px)
+          `,
+          backgroundSize: '4px 4px',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.5)'
+        }}
+        animate={{
+          opacity: [
+            Math.max(0.15, grainIntensity * 0.5),
+            Math.max(0.25, grainIntensity * 0.7),
+            Math.max(0.15, grainIntensity * 0.5)
+          ]
+        }}
+        transition={{
+          duration: 0.1,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+    </>
+  )
+}
+
+// Компонент звездного неба с мерцающими звездами
+// Компонент сетки с названиями партнеров
+function PartnersGrid({ partners }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: '2rem',
+      width: '100%',
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '2rem'
+    }}>
+      {partners.map((partner, index) => (
+        <div
+          key={index}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer',
+            minHeight: '150px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+            e.currentTarget.style.transform = 'scale(1.05)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <div style={{
+            color: '#ffffff',
+            fontFamily: "'Slovic', sans-serif",
+            fontSize: '1.5rem',
+            textAlign: 'center',
+            fontWeight: 'bold'
+          }}>
+            {partner.name}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
+  const [stars] = useState(() => {
+    return Array.from({ length: starCount }, () => ({
+      x: Math.random() * 100, // Позиция X в процентах
+      y: Math.random() * 100, // Позиция Y в процентах
+      size: Math.random() * 2 + 0.5, // Размер от 0.5px до 2.5px (меньше)
+      baseOpacity: Math.random() * 0.4 + 0.2, // Базовая прозрачность от 0.2 до 0.6
+      peakOpacity: Math.random() * 0.3 + 0.7, // Пиковая прозрачность от 0.7 до 1.0
+      duration: Math.random() * 2 + 1.5, // Длительность анимации от 1.5 до 3.5 секунд
+      delay: Math.random() * 2 // Задержка начала анимации от 0 до 2 секунд
+    }))
+  })
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: 1
+    }}>
+      {stars.map((star, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: star.baseOpacity }}
+          animate={{
+            opacity: [star.baseOpacity, star.peakOpacity, star.baseOpacity]
+          }}
+          transition={{
+            duration: star.duration,
+            repeat: Infinity,
+            delay: star.delay,
+            ease: "easeInOut"
+          }}
+          style={{
+            position: 'absolute',
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            borderRadius: '50%',
+            backgroundColor: '#ffffff',
+            boxShadow: `0 0 ${star.size}px rgba(255, 255, 255, 0.5)`
+          }}
+        />
+      ))}
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Перерисовываем только если изменился starCount
+  return prevProps.starCount === nextProps.starCount
+})
+
+// Компонент текстуры перфорации для лент
+function LentaPerforationTexture({ width, height, position = 'top', scale = 1 }) {
+  // Параметры текстуры - масштабируемые
+  // Отступы одинаковые: от краев ленты и между элементами
+  const gap = 5 * scale // Отступ между элементами и от краев (одинаковый)
+  const rectWidth = 20 * scale
+  const rectHeight = Math.min(height * 0.8, 16 * scale) // Адаптируем под высоту полосы
+  // Расстояние между началами элементов = ширина элемента + gap (отступ между элементами)
+  const rectSpacing = rectWidth + gap // Ширина элемента + один отступ
+  const borderRadius = 2 * scale // Меньше закругление
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  // Элемент начинается с 0, так как отступ от края уже учтен в позиции контейнера
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.2"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        [position]: 0,
+        left: `${gap}px`, // Отступ от левого края
+        width: `${width - gap * 2}px`, // Уменьшаем ширину на отступы с обеих сторон
+        height: `${height}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: '0 0',
+        pointerEvents: 'none',
+        zIndex: 1
+      }}
+    />
+  )
+}
+
+function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  
+  // Определяем список существующих файлов в папке (проверяем до 20 файлов)
+  const [existingFileNumbers, setExistingFileNumbers] = useState([])
+  
+  useEffect(() => {
+    if (!folderId) {
+      setExistingFileNumbers([])
+      return
+    }
+    
+    // Проверяем все файлы в папке (до 20) и собираем список существующих
+    // Это позволяет находить файлы даже если они не начинаются с 1.webp
+    const checkImageCount = async () => {
+      const maxCheck = 20 // Максимальное количество файлов для проверки
+      const existingFiles = []
+      
+      // Проверяем все файлы от 1 до maxCheck
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          
+          // Таймаут увеличен до 500ms для более надежной проверки
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      setExistingFileNumbers(existingFiles)
+    }
+    
+    checkImageCount()
+  }, [folderId])
+  
+  // Генерируем список путей к изображениям на основе найденных файлов
+  const frames = useMemo(() => {
+    if (existingFileNumbers.length > 0 && folderId) {
+      return existingFileNumbers.map((fileNum) => ({
+        type: 'image',
+        src: `/photos/${folderId}/${fileNum}.webp`
+      }))
+    }
+    // Fallback на случайные цвета если изображения не найдены
+    return Array.from({ length: 8 }, () => {
+      const r = Math.floor(Math.random() * 256)
+      const g = Math.floor(Math.random() * 256)
+      const b = Math.floor(Math.random() * 256)
+      return { type: 'color', value: `rgb(${r}, ${g}, ${b})` }
+    })
+  }, [existingFileNumbers, folderId])
+  
+  const frameCount = frames.length
+  
+  // Состояние для отслеживания hover на каждом кадре - временно отключено для производительности
+  // const [hoveredIndex, setHoveredIndex] = useState(null)
+
+  // progress может быть motion value или числом
+  // Прямое преобразование progress в позицию без spring - синхронно со скроллом
+  // Если progress - motion value, используем его напрямую, иначе создаем из числа
+  const progressMotion = typeof progress === 'object' && 'get' in progress 
+    ? progress 
+    : useMotionValue(typeof progress === 'number' ? (progress > 1 ? progress / 100 : progress) : 0)
+  
+  // Если progress - число, обновляем motion value
+  useEffect(() => {
+    if (typeof progress === 'number') {
+      const normalized = progress > 1 ? progress / 100 : progress
+      progressMotion.set(normalized)
+    }
+  }, [progress, progressMotion])
+  
+  // Прямое преобразование progress в позицию - без задержки, синхронно
+  const translateXValue = useTransform(progressMotion, (prog) => {
+    let targetLeftPosition = Math.max(-200, Math.min(200, (prog - center) * 500 * speed))
+    if (inverse) {
+      targetLeftPosition = -targetLeftPosition
+    }
+    return `translateX(${targetLeftPosition}vw)`
+  })
+
+  // Вычисляем zIndex на основе scale - крупные ленты должны быть выше визуально
+  // Базовый zIndex 1000, добавляем scale * 100 для правильного порядка
+  const zIndex = 1000 + Math.round(scale * 100)
+
+  return (
+    // Внешний контейнер - позиционирование относительно viewport
+    // Используем position: fixed для позиционирования относительно окна браузера
+          <div style={{
+      position: 'fixed',
+      top: `calc(50vh + ${topOffset}vh)`,
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      transformOrigin: 'center center',
+      zIndex: zIndex,
+      pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
+          }}>
+      {/* Контейнер поворота - поворачивается на angle градусов + параллакс */}
+            <motion.div
+        style={{
+        rotate: `${angle}deg`,
+        transformOrigin: 'center center',
+        pointerEvents: 'none',
+        x: isParallaxEnabled ? (parallaxX || 0) : 0,
+        y: isParallaxEnabled ? (parallaxY || 0) : 0,
+        rotateX: isParallaxEnabled ? (rotateX || 0) : 0,
+        rotateY: isParallaxEnabled ? (rotateY || 0) : 0,
+        perspective: '1000px'
+      }}>
+        {/* Контейнер движения - двигается по повернутой оси X */}
+        <motion.div
+          style={{
+            display: 'flex',
+            gap: 0, // Убираем отступы между кадрами для цельной ленты
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            pointerEvents: 'none', // Контейнер не перехватывает события - скролл проходит сквозь
+            transform: translateXValue,
+            position: 'relative' // Для позиционирования перфорации на уровне всей ленты
+          }}
+          onWheel={(e) => {
+            // Пробрасываем скролл событие - не блокируем его
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            // Не блокируем события мыши для скролла
+            e.stopPropagation()
+          }}
+        >
+          {(() => {
+            // Вычисляем параметры один раз для всей ленты
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale
+            const totalWidth = frameWidth * frameCount
+            
+            return (
+              <>
+                {/* Текстура перфорации на верхней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="top"
+                  scale={scale}
+                />
+                
+                {/* Текстура перфорации на нижней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="bottom"
+                  scale={scale}
+                />
+              </>
+            )
+          })()}
+          
+          {/* Кадры ленты */}
+          {frames.map((frame, index) => {
+            const isHovered = false // Временно отключено для производительности
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale // Высота черной полосы сверху/снизу
+            const holeSize = 4 * scale // Размер дырочек
+            const holeSpacing = 12 * scale // Расстояние между центрами дырочек
+            
+            return (
+              <div
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onFrameClick) onFrameClick(lentaId, index, frames)
+                }}
+                onWheel={(e) => {
+                  // Пробрасываем скролл событие родителю - не блокируем скролл
+                  if (containerRef && containerRef.current) {
+                    // Не вызываем preventDefault, чтобы скролл работал естественно
+                    // Просто пробрасываем событие
+                    const scrollEvent = new WheelEvent('wheel', {
+                      deltaY: e.deltaY,
+                      deltaX: e.deltaX,
+                      bubbles: true,
+                      cancelable: true
+                    })
+                    containerRef.current.dispatchEvent(scrollEvent)
+                  }
+                }}
+                onTouchMove={(e) => {
+                  // Для touch устройств тоже пробрасываем скролл
+                  if (containerRef && containerRef.current) {
+                    e.stopPropagation()
+                  }
+                }}
+                style={{
+                  width: `${frameWidth}px`,
+                  height: `${frameHeight + borderWidth * 2}px`,
+                  flexShrink: 0,
+                  position: 'relative',
+                  backgroundColor: '#000000', // Черный фон для полос сверху/снизу
+                  // Тени убраны для оптимизации производительности
+                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'pointer',
+                  pointerEvents: 'auto', // Кадры кликабельны
+                  touchAction: 'pan-y' // Разрешаем вертикальный скролл на touch устройствах
+                }}
+              >
+                {/* Сам кадр в центре */}
+                {frame.type === 'image' ? (
+                  <img
+                    src={frame.src}
+                    alt={`Frame ${index}`}
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      objectFit: 'cover',
+                      borderRadius: '2px'
+                    }}
+                    onError={(e) => {
+                      // При ошибке загрузки показываем серый фон
+                      e.target.style.display = 'none'
+                      e.target.parentElement.style.backgroundColor = '#333'
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      backgroundColor: frame.value || '#333',
+                      borderRadius: '2px'
+                    }}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </motion.div>
+      </motion.div>
+            </div>
+  )
+}
+
+export default function Home() {
+  const containerRef = useRef(null)
+  const firstScreenRef = useRef(null)
+  const secondScreenRef = useRef(null)
+  const thirdScreenRef = useRef(null)
+
+  // Zustand store для управления эффектами
+  const { isParallaxEnabled, toggleParallax, isGrainEnabled } = useParallaxStore()
+  
+  // Состояние для данных из Excel
+  const [filmographyData, setFilmographyData] = useState({ partners: [], projects: [] })
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  
+  // Загрузка данных из JSON файла
+  useEffect(() => {
+    fetch('/filmography.json')
+      .then(res => res.json())
+      .then(data => {
+        setFilmographyData(data)
+        setIsLoadingData(false)
+      })
+      .catch(err => {
+        console.error('Ошибка загрузки данных фильмографии:', err)
+        setIsLoadingData(false)
+      })
+  }, [])
+  
+  // Motion values для progress - без перерендеров
+  const progressMotionValue = useMotionValue(0)
+
+  // Spring версии progress для эластичной анимации лент с разными характеристиками
+  // Все ленты слушают один progressMotionValue, но с разными spring эффектами
+  const springProgressFast = useSpring(progressMotionValue, {
+    stiffness: 200, // Высокая жесткость - быстрый отклик
+    damping: 25,   // Низкое затухание - больше "пружинистости"
+    mass: 0.3      // Малая масса - легкость
+  })
+
+  const springProgressMedium = useSpring(progressMotionValue, {
+    stiffness: 150, // Средняя жесткость
+    damping: 30,   // Среднее затухание
+    mass: 0.5      // Средняя масса
+  })
+
+  const springProgressSlow = useSpring(progressMotionValue, {
+    stiffness: 100, // Низкая жесткость - медленный отклик
+    damping: 35,   // Высокое затухание - меньше "пружинистости"
+    mass: 0.8      // Большая масса - инертность
+  })
+  const firstScreenProgressMotionValue = useMotionValue(0)
+  const secondScreenProgressMotionValue = useMotionValue(0)
+  const thirdScreenProgressMotionValue = useMotionValue(0)
+  
+  // Motion values для позиции мыши - без перерендеров
+  const mouseX = useMotionValue(50) // 0-100, начальное значение центр
+  const mouseY = useMotionValue(50) // 0-100, начальное значение центр
+  
+  // Motion value для кастомного скролла
+  const customScrollTop = useMotionValue(0)
+  const [isDraggingScrollbar, setIsDraggingScrollbar] = useState(false)
+  const scrollbarRef = useRef(null)
+  
+  // Для отображения в UI (только для текста) - используем useState только для индикаторов
+  const [progressText, setProgressText] = useState(0)
+  const [firstScreenProgressText, setFirstScreenProgressText] = useState(0)
+  const [secondScreenProgressText, setSecondScreenProgressText] = useState(0)
+  const [thirdScreenProgressText, setThirdScreenProgressText] = useState(0)
+  const [flashActive, setFlashActive] = useState(false)
+  const [clapperboardActive, setClapperboardActive] = useState(false) // Отключено по умолчанию для производительности
+  const [clapperboardVisible, setClapperboardVisible] = useState(false) // Скрыто по умолчанию
+
+  // Состояние для активной галереи
+  const [activeGallery, setActiveGallery] = useState(null) // { lentaId, frameIndex, frames }
+
+  // Ленивая загрузка лент для производительности
+  const [showLents, setShowLents] = useState(false)
+
+  // Показываем ленты после полной загрузки страницы (оптимизация производительности)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLents(true)
+    }, 1000) // Показываем ленты через 1 секунду после загрузки
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Фикс для нестабильных vh и vw единиц - устанавливаем CSS переменные
+  useEffect(() => {
+    const setViewportUnits = () => {
+      const vh = window.innerHeight * 0.01
+      const vw = window.innerWidth * 0.01
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
+      document.documentElement.style.setProperty('--vw', `${vw}px`)
+    }
+
+    // Устанавливаем сразу
+    setViewportUnits()
+
+    // Обновляем при изменении размера окна и ориентации
+    window.addEventListener('resize', setViewportUnits)
+    window.addEventListener('orientationchange', setViewportUnits)
+
+    return () => {
+      window.removeEventListener('resize', setViewportUnits)
+      window.removeEventListener('orientationchange', setViewportUnits)
+    }
+  }, [])
+
+  // Отслеживание позиции мыши для параллакса - без перерендеров
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const x = (e.clientX / window.innerWidth) * 100 // 0-100
+      const y = (e.clientY / window.innerHeight) * 100 // 0-100
+      mouseX.set(x)
+      mouseY.set(y)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [mouseX, mouseY])
+
+  // Transforms для параллакса - преобразуем позицию мыши в значения перспективы
+  // Для крупных лент (scale >= 1.5): сильный эффект
+  const lentaLargeParallaxX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeParallaxY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeRotateX = useTransform(mouseY, [0, 100], [8, -8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaLargeRotateY = useTransform(mouseX, [0, 100], [-8, 8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для средних лент (scale < 1.5): средний эффект
+  const lentaMediumParallaxX = useTransform(mouseX, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumParallaxY = useTransform(mouseY, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumRotateX = useTransform(mouseY, [0, 100], [5, -5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaMediumRotateY = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких лент: слабый эффект
+  const lentaSmallParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaSmallRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для крупной круговой диаграммы в центре: СЛАБЫЙ эффект (она на переднем плане)
+  const chartCenterParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartCenterRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких диаграмм на заднем плане: СИЛЬНЫЙ эффект (они дальше)
+  const chartBackParallaxX = useTransform(mouseX, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackParallaxY = useTransform(mouseY, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackRotateX = useTransform(mouseY, [0, 100], [6, -6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartBackRotateY = useTransform(mouseX, [0, 100], [-6, 6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Комбинированные transforms для центрирования + параллакс
+  const chartCenterX = useTransform(chartCenterParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartCenterY = useTransform(chartCenterParallaxY, (py) => `calc(-50% + ${py}px)`)
+  const chartTopX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartTopY = useTransform(chartBackParallaxY, (py) => `calc(2rem + ${py}px)`)
+  const chartBottomX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartBottomY = useTransform(chartBackParallaxY, (py) => `calc(-2rem + ${py}px)`)
+  
+  // Для помех на втором экране: комбинируем скролл и мышь
+  // Параллакс от мыши для помех
+  const grainMouseX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const grainMouseY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  
+  // Комбинированные motion values для backgroundPosition
+  const grainBackgroundXValue = useMotionValue(0)
+  const grainBackgroundYValue = useMotionValue(0)
+  
+  // Transform для backgroundPosition (комбинированная строка)
+  const grainBackgroundPosition = useTransform(
+    [grainBackgroundXValue, grainBackgroundYValue],
+    ([x, y]) => `${x}px ${y}px`
+  )
+  
+  // Transform для движения самого элемента (x, y) - комбинируем скролл и мышь
+  const grainTransformXValue = useMotionValue(0)
+  const grainTransformYValue = useMotionValue(0)
+  
+  const grainTransformX = grainTransformXValue
+  const grainTransformY = grainTransformYValue
+  
+  // Для лент перфорации: накапливаем смещение при движении мыши (как вращение пленки)
+  const perforationMouseOffset = useMotionValue(0)
+  const lastMouseX = useRef(50) // Начальная позиция мыши (центр)
+  
+  useEffect(() => {
+    const updatePerforationOffset = () => {
+      if (!isParallaxEnabled) return
+
+      const currentMouseX = mouseX.get()
+      const delta = Math.abs(currentMouseX - lastMouseX.current)
+
+      // Если мышь движется, добавляем смещение в одну сторону (вправо)
+      if (delta > 0.1) { // Порог для определения движения
+        // Скорость зависит от скорости движения мыши
+        const speed = Math.min(delta * 2, 5) // Ограничиваем максимальную скорость
+        perforationMouseOffset.set(perforationMouseOffset.get() + speed)
+        lastMouseX.current = currentMouseX
+      }
+    }
+
+    // Небольшое затухание накопленного смещения (имитация трения пленки)
+    const decayInterval = setInterval(() => {
+      const current = perforationMouseOffset.get()
+      if (current > 0) {
+        perforationMouseOffset.set(Math.max(0, current - 0.5)) // Медленное затухание
+      }
+    }, 100) // Каждые 100мс уменьшаем на 0.5
+
+    const unsubscribe = isParallaxEnabled ? mouseX.on('change', updatePerforationOffset) : null
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+      clearInterval(decayInterval)
+    }
+  }, [mouseX, perforationMouseOffset, isParallaxEnabled])
+  
+  // Для карточек проектов: разная сила параллакса в зависимости от расстояния от центра
+  // Центральная карточка (выбранная) - сильный параллакс
+  const movieCardCenterParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardCenterRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  
+  // Близкие карточки (offset 1) - средний параллакс
+  const movieCardNearParallaxX = useTransform(mouseX, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearParallaxY = useTransform(mouseY, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearRotateX = useTransform(mouseY, [0, 100], [2, -2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardNearRotateY = useTransform(mouseX, [0, 100], [-2, 2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Дальние карточки (offset 2) - слабый параллакс
+  const movieCardFarParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardFarRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Стабилизируем объект mouseParallaxValues через useMemo, чтобы не вызывать перерисовки MoviesCarousel
+  const movieParallaxValues = useMemo(() => ({
+    centerX: movieCardCenterParallaxX,
+    centerY: movieCardCenterParallaxY,
+    centerRotateX: movieCardCenterRotateX,
+    centerRotateY: movieCardCenterRotateY,
+    nearX: movieCardNearParallaxX,
+    nearY: movieCardNearParallaxY,
+    nearRotateX: movieCardNearRotateX,
+    nearRotateY: movieCardNearRotateY,
+    farX: movieCardFarParallaxX,
+    farY: movieCardFarParallaxY,
+    farRotateX: movieCardFarRotateX,
+    farRotateY: movieCardFarRotateY
+  }), [
+    movieCardCenterParallaxX, movieCardCenterParallaxY, movieCardCenterRotateX, movieCardCenterRotateY,
+    movieCardNearParallaxX, movieCardNearParallaxY, movieCardNearRotateX, movieCardNearRotateY,
+    movieCardFarParallaxX, movieCardFarParallaxY, movieCardFarRotateX, movieCardFarRotateY
+  ])
+
+  // 6 популярных российских кинопродакшенов/киностудий, принимающих госзаказы
+  const partners = [
+    { name: 'Мосфильм' },
+    { name: 'Ленфильм' },
+    { name: 'СТВ' },
+    { name: 'Централ Партнершип' },
+    { name: 'ВГТРК' },
+    { name: 'Первый канал' }
+  ]
+
+  // Топ-20 популярных российских фильмов последних 5 лет (2019-2024) с правильными ID для Кинопоиска
+  const topMovies = [
+    { title: 'Т-34', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1900788/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Движение вверх', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Холоп', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Серебряные коньки', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Огонь', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Вторжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Лёд 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Союз спасения', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Стриптизёрши', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Время первых', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Экипаж', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Притяжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Лёд', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: '28 панфиловцев', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Душа', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Селфи', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Холоп 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Чебурашка', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Сердце Пармы', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+    { title: 'Вызов', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 }
+  ]
+  
+  // Генерация frames для ленты на основе lentaId (для стабильности)
+  const generateFramesForLenta = (lentaId, frameCount) => {
+    // Используем lentaId как seed для генерации стабильных цветов
+    const seed = lentaId.split('-')[1] // Извлекаем номер из "lenta-1" -> "1"
+    const seedNum = parseInt(seed) || 0
+    
+    return Array.from({ length: frameCount }, (_, i) => {
+      // Простая детерминированная генерация на основе seed и индекса
+      const r = (seedNum * 17 + i * 23) % 256
+      const g = (seedNum * 31 + i * 37) % 256
+      const b = (seedNum * 41 + i * 43) % 256
+      return `rgb(${r}, ${g}, ${b})`
+    })
+  }
+
+  // Массив всех лент с их данными - используем folderId для генерации путей к изображениям
+  // Количество файлов будет определено динамически при загрузке
+  const allLentas = useMemo(() => {
+    return [
+      { id: 'lenta-1', folderId: '1' },
+      { id: 'lenta-6', folderId: '2' },
+      { id: 'lenta-9', folderId: '3' },
+      { id: 'lenta-2', folderId: '4' },
+      { id: 'lenta-3', folderId: '5' },
+      { id: 'lenta-4', folderId: '6' },
+      { id: 'lenta-7', folderId: '7' },
+      { id: 'lenta-8', folderId: '8' },
+      { id: 'lenta-12', folderId: '9' },
+      { id: 'lenta-5', folderId: '10' },
+      { id: 'lenta-10', folderId: '11' },
+      { id: 'lenta-11', folderId: '12' }
+    ]
+  }, [])
+
+  const handleFrameClick = (lentaId, frameIndex, frames) => {
+    // Находим индекс ленты в массиве
+    const lentaIndex = allLentas.findIndex(l => l.id === lentaId)
+    
+    // Используем переданные frames (они уже содержат реальные изображения)
+    // allLentas будет обновлен в Gallery при загрузке
+    setActiveGallery({ 
+      lentaId, 
+      frameIndex, 
+      frames, // Передаем реальные frames с изображениями
+      lentaIndex: lentaIndex >= 0 ? lentaIndex : 0,
+      allLentas // Передаем allLentas для навигации между лентами
+    })
+  }
+  
+  const handleCloseGallery = () => {
+    setActiveGallery(null)
+  }
+  
+  const handleSign = () => {
+    setFlashActive(true)
+  }
+  
+  const handleFlashComplete = () => {
+    setFlashActive(false)
+  }
+  
+  // Показываем хлопушку на 1/3 времени всех вспышек раньше (~1 сек)
+  // Без автозакрытия - окно остается открытым до ручного закрытия
+  // Но верхняя створка закрывается после падения
+  useEffect(() => {
+    if (flashActive) {
+      // Показываем на 1 сек (на 1/3 времени всех вспышек раньше)
+      const showTimeout = setTimeout(() => {
+        setClapperboardActive(true) // Открыта
+        setClapperboardVisible(true) // Показываем и падает сверху
+      }, 1000) // 1 сек - на 1/3 времени всех вспышек раньше
+      
+      // Закрываем верхнюю створку после падения (через ~1.5 сек после начала падения)
+      // 1000ms (показ) + 1500ms (время падения) = 2500ms
+      const closeFlapTimeout = setTimeout(() => {
+        setClapperboardActive(false) // Закрываем верхнюю створку
+      }, 2500)
+      
+      return () => {
+        clearTimeout(showTimeout)
+        clearTimeout(closeFlapTimeout)
+      }
+    }
+    // Убираем else блок - окно остается видимым до ручного закрытия
+  }, [flashActive])
+  
+  const handleClapperboardClose = useCallback(() => {
+    setClapperboardActive(false)
+    setTimeout(() => {
+      setClapperboardVisible(false)
+    }, 600) // Время на анимацию закрытия
+  }, [])
+
+  // Отслеживаем скролл контейнера с помощью framer-motion
+  const { scrollYProgress, scrollY } = useScroll({
+    container: containerRef,
+    layoutEffect: false
+  })
+
+  // Отслеживаем прогресс каждого экрана от появления до исчезновения
+  // offset: ["start end"] - когда верхний край экрана касается нижней части viewport (0%)
+  // offset: ["end start"] - когда нижний край экрана касается верхней части viewport (100%)
+  const { scrollYProgress: firstScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: firstScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: secondScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: secondScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: thirdScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: thirdScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  // Вычисляем прогресс через useTransform - без перерендеров, прямое обновление DOM
+  // Используем useTransform для преобразования scrollY в progress (0-1)
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const container = containerRef.current
+    const updateProgress = () => {
+      const viewportHeight = container.clientHeight
+      const containerHeight = container.scrollHeight
+      const full = containerHeight - viewportHeight
+      
+      if (full <= 0) {
+        progressMotionValue.set(0)
+        return
+      }
+      
+      // Подписываемся на изменения scrollY и обновляем progressMotionValue
+      const unsubscribe = scrollY.on("change", (latest) => {
+        const progressValue = Math.min(Math.max((latest / full) * 100, 0), 100) / 100
+        progressMotionValue.set(progressValue)
+      })
+      
+      return unsubscribe
+    }
+    
+    const unsubscribe = updateProgress()
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [scrollY, progressMotionValue])
+  
+  // Преобразуем scrollYProgress в motion value напрямую
+  useEffect(() => {
+    const unsubscribe1 = firstScreenScrollProgress.on("change", (latest) => {
+      firstScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe2 = secondScreenScrollProgress.on("change", (latest) => {
+      secondScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe3 = thirdScreenScrollProgress.on("change", (latest) => {
+      thirdScreenProgressMotionValue.set(latest)
+    })
+    
+    return () => {
+      unsubscribe1()
+      unsubscribe2()
+      unsubscribe3()
+    }
+  }, [firstScreenScrollProgress, secondScreenScrollProgress, thirdScreenScrollProgress, firstScreenProgressMotionValue, secondScreenProgressMotionValue, thirdScreenProgressMotionValue])
+  
+  // Motion values для изменения параметров шума (не движения, а изменения свойств)
+  const grainNoiseIntensity = useMotionValue(0.5) // Интенсивность шума
+  const grainNoiseOpacity = useMotionValue(0.6) // Прозрачность шума
+  
+  // Обновляем параметры шума при изменении скролла или мыши (не движение, а изменение)
+  useEffect(() => {
+    const updateNoise = () => {
+      const scroll = secondScreenScrollProgress.get()
+      const mouseXVal = mouseX.get() / 100 // 0-1
+      const mouseYVal = mouseY.get() / 100 // 0-1
+
+      // Изменяем backgroundPosition на основе скролла и мыши (движение фона)
+      if (isParallaxEnabled) {
+        grainBackgroundXValue.set(scroll * 200 + (mouseXVal - 0.5) * 50)
+        grainBackgroundYValue.set(scroll * 200 + (mouseYVal - 0.5) * 50)
+      } else {
+        grainBackgroundXValue.set(scroll * 200) // Только скролл, без мыши
+        grainBackgroundYValue.set(scroll * 200)
+      }
+
+      // Изменяем интенсивность шума на основе мыши и скролла (не движение, а изменение)
+      const mouseInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.1 : 0
+      const noiseIntensity = 0.4 + scroll * 0.3 + mouseInfluence
+      grainNoiseIntensity.set(Math.min(1, Math.max(0.3, noiseIntensity)))
+
+      const mouseOpacityInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.15 : 0
+      const noiseOpacity = 0.5 + scroll * 0.2 + mouseOpacityInfluence
+      grainNoiseOpacity.set(Math.min(1, Math.max(0.3, noiseOpacity)))
+    }
+    
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateNoise)
+    const unsubscribeMouseX = mouseX.on('change', updateNoise)
+    const unsubscribeMouseY = mouseY.on('change', updateNoise)
+    
+    // Инициализация
+    updateNoise()
+    
+    return () => {
+      unsubscribeScroll()
+      unsubscribeMouseX()
+      unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, grainBackgroundXValue, grainBackgroundYValue, grainNoiseIntensity, grainNoiseOpacity])
+  
+  // Motion values для перерисовки царапин (изменение их позиций)
+  const scratchRedrawTrigger = useMotionValue(0) // Триггер для перерисовки
+  
+  useEffect(() => {
+    const updateScratches = () => {
+      // Просто обновляем триггер, чтобы вызвать перерисовку
+      scratchRedrawTrigger.set(Date.now())
+    }
+
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateScratches)
+    const unsubscribeMouseX = isParallaxEnabled ? mouseX.on('change', updateScratches) : null
+    const unsubscribeMouseY = isParallaxEnabled ? mouseY.on('change', updateScratches) : null
+
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouseX) unsubscribeMouseX()
+      if (unsubscribeMouseY) unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, scratchRedrawTrigger, isParallaxEnabled])
+  
+  // UI обновления - синхронные для плавной работы (дебаунсинг только для тяжелых диаграмм)
+  useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    setProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(firstScreenProgressMotionValue, "change", (latest) => {
+    setFirstScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(secondScreenProgressMotionValue, "change", (latest) => {
+    setSecondScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(thirdScreenProgressMotionValue, "change", (latest) => {
+    setThirdScreenProgressText(Math.round(latest * 100))
+  })
+
+  return (
+    <>
+      {/* Компонент Вспышка */}
+      <Flash isActive={flashActive} onComplete={handleFlashComplete} />
+      
+      {/* Галерея для активированной ленты */}
+      {activeGallery && (
+        <Gallery
+          frames={activeGallery.frames}
+          initialIndex={activeGallery.frameIndex}
+          onClose={handleCloseGallery}
+          lentaIndex={activeGallery.lentaIndex}
+          allLentas={activeGallery.allLentas}
+        />
+      )}
+      
+      {/* Логотип SI-PRODUCTION в правом нижнем углу */}
+      <div 
+        className="si-production-logo"
+        style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          color: '#ffffff',
+          fontSize: 'clamp(32px, 6vw, 72px)',
+          fontFamily: "'Science Gothic', monospace",
+          fontWeight: 'bold',
+          zIndex: 10000,
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}
+      >
+        <span 
+          className="si-text"
+          style={{
+            fontFamily: "'Slovic', sans-serif",
+            color: '#ff0000',
+            transform: 'translateY(-3px)'
+          }}
+        >SI</span>
+        <span className="dash-text">-</span>
+        <span 
+          className="production-text"
+          style={{
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+          }}
+        >PRODUCTION</span>
+      </div>
+      
+      {/* Контейнер для хлопушки - fixed с overflow hidden */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        zIndex: 99999, // Ниже вспышки (100000)
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
+            </div>
+
+
+    <div 
+      ref={containerRef} 
+      className="main-scroll-container"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        overflowY: 'auto', // Нативный скролл
+        overflowX: 'hidden',
+        touchAction: 'pan-y' // Разрешаем вертикальный touch-скролл на мобильных
+      }}
+    >
+      {/* Ленты размещены внутри скроллящейся зоны */}
+      {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
+      {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
+      {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
+      {/* Каждая лента соответствует одной папке из public/photos (1-12) */}
+      {/* Центральные крупные ленты - быстрый spring для максимального эффекта */}
+      {/* Эти ленты самые заметные и должны реагировать мгновенно */}
+      <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Промежуточные ленты - средний spring */}
+      {/* Баланс между скоростью и плавностью */}
+      <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Фоновые ленты - медленный spring для subtle эффекта */}
+      {/* Эти ленты создают глубину и не должны отвлекать внимание */}
+      <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      
+      {/* Индикатор прогресса в левом верхнем углу */}
+      <div style={{
+        position: 'fixed',
+        top: '16px',
+        left: '16px',
+        color: '#ffffff',
+        fontSize: 'clamp(14px, 2vw, 18px)',
+        fontFamily: "'Science Gothic', monospace",
+        zIndex: 10000,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: '8px 16px',
+        borderRadius: '4px',
+        backdropFilter: 'blur(4px)',
+        pointerEvents: 'none'
+      }}>
+        Прогресс кинопроизводства: {progressText}%
+            </div>
+
+      {/* Первый экран */}
+      <section 
+        ref={firstScreenRef}
+        style={{ 
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a', // Чуть светлее черного
+          position: 'relative'
+        }}
+      >
+        {/* Индикатор прогресса первого экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '70px',
+          width: 'fit-content',
+          left: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Составление плана: {firstScreenProgressText}%
+            </div>
+
+        {/* Надпись ПЕРВЫЙ ЭКРАН */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+            Первый экран
+            </div>
+      </section>
+
+      {/* Второй экран */}
+      <section 
+        ref={secondScreenRef}
+        style={{ 
+        width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          overflowX: 'hidden'
+        }}
+      >
+        {/* Индикатор прогресса второго экрана - обертка для правильной работы sticky */}
+        <ProgressIndicator progressText={secondScreenProgressText} />
+        
+        {/* Эффекты помех - только если включены */}
+        {isGrainEnabled && (
+          <>
+            {/* Статические помехи как на старой пленке - зернистость */}
+            <GrainLayerComponent
+          zIndex={100}
+          opacity={0.6}
+          backgroundImage={`
+            radial-gradient(circle at 0 0, rgba(255,255,255,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 2px 2px, rgba(0,0,0,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 0.5px, transparent 0.5px)
+          `}
+          backgroundSize="4px 4px, 4px 4px, 2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2) brightness(0.85)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Дополнительный слой зернистости - точки */}
+        <GrainLayerComponent
+          zIndex={101}
+          opacity={0.5}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(255,255,255,0.1) 1px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 3px),
+            repeating-linear-gradient(90deg, transparent 0px, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 3px)
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="screen"
+          filter="contrast(1.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Третий слой - более крупная зернистость */}
+        <GrainLayerComponent
+          zIndex={102}
+          opacity={0.4}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px)
+          `}
+          backgroundSize="3px 3px"
+          mixBlendMode="multiply"
+          filter="contrast(1.5)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Четвертый слой - очень заметная зернистость с точками */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.7}
+          backgroundImage={`
+            repeating-conic-gradient(from 0deg at 50% 50%, 
+              rgba(255,255,255,0.2) 0deg, 
+              transparent 1deg, 
+              transparent 2deg, 
+              rgba(0,0,0,0.2) 2deg, 
+              rgba(0,0,0,0.2) 3deg, 
+              transparent 3deg, 
+              transparent 4deg
+            )
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2.5) brightness(0.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Горизонтальные царапины - перерисовываются при движении мыши */}
+        <ScratchesComponent count={15} scratchRedrawTrigger={scratchRedrawTrigger} />
+        
+        {/* Вертикальные полосы повреждений */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.25}
+          backgroundImage={`
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.15) 2px,
+              rgba(255, 255, 255, 0.15) 3px,
+              transparent 3px,
+              transparent 8px
+            )
+          `}
+          backgroundSize="60px 100%"
+          mixBlendMode="overlay"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+          </>
+        )}
+
+        {/* Движущиеся ленты перфорации по границам экрана */}
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" mouseOffset={perforationMouseOffset} />
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" mouseOffset={perforationMouseOffset} />
+        
+        {/* Линейная диаграмма на весь экран */}
+        <LineChartComponent key="line-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        
+        {/* Радарная диаграмма - сверху с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            top: '2rem',
+            x: chartTopX,
+            y: chartTopY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadarChartComponent key="radar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+        
+        {/* Радиальная столбчатая диаграмма - снизу с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            bottom: '2rem',
+            top: 'auto',
+            x: chartBottomX,
+            y: chartBottomY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadialBarChartComponent key="radial-bar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+
+        {/* Круговая диаграмма прогресса - по центру, передний план, СЛАБЫЙ параллакс */}
+        <CenterChartContainer
+          style={{
+            x: chartCenterX,
+            y: chartCenterY,
+            rotateX: chartCenterRotateX,
+            rotateY: chartCenterRotateY,
+          }}
+        >
+          <ProgressChart key="progress-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </CenterChartContainer>
+        
+          {/* Контейнер для договора */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(210mm, 90vw)',
+            height: 'min(297mm, calc(90vw * 1.414))',
+            maxHeight: 'calc(var(--vh, 1vh) * 90)',
+            zIndex: 20
+          }}>
+            {/* Сетчатый лист A4 - фон с сеткой */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backgroundImage: `
+                linear-gradient(to right, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px)
+              `,
+              backgroundSize: '1.5em 1.5em',
+              backgroundPosition: 'center center',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.6)'
+            }} />
+
+            {/* Контейнер с текстом договора */}
+            <div 
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                padding: 'clamp(16px, 3vw, 2rem)',
+                display: 'flex',
+                flexDirection: 'column',
+                fontSize: 'clamp(24px, 3vw, 36px)',
+                pointerEvents: 'auto',
+                zIndex: 1
+              }}
+            >
+            {/* Надпись ДОГОВОР сверху по центру */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: 'auto',
+              paddingTop: '1em'
+            }}>
+              <h1 
+                style={{
+                  fontSize: '2em',
+                  fontFamily: "'Slovic', sans-serif",
+                  color: '#ffffff',
+                  margin: 0
+                }}
+              >
+                ДОГОВОР
+              </h1>
+            </div>
+
+            {/* Список услуг с галочками в центре */}
+            <ContractItemsList progressMotionValue={secondScreenProgressMotionValue} />
+
+            {/* Кнопка Подписать снизу */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: 'auto',
+              paddingBottom: '1em'
+            }}>
+              <button 
+                onClick={handleSign}
+                style={{
+                  padding: '0.6em 1.6em',
+                  backgroundColor: '#ff0000',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0.2em',
+                  fontSize: '1em',
+                  fontFamily: "'Slovic', sans-serif",
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ff0000'
+                  e.currentTarget.style.color = '#ffffff'
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+              >
+                Подписать
+              </button>
+            </div>
+          </div>
+          </div>
+        
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+          Второй экран
+        </div>
+      </section>
+
+      {/* Третий экран */}
+      <section 
+        ref={thirdScreenRef}
+        style={{
+        width: '100vw',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
+          background: 'linear-gradient(to bottom, #000000 0%, #0a0a2e 50%, #1a1a3e 100%)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Упрощенное звездное небо для производительности */}
+        <StarrySky starCount={50} />
+
+        {/* Индикатор прогресса третьего экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '16px',
+          width: 'fit-content',
+          marginLeft: 'auto',
+          marginRight: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Монтаж: {thirdScreenProgressText}%
+        </div>
+
+        {/* Секция ПРОЕКТЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПРОЕКТЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1 
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПРОЕКТЫ
+            </h1>
+          </div>
+
+          {/* Карусель с фильмами */}
+          <div style={{ minHeight: '500px' }}>
+            <MoviesCarousel 
+              movies={topMovies}
+              mouseParallaxValues={movieParallaxValues}
+            />
+          </div>
+        </div>
+
+        {/* Секция ПАРТНЕРЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПАРТНЕРЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПАРТНЕРЫ
+            </h1>
+          </div>
+
+          {/* Сетка с логотипами партнеров */}
+          <PartnersGrid partners={partners} />
+          
+          {/* Футер - Made in Zvenigorod на звездном фоне */}
+          <footer style={{
+            width: '100%',
+            textAlign: 'center',
+            marginTop: '4rem',
+            marginBottom: '150px',
+            pointerEvents: 'none'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
+              fontFamily: "'Slovic', sans-serif",
+              fontWeight: 'bold'
+            }}>
+              <span>Made in</span>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontFamily: "'Slovic', sans-serif",
+                fontWeight: 'bold'
+              }}>
+                {/* Иконка православного купола из SVG файла */}
+                <img 
+                  src="/tampls.svg" 
+                  alt="Zvenigorod dome" 
+                  style={{ 
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    width: '24px',
+                    height: '24px'
+                  }}
+                />
+                <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
+              </span>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+    </div>
+    </>
+  )
+}
+
+// Компонент кастомного скроллбара
+function CustomScrollbar({ containerRef, scrollTop, isDragging, setIsDragging, scrollbarRef }) {
+  const [scrollbarHeight, setScrollbarHeight] = useState(0)
+  const [scrollbarTop, setScrollbarTop] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(0)
+  const [contentHeight, setContentHeight] = useState(0)
+  const dragStartY = useRef(0)
+  const dragStartScroll = useRef(0)
+  
+  // Вычисляем размеры скроллбара
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const updateScrollbar = () => {
+      const container = containerRef.current
+      if (!container) return
+      
+      const ch = container.clientHeight
+      const sh = container.scrollHeight
+      const st = scrollTop.get()
+      
+      setContainerHeight(ch)
+      setContentHeight(sh)
+      
+      // Высота скроллбара пропорциональна видимой области
+      const thumbHeight = Math.max(20, (ch / sh) * ch)
+      setScrollbarHeight(thumbHeight)
+      
+      // Позиция скроллбара пропорциональна scrollTop
+      const maxTop = ch - thumbHeight
+      const scrollProgress = sh > ch ? st / (sh - ch) : 0
+      setScrollbarTop(scrollProgress * maxTop)
+    }
+    
+    const unsubscribe = scrollTop.on('change', updateScrollbar)
+    updateScrollbar()
+    
+    // Обновляем при изменении размера окна
+    window.addEventListener('resize', updateScrollbar)
+    
+    return () => {
+      unsubscribe()
+      window.removeEventListener('resize', updateScrollbar)
+    }
+  }, [containerRef, scrollTop])
+  
+  // Обработка drag скроллбара
+  useEffect(() => {
+    if (!isDragging) return
+    
+    const handleMouseMove = (e) => {
+      if (!containerRef.current || !scrollbarRef.current) return
+      
+      const container = containerRef.current
+      const scrollbar = scrollbarRef.current
+      const containerRect = container.getBoundingClientRect()
+      const scrollbarRect = scrollbar.getBoundingClientRect()
+      
+      const deltaY = e.clientY - dragStartY.current
+      const scrollbarTrackHeight = containerHeight - scrollbarHeight
+      const scrollRatio = (deltaY / scrollbarTrackHeight) * (contentHeight - containerHeight)
+      
+      const newScroll = Math.max(0, Math.min(contentHeight - containerHeight, dragStartScroll.current + scrollRatio))
+      scrollTop.set(newScroll)
+    }
+    
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, containerRef, scrollbarRef, containerHeight, scrollbarHeight, contentHeight, scrollTop, setIsDragging])
+  
+  const handleMouseDown = (e) => {
+    e.preventDefault()
+    dragStartY.current = e.clientY
+    dragStartScroll.current = scrollTop.get()
+    setIsDragging(true)
+  }
+  
+  const handleTrackClick = (e) => {
+    if (!containerRef.current || !scrollbarRef.current) return
+    
+    const container = containerRef.current
+    const scrollbar = scrollbarRef.current
+    const containerRect = container.getBoundingClientRect()
+    const clickY = e.clientY - containerRect.top
+    
+    const scrollbarTrackHeight = containerHeight - scrollbarHeight
+    const clickRatio = clickY / scrollbarTrackHeight
+    const newScroll = clickRatio * (contentHeight - containerHeight)
+    
+    scrollTop.set(Math.max(0, Math.min(contentHeight - containerHeight, newScroll)))
+  }
+  
+  if (contentHeight <= containerHeight) return null // Не показываем скроллбар если контент помещается
+  
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        right: '10px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '8px',
+        height: `${containerHeight}px`,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '4px',
+        zIndex: 10000,
+        cursor: 'pointer'
+      }}
+      onClick={handleTrackClick}
+    >
+      <div
+        ref={scrollbarRef}
+        style={{
+          position: 'absolute',
+          top: `${scrollbarTop}px`,
+          left: 0,
+          width: '100%',
+          height: `${scrollbarHeight}px`,
+          backgroundColor: 'rgba(255, 255, 255, 0.5)',
+          borderRadius: '4px',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: isDragging ? 'none' : 'background-color 0.2s ease',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'
+        }}
+        onMouseLeave={(e) => {
+          if (!isDragging) {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+```
+
+```javascript
+import React, { useRef, useState, useEffect, Suspense, memo, useMemo, useCallback } from 'react'
+import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
+import { useParallaxStore } from '../store/parallaxStore'
+
+// Компонент пункта договора с галочкой
+const ContractItem = memo(function ContractItem({ text, progress, threshold, textColor }) {
+  // progress может быть motion value или числом
+  const [progressValue, setProgressValue] = useState(typeof progress === 'number' ? progress : 0)
+  
+  // Если progress - motion value, подписываемся на изменения
+  useEffect(() => {
+    if (typeof progress === 'object' && 'on' in progress) {
+      const unsubscribe = progress.on('change', (latest) => {
+        setProgressValue(latest * 100)
+      })
+      return unsubscribe
+    } else if (typeof progress === 'number') {
+      setProgressValue(progress)
+    }
+  }, [progress])
+  
+  // Галочка ставится когда progress >= threshold
+  const isChecked = progressValue >= threshold
+
+  return (
+    <div style={{
+          display: 'flex',
+          alignItems: 'center',
+      gap: '0.8em',
+      fontSize: '0.7em',
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      marginBottom: '0.8em'
+    }}>
+      <div style={{
+          width: '1.2em',
+          height: '1.2em',
+          minWidth: '1.2em',
+          minHeight: '1.2em',
+          border: '0.1em solid #ff0000',
+          borderRadius: '0.2em',
+          flexShrink: 0,
+          backgroundColor: isChecked ? '#ff0000' : 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+          justifyContent: 'center',
+            position: 'relative',
+          transition: 'background-color 0.3s ease'
+        }}>
+        {isChecked && (
+          <svg
+            width="0.8em"
+            height="0.8em"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ flexShrink: 0 }}
+          >
+            <path
+              d="M3 8L6 11L13 4"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+        </div>
+      {textColor ? (
+        <motion.span style={{ color: textColor, fontWeight: 'bold' }}>{text}</motion.span>
+      ) : (
+        <span style={{ color: '#000000', fontWeight: 'bold' }}>{text}</span>
+      )}
+    </div>
+  )
+})
+
+// Компонент Вспышка
+function Flash({ isActive, onComplete }) {
+  if (!isActive) return null
+
+  // Несколько вспышек для калибровки (как на современных телефонах)
+  // Финальная вспышка длится столько же, сколько хлопушка на экране (~2.6 сек)
+  // Хлопушка появляется на 1/3 времени всех вспышек раньше (~1 сек)
+  const totalDuration = 4.5 // Общая длительность: 0.5 сек калибровка + 2.6 сек финальная вспышка + 1.4 сек затухание
+  const clapperboardShowTime = 1.0 // Хлопушка появляется на 1 сек (на 1/3 времени всех вспышек раньше)
+  const finalFlashStart = 0.22 // Финальная вспышка начинается на 0.22 (~1 сек) - синхронизировано с хлопушкой
+  const finalFlashPeak = 0.25 // Максимум финальной вспышки на 0.25 (~1.125 сек)
+  const finalFlashEnd = 0.78 // Финальная вспышка заканчивается на 0.78 (~3.51 сек) - примерно когда хлопушка скрывается
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ 
+        opacity: [
+          0, 1, 0,      // Первая вспышка (быстрая)
+          0, 0.8, 0,    // Вторая вспышка (средняя)
+          0, 0.6, 0,    // Третья вспышка (слабая)
+          0, 1, 1, 0    // Финальная длинная вспышка (длится столько же, сколько хлопушка на экране)
+        ]
+      }}
+      transition={{ 
+        duration: totalDuration,
+        times: [
+          0, 0.05, 0.1,           // Первая вспышка (0-0.45 сек)
+          0.12, 0.15, 0.18,       // Вторая вспышка (0.54-0.81 сек)
+          finalFlashStart, finalFlashPeak, finalFlashEnd, 1  // Финальная вспышка начинается раньше (~1 сек) и длится до ~3.51 сек
+        ],
+        onComplete: onComplete
+      }}
+        style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+        backgroundColor: '#ffffff',
+        zIndex: 100000,
+        pointerEvents: 'none'
+      }}
+    />
+  )
+}
+
+// Компонент Хлопушка (Clapperboard) - теперь окно контактов
+const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
+  const [isDragging, setIsDragging] = useState(false)
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+
+  // Оптимизируем вычисления размеров с useMemo
+  const dimensions = useMemo(() => ({
+    width: '80vw',
+    height: 'calc(80vw / 1.333)'
+  }), [])
+  
+  const handleDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleDragEnd = (event, info) => {
+    // Закрытие окна при смахивании в любую сторону
+    const threshold = Math.min(window.innerHeight, window.innerWidth) * 0.25 // 25% от меньшей стороны экрана
+    const distance = Math.sqrt(info.offset.x ** 2 + info.offset.y ** 2)
+    
+    if (distance > threshold) {
+      if (onClose) {
+        onClose()
+      }
+    }
+    setIsDragging(false)
+  }
+  
+  return (
+        <motion.div
+      className="clapperboard-container"
+      initial={false}
+      animate={{
+        y: isVisible
+          ? ['calc(var(--vh, 1vh) * -100)', 0, -30, 0, -15, 0, -8, 0] // Падение сверху с отскоками
+          : 'calc(var(--vh, 1vh) * -100)',
+        x: isVisible ? 0 : '100vw', // При показе x=0, при скрытии улетает вправо
+        opacity: isVisible ? 1 : 0
+      }}
+      transition={{
+        y: isVisible ? {
+          duration: 1.5,
+          times: [0, 0.4, 0.5, 0.65, 0.75, 0.85, 0.92, 1],
+          ease: [0.25, 0.46, 0.45, 0.94] // Ease out для падения
+        } : {
+          type: "spring",
+          stiffness: 200,
+          damping: 15,
+          bounce: 0.6
+        },
+        x: {
+          type: "spring",
+          stiffness: 150,
+          damping: 18,
+          bounce: 0.4
+        },
+        opacity: {
+          duration: 0.3
+        }
+      }}
+      drag={true}
+      dragConstraints={dragConstraints}
+      dragElastic={0.3}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+          style={{
+        position: 'relative',
+        width: dimensions.width,
+        height: dimensions.height,
+        minHeight: dimensions.height,
+        pointerEvents: 'auto',
+        transformOrigin: 'top right',
+        cursor: isDragging ? 'grabbing' : 'grab'
+      }}
+    >
+      {/* Верхняя створка - черная с текстом SI-PRODUCTION */}
+        <motion.div
+        className="clapperboard-top"
+        initial={false}
+        animate={{ rotate: isActive ? 90 : 0 }}
+        transition={{ 
+          duration: 0.6,
+          ease: [0.25, 0.46, 0.45, 0.94] // Плавная анимация без spring эффекта
+        }}
+          style={{
+            position: 'absolute',
+            top: 0,
+          right: 0,
+            width: '100%',
+          height: '40%', // Уменьшено с 50% до 40% чтобы освободить место для нижней зоны
+          backgroundColor: '#000000',
+          border: '2px solid #333',
+          transformOrigin: 'bottom right',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+                  color: '#ffffff',
+          fontSize: 'clamp(20px, 4vw, 48px)',
+                  fontFamily: "'Science Gothic', monospace",
+                        fontWeight: 'bold',
+          zIndex: 2
+        }}
+      >
+            <span style={{
+          fontFamily: "'Slovic', sans-serif",
+          color: '#ff0000',
+          transform: 'translateY(-3px)'
+        }}>SI</span>
+        <span style={{
+          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+        }}>-PRODUCTION</span>
+      </motion.div>
+
+      {/* Нижний блок - контакты с фейковыми данными */}
+      <div 
+        className="clapperboard-contacts"
+        style={{
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: '100%',
+        minHeight: '60%', // Минимальная высота 60%, но может расширяться
+        height: 'auto', // Высота адаптируется под содержимое
+        backgroundColor: '#000000',
+        border: '2px solid #333',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 'clamp(16px, 3vw, 32px)',
+        fontSize: 'clamp(14px, 2.5vw, 24px)',
+        fontFamily: "'Science Gothic', monospace",
+        color: '#ffffff',
+        zIndex: 1,
+        gap: '1rem',
+        overflowY: 'auto', // Добавляем скролл если контент не вписывается
+        boxSizing: 'border-box' // Учитываем padding в высоте
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '1rem'
+        }}>
+          <div style={{ fontSize: 'clamp(18px, 3vw, 28px)', fontWeight: 'bold' }}>КОНТАКТЫ</div>
+          <button
+            onClick={onClose}
+            style={{
+              backgroundColor: 'transparent',
+              border: '2px solid #ffffff',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              fontSize: 'clamp(12px, 2vw, 18px)',
+              fontFamily: "'Science Gothic', monospace",
+              cursor: 'pointer',
+              borderRadius: '4px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff'
+              e.currentTarget.style.color = '#000000'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.color = '#ffffff'
+            }}
+          >
+            ЗАКРЫТЬ
+          </button>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '1rem',
+          flex: 1
+        }}>
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телеграм:</div>
+            <a 
+              href="https://t.me/example" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ 
+                color: '#00a8ff',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
+            >
+              @example_contact
+            </a>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Email:</div>
+            <div>contact@example.com</div>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телефон:</div>
+            <div>+7 (999) 123-45-67</div>
+          </div>
+        </div>
+        </div>
+    </motion.div>
+  )
+})
+
+// Компонент Галерея для активированной ленты (слайдер)
+function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(initialIndex)
+  const [currentLentaIndex, setCurrentLentaIndex] = useState(lentaIndex || 0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [loadedLentas, setLoadedLentas] = useState({}) // Кэш загруженных лент
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+  
+  // Загружаем изображения для всех лент
+  useEffect(() => {
+    if (!allLentas || allLentas.length === 0) return
+    
+    const loadLentaImages = async (lenta) => {
+      if (loadedLentas[lenta.id]) return // Уже загружена
+      
+      const folderId = lenta.folderId
+      if (!folderId) return
+      
+      // Проверяем все файлы в папке (до 20) и собираем список существующих
+      const maxCheck = 20
+      const existingFiles = []
+      
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      if (existingFiles.length > 0) {
+        const lentaFrames = existingFiles.map((fileNum) => ({
+          type: 'image',
+          src: `/photos/${folderId}/${fileNum}.webp`
+        }))
+        
+        setLoadedLentas(prev => ({
+          ...prev,
+          [lenta.id]: lentaFrames
+        }))
+      }
+    }
+    
+    // Загружаем изображения для всех лент параллельно
+    allLentas.forEach(lenta => {
+      loadLentaImages(lenta)
+    })
+  }, [allLentas, loadedLentas])
+  
+  // Получаем текущую ленту и её frames
+  const currentLenta = allLentas && allLentas[currentLentaIndex] ? allLentas[currentLentaIndex] : null
+  // Используем загруженные frames если есть, иначе переданные frames
+  const currentFrames = currentLenta && loadedLentas[currentLenta.id] 
+    ? loadedLentas[currentLenta.id] 
+    : (currentLenta ? currentLenta.frames : frames)
+  
+  // Обновляем индексы при изменении initialIndex или lentaIndex
+  useEffect(() => {
+    setCurrentFrameIndex(initialIndex)
+    if (lentaIndex !== undefined) {
+      setCurrentLentaIndex(lentaIndex)
+    }
+  }, [initialIndex, lentaIndex])
+
+  // Обработка клавиатуры для навигации
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        handlePrevFrame()
+      } else if (e.key === 'ArrowRight') {
+        handleNextFrame()
+      } else if (e.key === 'ArrowUp') {
+        handlePrevLenta()
+      } else if (e.key === 'ArrowDown') {
+        handleNextLenta()
+      } else if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentFrameIndex, currentLentaIndex, currentFrames, allLentas])
+
+  // Навигация по кадрам (горизонтально)
+  const handlePrevFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev > 0 ? prev - 1 : currentFrames.length - 1))
+  }
+
+  const handleNextFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev < currentFrames.length - 1 ? prev + 1 : 0))
+  }
+
+  // Навигация по лентам (вертикально)
+  const handlePrevLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev > 0 ? prev - 1 : allLentas.length - 1
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleNextLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev < allLentas.length - 1 ? prev + 1 : 0
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleVerticalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleVerticalDragEnd = (event, info) => {
+    // Вертикальный drag - переключение между лентами
+    if (!allLentas || allLentas.length === 0) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены ленты
+    if (info.offset.y > threshold) {
+      handlePrevLenta()
+    } else if (info.offset.y < -threshold) {
+      handleNextLenta()
+    }
+    setIsDragging(false)
+  }
+
+  const handleHorizontalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleHorizontalDragEnd = (event, info) => {
+    // Горизонтальный drag - смена кадров в ленте
+    if (!currentFrames) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены кадра
+    if (info.offset.x > threshold) {
+      handlePrevFrame()
+    } else if (info.offset.x < -threshold) {
+      handleNextFrame()
+    }
+    setIsDragging(false)
+  }
+
+  return (
+    <>
+      {/* Overlay с затемнением */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          zIndex: 100000,
+          cursor: 'pointer'
+        }}
+      />
+      
+      {/* Слайдер */}
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        drag="y"
+        dragConstraints={dragConstraints}
+        dragElastic={0.3}
+        onDragStart={handleVerticalDragStart}
+        onDragEnd={handleVerticalDragEnd}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100001,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Вертикальная карусель всех лент */}
+        {allLentas && allLentas.length > 0 ? (
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Все ленты вертикально */}
+            {allLentas.map((lenta, lentaIdx) => {
+              const isLentaActive = lentaIdx === currentLentaIndex
+              // Используем загруженные frames если есть, иначе генерируем пути
+              const lentaFrames = loadedLentas[lenta.id] || (lenta.folderId ? 
+                Array.from({ length: 20 }, (_, i) => ({
+                  type: 'image',
+                  src: `/photos/${lenta.folderId}/${i + 1}.webp`
+                })) : [])
+              
+              return (
+                <motion.div
+                  key={lenta.id}
+                  initial={false}
+                  animate={{
+                    opacity: isLentaActive ? 1 : 0,
+                    y: isLentaActive ? 0 : (lentaIdx < currentLentaIndex ? -100 : 100),
+                    scale: isLentaActive ? 1 : 0.8
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isLentaActive ? 'auto' : 'none'
+                  }}
+                >
+                  {/* Кадры текущей ленты горизонтально */}
+                  {isLentaActive && lentaFrames.map((frame, frameIdx) => {
+                    const isFrameActive = frameIdx === currentFrameIndex
+                    return (
+                      <motion.div
+                        key={`${lenta.id}-${frameIdx}`}
+                        initial={false}
+                        animate={{
+                          opacity: isFrameActive ? 1 : 0,
+                          scale: isFrameActive ? 1 : 0.8,
+                          x: isFrameActive ? 0 : (frameIdx < currentFrameIndex ? -100 : 100)
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          ease: [0.25, 0.46, 0.45, 0.94]
+                        }}
+                        drag="x"
+                        dragConstraints={dragConstraints}
+                        dragElastic={0.2}
+                        onDragStart={handleHorizontalDragStart}
+                        onDragEnd={handleHorizontalDragEnd}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          pointerEvents: isFrameActive ? 'auto' : 'none',
+                          cursor: isDragging ? 'grabbing' : 'grab'
+                        }}
+                      >
+                        {frame.type === 'image' ? (
+                          <img
+                            src={frame.src}
+                            alt={`Frame ${frameIdx}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                            }}
+                            onError={(e) => {
+                              // При ошибке показываем серый фон
+                              e.target.style.display = 'none'
+                              const parent = e.target.parentElement
+                              if (parent && !parent.querySelector('.fallback-bg')) {
+                                const fallback = document.createElement('div')
+                                fallback.className = 'fallback-bg'
+                                fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                                parent.appendChild(fallback)
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: frame.value || frame || '#333',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    )
+                  })}
+                </motion.div>
+              )
+            })}
+          </div>
+        ) : (
+          /* Fallback для старого режима без всех лент */
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px'
+            }}
+          >
+            {currentFrames && currentFrames.map((frame, index) => {
+              const isActive = index === currentFrameIndex
+              // Поддерживаем обратную совместимость: если frame - строка (старый формат), преобразуем в объект
+              const frameData = typeof frame === 'string' ? { type: 'color', value: frame } : frame
+              
+              return (
+                <motion.div
+                  key={index}
+                  initial={false}
+                  animate={{
+                    opacity: isActive ? 1 : 0,
+                    scale: isActive ? 1 : 0.8,
+                    x: isActive ? 0 : (index < currentFrameIndex ? -100 : 100)
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  drag="x"
+                  dragConstraints={dragConstraints}
+                  dragElastic={0.2}
+                  onDragStart={handleHorizontalDragStart}
+                  onDragEnd={handleHorizontalDragEnd}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isActive ? 'auto' : 'none',
+                    cursor: isDragging ? 'grabbing' : 'grab'
+                  }}
+                >
+                  {frameData.type === 'image' ? (
+                    <img
+                      src={frameData.src}
+                      alt={`Frame ${index}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                      }}
+                      onError={(e) => {
+                        // При ошибке показываем серый фон
+                        e.target.style.display = 'none'
+                        const parent = e.target.parentElement
+                        if (parent && !parent.querySelector('.fallback-bg')) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'fallback-bg'
+                          fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: frameData.value || frameData || '#333',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    />
+                  )}
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Кнопка закрытия в левом верхнем углу */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          style={{
+            position: 'absolute',
+            top: '32px',
+            left: '32px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ×
+        </button>
+
+        {/* Кнопки навигации по кадрам (горизонтально) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handlePrevFrame()
+          }}
+          style={{
+            position: 'absolute',
+            left: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ‹
+        </button>
+        
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleNextFrame()
+          }}
+          style={{
+            position: 'absolute',
+            right: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ›
+        </button>
+
+        {/* Кнопки навигации по лентам (вертикально) - только если есть все ленты */}
+        {allLentas && allLentas.length > 0 && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePrevLenta()
+              }}
+              style={{
+                position: 'absolute',
+                top: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↑
+            </button>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleNextLenta()
+              }}
+              style={{
+                position: 'absolute',
+                bottom: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↓
+            </button>
+          </>
+        )}
+
+        {/* Индикатор текущего кадра и ленты */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: allLentas && allLentas.length > 0 ? '100px' : '32px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            zIndex: 100002,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          {allLentas && allLentas.length > 0 && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '14px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              Лента {currentLentaIndex + 1} / {allLentas.length}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              display: 'flex',
+              gap: '8px'
+            }}>
+              {currentFrames.map((_, index) => (
+                <div
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCurrentFrameIndex(index)
+                  }}
+                  style={{
+                    width: index === currentFrameIndex ? '32px' : '8px',
+                    height: '8px',
+                    borderRadius: '4px',
+                    backgroundColor: index === currentFrameIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '12px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              {currentFrameIndex + 1} / {currentFrames.length}
+            </div>
+          )}
+        </div>
+
+      </motion.div>
+    </>
+  )
+}
+
+const ProgressChart = memo(function ProgressChart({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Внешний круг - больше элементов, зависящих от скролла
+  const outerData = [
+    { name: 'P1', value: progress }, // 0-100%
+    { name: 'P2', value: progress * 0.7 }, // 0-70%
+    { name: 'P3', value: progress * 0.5 }, // 0-50%
+    { name: 'P4', value: progress * 0.3 }, // 0-30%
+    { name: 'A', value: 25 + progress * 0.2 }, // Двигается вверх
+    { name: 'B', value: 30 - progress * 0.15 }, // Двигается вниз
+    { name: 'C', value: 20 + progress * 0.4 }, // Двигается вверх
+    { name: 'D', value: 35 - progress * 0.25 }, // Двигается вниз
+    { name: 'E', value: 15 + progress * 0.35 }, // Двигается вверх
+    { name: 'F', value: 40 - progress * 0.2 } // Двигается вниз
+  ]
+
+  // Внутренний круг - тоже с движущимися элементами
+  const innerData = [
+    { name: 'IP1', value: progress * 0.8 }, // 0-80%
+    { name: 'IP2', value: progress * 0.6 }, // 0-60%
+    { name: 'IP3', value: progress * 0.4 }, // 0-40%
+    { name: 'IA', value: 20 + progress * 0.3 }, // Двигается вверх
+    { name: 'IB', value: 25 - progress * 0.2 }, // Двигается вниз
+    { name: 'IC', value: 15 + progress * 0.5 }, // Двигается вверх
+    { name: 'ID', value: 30 - progress * 0.3 } // Двигается вниз
+  ]
+
+  return (
+    <div key="progress-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <PieChart key="pie-chart" width={600} height={600}>
+        {/* Внешний круг */}
+        <Pie
+          data={outerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={120}
+          outerRadius={200}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={3}
+          paddingAngle={2}
+        >
+          {outerData.map((entry, index) => (
+            <Cell 
+              key={`outer-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={3}
+            />
+          ))}
+        </Pie>
+        {/* Внутренний круг */}
+        <Pie
+          data={innerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={20}
+          outerRadius={110}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={2}
+          paddingAngle={1.5}
+        >
+          {innerData.map((entry, index) => (
+            <Cell 
+              key={`inner-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={2}
+            />
+          ))}
+        </Pie>
+      </PieChart>
+    </div>
+  )
+})
+
+// Компонент линейной диаграммы с точками, зависящими от скролла
+const LineChartComponent = memo(function LineChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки точек (Dots)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, value2: 30 - progress * 0.2 }, // Первая линия вверх, вторая вниз
+    { name: 'B', value: 50 - progress * 0.2, value2: 40 + progress * 0.3 }, // Первая вниз, вторая вверх
+    { name: 'C', value: 30 + progress * 0.4, value2: 50 - progress * 0.25 }, // Первая вверх, вторая вниз
+    { name: 'D', value: 60 - progress * 0.3, value2: 35 + progress * 0.4 }, // Первая вниз, вторая вверх
+    { name: 'E', value: 40 + progress * 0.25, value2: 55 - progress * 0.15 }, // Первая вверх, вторая вниз
+    { name: 'F', value: 70 - progress * 0.35, value2: 25 + progress * 0.5 }, // Первая вниз, вторая вверх
+    { name: 'G', value: 25 + progress * 0.5, value2: 60 - progress * 0.3 }, // Первая вверх, вторая вниз
+    { name: 'H', value: 55 - progress * 0.15, value2: 45 + progress * 0.2 }, // Первая вниз, вторая вверх
+    { name: 'I', value: 35 + progress * 0.3, value2: 50 - progress * 0.35 }, // Первая вверх, вторая вниз
+    { name: 'J', value: 65 - progress * 0.4, value2: 30 + progress * 0.45 }  // Первая вниз, вторая вверх
+  ], [progress])
+
+  return (
+    <div
+      key="line-chart-container"
+      style={{
+      width: '100%',
+      height: '100%',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      padding: 0,
+      zIndex: 1,
+      pointerEvents: 'none'
+    }}>
+      <ResponsiveContainer key="line-responsive-container" width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+          <XAxis 
+            dataKey="name" 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            hide={true}
+          />
+          <YAxis 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            domain={[0, 100]}
+            hide={true}
+          />
+          <Tooltip
+            key="line-tooltip"
+            cursor={false}
+            isAnimationActive={false}
+            contentStyle={{
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#ffffff'
+            }}
+          />
+          {/* Старая линия с точками */}
+          <Line
+            key="line1"
+            type="monotone"
+            dataKey="value"
+            stroke="#ffffff"
+            strokeWidth={3}
+            dot={{ fill: '#ffffff', r: 6 }}
+            activeDot={{ r: 8 }}
+          />
+          {/* Новая угловатая линия без точек */}
+          <Line
+            key="line2"
+            type="step"
+            dataKey="value2"
+            stroke="#ffffff"
+            strokeWidth={2}
+            dot={false}
+            strokeOpacity={0.7}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радарной диаграммы
+const RadarChartComponent = memo(function RadarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const data = [
+    { subject: 'A', value: 50 + progress * 0.3, fullMark: 100 },
+    { subject: 'B', value: 60 - progress * 0.2, fullMark: 100 },
+    { subject: 'C', value: 40 + progress * 0.4, fullMark: 100 },
+    { subject: 'D', value: 70 - progress * 0.3, fullMark: 100 },
+    { subject: 'E', value: 55 + progress * 0.25, fullMark: 100 },
+    { subject: 'F', value: 45 - progress * 0.35, fullMark: 100 }
+  ]
+
+  return (
+    <div key="radar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radar-responsive-container" width="100%" height="100%">
+        <RadarChart key="radar-chart" data={data}>
+          <PolarGrid stroke="#ffffff" strokeOpacity={0.3} />
+          <PolarAngleAxis 
+            dataKey="subject" 
+            tick={{ fill: '#ffffff', fontSize: 12 }}
+          />
+          <PolarRadiusAxis 
+            angle={90} 
+            domain={[0, 100]}
+            tick={{ fill: '#ffffff', fontSize: 10 }}
+          />
+          <Radar 
+            name="Value" 
+            dataKey="value" 
+            stroke="#ffffff" 
+            fill="#ffffff" 
+            fillOpacity={0.3}
+            strokeWidth={2}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радиальной столбчатой диаграммы, зависимый от скролла
+const RadialBarChartComponent = memo(function RadialBarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки секторов (RadialBarSectors)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, fill: '#ffffff' },
+    { name: 'B', value: 40 - progress * 0.2, fill: '#ffffff' },
+    { name: 'C', value: 60 + progress * 0.4, fill: '#ffffff' },
+    { name: 'D', value: 30 - progress * 0.3, fill: '#ffffff' },
+    { name: 'E', value: 50 + progress * 0.25, fill: '#ffffff' },
+    { name: 'F', value: 70 - progress * 0.35, fill: '#ffffff' }
+  ], [progress])
+
+  return (
+    <div key="radial-bar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radial-responsive-container" width="100%" height="100%">
+        <RadialBarChart
+          key="radial-bar-chart" 
+          cx="50%" 
+          cy="50%" 
+          innerRadius="20%" 
+          outerRadius="80%" 
+          data={data}
+          startAngle={90}
+          endAngle={-270}
+        >
+          <RadialBar
+            key="radial-bar"
+            dataKey="value"
+            cornerRadius={4}
+            fill="rgba(255, 255, 255, 0.3)"
+            stroke="#ffffff"
+            strokeWidth={2}
+          />
+        </RadialBarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент карусели с постерами фильмов (вращающаяся карусель)
+const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValues = null }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [wasDragging, setWasDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [dragOffset, setDragOffset] = useState(0)
+  const carouselRef = useRef(null)
+  const autoPlayRef = useRef(null)
+  const [isInViewport, setIsInViewport] = useState(false)
+
+  // Проверка видимости компонента в viewport
+  useEffect(() => {
+    if (!carouselRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsInViewport(entry.isIntersecting)
+        })
+      },
+      {
+        threshold: 0.1 // Компонент считается видимым, если видно хотя бы 10%
+      }
+    )
+
+    observer.observe(carouselRef.current)
+
+    return () => {
+      if (carouselRef.current) {
+        observer.unobserve(carouselRef.current)
+      }
+    }
+  }, [])
+
+  // Автоматическое вращение карусели (но не скролл страницы)
+  useEffect(() => {
+    // Автоплей работает только когда компонент виден
+    if (!isDragging && isInViewport) {
+      autoPlayRef.current = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }, 3000) // Меняем каждые 3 секунды
+    } else {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+
+    return () => {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+  }, [movies.length, isDragging, isInViewport])
+
+  // Обработчики для перетаскивания
+  const handleMouseDown = (e) => {
+    setIsDragging(true)
+    setStartX(e.clientX)
+    setDragOffset(0)
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current)
+    }
+  }
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return
+    const diff = e.clientX - startX
+    setDragOffset(diff)
+  }
+
+  const handleMouseUp = () => {
+    if (!isDragging) return
+    
+    const hadDrag = Math.abs(dragOffset) > 10
+    setWasDragging(hadDrag)
+    
+    // Если перетащили достаточно далеко, меняем слайд
+    if (Math.abs(dragOffset) > 100) {
+      if (dragOffset > 0) {
+        setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length)
+      } else {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }
+    }
+    
+    setIsDragging(false)
+    setDragOffset(0)
+    
+    // Сбрасываем флаг через небольшую задержку
+    setTimeout(() => setWasDragging(false), 100)
+  }
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false)
+      setDragOffset(0)
+    }
+  }
+
+  // Вычисляем позиции для карусели (3D эффект)
+  const getTransform = (index) => {
+    const offset = index - currentIndex
+    const absOffset = Math.abs(offset)
+    const direction = offset > 0 ? 1 : -1
+    
+    // Если элемент далеко, скрываем его
+    if (absOffset > 3) {
+      return {
+        transform: `translateX(${direction * 400}px) translateZ(-200px) scale(0.5)`,
+        opacity: 0,
+        zIndex: 0
+      }
+    }
+
+    // Близкие элементы видны
+    const scale = 1 - absOffset * 0.15
+    const translateX = offset * 220 + (isDragging ? dragOffset : 0)
+    const translateZ = -absOffset * 100
+    const opacity = 1 - absOffset * 0.3
+
+    return {
+      transform: `translateX(${translateX}px) translateZ(${translateZ}px) scale(${scale})`,
+      opacity: Math.max(0, opacity),
+      zIndex: movies.length - absOffset
+    }
+  }
+
+  return (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem 0',
+      perspective: '1000px',
+      perspectiveOrigin: 'center center'
+    }}>
+      <div 
+        ref={carouselRef}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '400px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transformStyle: 'preserve-3d',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
+        {movies.map((movie, index) => {
+          const baseStyle = getTransform(index)
+          const offset = Math.abs(index - currentIndex)
+          
+          // Определяем параллакс в зависимости от расстояния от центра
+          // Параллакс работает только когда компонент в viewport и параллакс включен
+          let parallaxX, parallaxY, rotateX, rotateY
+          if (!isInViewport || !isParallaxEnabled) {
+            // Если не в viewport или параллакс отключен - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          } else if (offset === 0) {
+            // Центральная карточка - сильный параллакс
+            parallaxX = mouseParallaxValues?.centerX || 0
+            parallaxY = mouseParallaxValues?.centerY || 0
+            rotateX = mouseParallaxValues?.centerRotateX || 0
+            rotateY = mouseParallaxValues?.centerRotateY || 0
+          } else if (offset === 1) {
+            // Близкие карточки - средний параллакс
+            parallaxX = mouseParallaxValues?.nearX || 0
+            parallaxY = mouseParallaxValues?.nearY || 0
+            rotateX = mouseParallaxValues?.nearRotateX || 0
+            rotateY = mouseParallaxValues?.nearRotateY || 0
+          } else if (offset === 2) {
+            // Дальние карточки - слабый параллакс
+            parallaxX = mouseParallaxValues?.farX || 0
+            parallaxY = mouseParallaxValues?.farY || 0
+            rotateX = mouseParallaxValues?.farRotateX || 0
+            rotateY = mouseParallaxValues?.farRotateY || 0
+          } else {
+            // Очень дальние карточки - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          }
+          
+          const handleClick = (e) => {
+            // Не открываем ссылку, если был drag
+            if (wasDragging || isDragging) {
+              e.preventDefault()
+              return
+            }
+            if (movie.kinopoiskId) {
+              window.open(`https://www.kinopoisk.ru/film/${movie.kinopoiskId}/`, '_blank')
+            }
+          }
+
+          return (
+            <motion.div
+              key={index}
+              style={{
+                position: 'absolute',
+                width: '200px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.6s ease',
+                ...baseStyle
+              }}
+              onClick={handleClick}
+            >
+              {/* Внутренний элемент для параллакса, чтобы не ломать существующий transform */}
+              <motion.div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  x: parallaxX,
+                  y: parallaxY,
+                  rotateX: rotateX,
+                  rotateY: rotateY,
+                  perspective: '1000px',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+              <div style={{
+                width: '100%',
+                height: '300px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                backgroundColor: '#333',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <img
+                  src={movie.poster}
+                  alt={movie.title}
+                  draggable={false}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    userSelect: 'none',
+                    pointerEvents: 'none'
+                  }}
+                  onError={(e) => {
+                    // При ошибке скрываем изображение и показываем название
+                    e.target.style.display = 'none'
+                    const parent = e.target.parentElement
+                    if (!parent.querySelector('.fallback-text')) {
+                      const fallback = document.createElement('div')
+                      fallback.className = 'fallback-text'
+                      fallback.style.cssText = 'color: #ffffff; font-family: "Slovic", sans-serif; font-size: 1.2rem; text-align: center; padding: 1rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%;'
+                      fallback.textContent = movie.title
+                      parent.appendChild(fallback)
+                    }
+                  }}
+                />
+              </div>
+              <div style={{
+                color: '#ffffff',
+                fontSize: '0.9rem',
+                fontFamily: "'Slovic', sans-serif",
+                textAlign: 'center',
+                padding: '0.5rem',
+                lineHeight: '1.3'
+              }}>
+                {movie.title}
+              </div>
+              </motion.div>
+            </motion.div>
+          )
+        })}
+      </div>
+      
+      {/* Индикаторы точек */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        marginTop: '2rem'
+      }}>
+        {movies.map((_, index) => (
+          <div
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            style={{
+              width: index === currentIndex ? '24px' : '8px',
+              height: '8px',
+              borderRadius: '4px',
+              backgroundColor: index === currentIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Кастомная функция сравнения - перерисовываем только если изменились movies
+  // mouseParallaxValues - это motion values, они не должны вызывать перерисовки
+  return prevProps.movies === nextProps.movies
+})
+
+// Компонент текстуры с закругленными прямоугольниками для границ экрана
+function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset = null }) {
+  // Параметры текстуры - одинаковые отступы
+  const gap = 5 // Отступ между элементами и от краев
+  const rectWidth = 20
+  const rectHeight = 16
+  const rectSpacing = rectWidth + gap * 2 // Ширина элемента + отступы с обеих сторон
+  const borderRadius = 2 // Меньше закругление
+  const edgeOffset = 20 // Отступ от края экрана
+
+  // Преобразуем scrollProgress в смещение текстуры с spring эффектом
+  const scrollOffsetRaw = useTransform(scrollProgress, [0, 1], [0, 600]) // Увеличено в 3 раза (200 -> 600)
+  const scrollOffset = useSpring(scrollOffsetRaw, {
+    stiffness: 50,
+    damping: 20,
+    mass: 1
+  })
+  
+  // Комбинируем скролл и накопленное смещение от мыши (всегда в одну сторону)
+  const combinedOffset = useMotionValue(0)
+  
+  useEffect(() => {
+    const updateOffset = () => {
+      const scroll = scrollOffset.get()
+      const mouse = mouseOffset ? mouseOffset.get() : 0
+      // Мышь всегда добавляет смещение в одну сторону (вправо)
+      combinedOffset.set(scroll + mouse)
+    }
+    
+    const unsubscribeScroll = scrollOffset.on('change', updateOffset)
+    const unsubscribeMouse = mouseOffset ? mouseOffset.on('change', updateOffset) : null
+    
+    updateOffset()
+    
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouse) unsubscribeMouse()
+    }
+  }, [scrollOffset, mouseOffset, combinedOffset])
+  
+  const backgroundPosition = useTransform(combinedOffset, (value) => `${value}px 0`)
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="${gap}" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.4"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        [position]: `${edgeOffset}px`, // Отступ от края
+        left: 0,
+        width: '100%',
+        height: `${rectHeight + 4}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: backgroundPosition,
+        pointerEvents: 'none',
+        zIndex: 25
+      }}
+    />
+  )
+}
+
+// Компонент для горизонтальных царапин, которые перерисовываются при движении мыши
+function ScratchesComponent({ count = 15, scratchRedrawTrigger }) {
+  const [scratches, setScratches] = useState([])
+  const [renderKey, setRenderKey] = useState(0)
+  
+  // Перерисовываем царапины при изменении триггера
+  useMotionValueEvent(scratchRedrawTrigger, 'change', () => {
+    // Генерируем новые позиции и параметры для всех царапин
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+    // Меняем key для полной перерисовки элементов
+    setRenderKey(prev => prev + 1)
+  })
+  
+  // Инициализация при монтировании
+  useEffect(() => {
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+  }, [count])
+  
+  return (
+    <>
+      {scratches.map((scratch) => (
+        <div
+          key={`${scratch.id}-${renderKey}`} // Меняем key для полной перерисовки
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '2px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: scratch.opacity,
+            transform: `rotate(${scratch.rotate}deg)`,
+            boxShadow: '0 0 3px rgba(255, 255, 255, 0.2)'
+            // Убрали transition - элементы появляются мгновенно в новых местах
+          }}
+        />
+      ))}
+    </>
+  )
+}
+
+// Компонент слоя помех с поддержкой скролла и мыши (без движения, только изменение параметров)
+function GrainLayerComponent({ zIndex, opacity, backgroundImage, backgroundSize, mixBlendMode, filter, grainBackgroundPosition, grainNoiseOpacity = null }) {
+  const layerRef = useRef(null)
+  
+  useMotionValueEvent(grainBackgroundPosition, 'change', (latest) => {
+    if (layerRef.current) {
+      layerRef.current.style.backgroundPosition = latest
+    }
+  })
+  
+  // Изменяем opacity на основе мыши и скролла
+  useEffect(() => {
+    if (!grainNoiseOpacity) return
+    
+    const unsubscribe = grainNoiseOpacity.on('change', (latest) => {
+      if (layerRef.current) {
+        layerRef.current.style.opacity = latest * opacity
+      }
+    })
+    
+    return () => unsubscribe()
+  }, [grainNoiseOpacity, opacity])
+  
+  return (
+    <div
+      ref={layerRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex,
+        opacity: grainNoiseOpacity ? undefined : opacity,
+        backgroundImage,
+        backgroundSize,
+        mixBlendMode,
+        filter
+      }}
+    />
+  )
+}
+
+// Мемоизированный контейнер для диаграмм с параллаксом
+const ChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      left: '50%',
+      top: '2rem', // default top
+      zIndex: 12,
+      width: '25vw',
+      height: '25vw',
+      maxWidth: '300px',
+      maxHeight: '300px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный контейнер для центральной большой диаграммы
+const CenterChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      zIndex: 18,
+      width: '80vw',
+      height: '80vw',
+      maxWidth: '1000px',
+      maxHeight: '1000px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный индикатор прогресса
+const ProgressIndicator = memo(({ progressText }) => (
+  <div style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+    pointerEvents: 'none',
+    zIndex: 1000
+  }}>
+    <div style={{
+      position: 'sticky',
+      top: '45px',
+      width: 'fit-content',
+      marginLeft: 'auto',
+      marginRight: '16px',
+      color: '#ffffff',
+      fontSize: 'clamp(14px, 2vw, 18px)',
+      fontFamily: "'Science Gothic', monospace",
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      padding: '8px 16px',
+      borderRadius: '4px',
+      backdropFilter: 'blur(4px)',
+      pointerEvents: 'none'
+    }}>
+      Запуск процессов: {progressText}%
+    </div>
+  </div>
+))
+
+// Мемоизированный список пунктов договора
+const ContractItemsList = memo(({ progressMotionValue }) => (
+  <div style={{
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 'clamp(16px, 3vw, 2em)',
+    paddingRight: 'clamp(16px, 3vw, 2em)'
+  }}>
+    <ContractItem text="Подбор и согласование локаций любой сложности по всей России" progress={progressMotionValue} threshold={35} textColor="#ffffff" />
+    <ContractItem text="Согласуем все договоренности и разрешения" progress={progressMotionValue} threshold={40} textColor="#ffffff" />
+    <ContractItem text="Полное сопровождение съемок и постродакшен" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
+    <ContractItem text="Кинопроизводство полного цикла" progress={progressMotionValue} threshold={60} textColor="#ffffff" />
+    <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={progressMotionValue} threshold={65} textColor="#ffffff" />
+  </div>
+))
+
+// Компонент эффекта помех/повреждения пленки для второго экрана
+function FilmGrainEffect({ scrollProgress }) {
+  const [grainIntensity, setGrainIntensity] = useState(0)
+  const [scratchOffset, setScratchOffset] = useState(0)
+  const [rgbSplit, setRgbSplit] = useState(0)
+  const [flicker, setFlicker] = useState(1)
+
+  // Обновляем интенсивность эффектов на основе скролла
+  useMotionValueEvent(scrollProgress, "change", (latest) => {
+    const progress = Math.min(Math.max(latest, 0), 1)
+    setGrainIntensity(progress)
+    setScratchOffset(progress * 200)
+    setRgbSplit(progress * 8) // Максимальное смещение RGB каналов 8px
+    // Flicker эффект - случайные вспышки при скролле
+    setFlicker(1 - (Math.random() * 0.15 * progress))
+  })
+
+  // Генерируем случайные царапины
+  const scratches = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    top: Math.random() * 100,
+    left: Math.random() * 100,
+    width: Math.random() * 300 + 100,
+    opacity: Math.random() * 0.5 + 0.2,
+    delay: Math.random() * 2
+  }))
+
+  return (
+    <>
+      {/* Основной слой зернистости - более заметный */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 100,
+          opacity: Math.max(0.3, grainIntensity * 0.8),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.3) 3px),
+            repeating-linear-gradient(90deg, rgba(0,0,0,0.2) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.2) 3px),
+            repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.05) 3px)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.3) brightness(0.85)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 100}% ${Math.random() * 100}%`,
+            `${Math.random() * 100}% ${Math.random() * 100}%`
+          ]
+        }}
+        transition={{
+          duration: 0.05,
+          repeat: Infinity,
+          repeatType: 'reverse'
+        }}
+      />
+
+      {/* RGB Split эффект - смещение цветовых каналов */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 101,
+          opacity: Math.max(0.2, grainIntensity * 0.7),
+          background: `
+            linear-gradient(to right, 
+              rgba(255, 0, 0, 0.2) 0%, 
+              transparent ${rgbSplit}px,
+              transparent calc(100% - ${rgbSplit}px),
+              rgba(0, 0, 255, 0.2) 100%)
+          `,
+          mixBlendMode: 'screen',
+          transform: `translateX(${rgbSplit * 0.3}px)`,
+          filter: `blur(${rgbSplit * 0.1}px)`
+        }}
+      />
+
+      {/* Горизонтальные царапины */}
+      {scratches.map((scratch) => (
+        <motion.div
+          key={scratch.id}
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '3px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.6), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity)),
+            transform: `translateX(${scratchOffset * 0.5}px)`,
+            boxShadow: '0 0 4px rgba(255, 255, 255, 0.3)'
+          }}
+          animate={{
+            x: [0, scratchOffset * 0.5, 0],
+            opacity: [
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5),
+              Math.max(0.2, scratch.opacity * Math.max(0.3, grainIntensity)),
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5)
+            ]
+          }}
+          transition={{
+            duration: 1.5 + Math.random() * 2,
+            repeat: Infinity,
+            delay: scratch.delay,
+            ease: 'linear'
+          }}
+        />
+      ))}
+
+      {/* Вертикальные полосы повреждений */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 103,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          backgroundImage: `
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.1) 2px,
+              rgba(255, 255, 255, 0.1) 3px,
+              transparent 3px,
+              transparent 5px
+            )
+          `,
+          backgroundSize: '80px 100%',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          backgroundPosition: [`${scratchOffset * 0.3}px 0`, `${scratchOffset * 0.3 + 80}px 0`]
+        }}
+        transition={{
+          duration: 0.3,
+          repeat: Infinity,
+          ease: 'linear'
+        }}
+      />
+
+      {/* Flicker эффект - мерцание */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 104,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          opacity: [flicker * 0.4, flicker * 0.8, flicker * 0.4]
+        }}
+        transition={{
+          duration: 0.08 + Math.random() * 0.15,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+
+      {/* Дополнительный шум через canvas-like эффект */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 99,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          background: `
+            radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.04) 0%, transparent 40%),
+            radial-gradient(circle at 90% 20%, rgba(0, 0, 0, 0.04) 0%, transparent 40%)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'difference',
+          filter: 'blur(1px)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 50}% ${Math.random() * 50}%`,
+            `${Math.random() * 50 + 50}% ${Math.random() * 50 + 50}%`
+          ]
+        }}
+        transition={{
+          duration: 2 + Math.random() * 1.5,
+          repeat: Infinity,
+          repeatType: 'reverse',
+          ease: 'easeInOut'
+        }}
+      />
+      
+      {/* Дополнительный слой статического шума */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 105,
+          opacity: Math.max(0.15, grainIntensity * 0.5),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px)
+          `,
+          backgroundSize: '4px 4px',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.5)'
+        }}
+        animate={{
+          opacity: [
+            Math.max(0.15, grainIntensity * 0.5),
+            Math.max(0.25, grainIntensity * 0.7),
+            Math.max(0.15, grainIntensity * 0.5)
+          ]
+        }}
+        transition={{
+          duration: 0.1,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+    </>
+  )
+}
+
+// Компонент звездного неба с мерцающими звездами
+// Компонент сетки с названиями партнеров
+function PartnersGrid({ partners }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: '2rem',
+      width: '100%',
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '2rem'
+    }}>
+      {partners.map((partner, index) => (
+        <div
+          key={index}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer',
+            minHeight: '150px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+            e.currentTarget.style.transform = 'scale(1.05)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <div style={{
+            color: '#ffffff',
+            fontFamily: "'Slovic', sans-serif",
+            fontSize: '1.5rem',
+            textAlign: 'center',
+            fontWeight: 'bold'
+          }}>
+            {partner.name}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
+  const [stars] = useState(() => {
+    return Array.from({ length: starCount }, () => ({
+      x: Math.random() * 100, // Позиция X в процентах
+      y: Math.random() * 100, // Позиция Y в процентах
+      size: Math.random() * 2 + 0.5, // Размер от 0.5px до 2.5px (меньше)
+      baseOpacity: Math.random() * 0.4 + 0.2, // Базовая прозрачность от 0.2 до 0.6
+      peakOpacity: Math.random() * 0.3 + 0.7, // Пиковая прозрачность от 0.7 до 1.0
+      duration: Math.random() * 2 + 1.5, // Длительность анимации от 1.5 до 3.5 секунд
+      delay: Math.random() * 2 // Задержка начала анимации от 0 до 2 секунд
+    }))
+  })
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: 1
+    }}>
+      {stars.map((star, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: star.baseOpacity }}
+          animate={{
+            opacity: [star.baseOpacity, star.peakOpacity, star.baseOpacity]
+          }}
+          transition={{
+            duration: star.duration,
+            repeat: Infinity,
+            delay: star.delay,
+            ease: "easeInOut"
+          }}
+          style={{
+            position: 'absolute',
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            borderRadius: '50%',
+            backgroundColor: '#ffffff',
+            boxShadow: `0 0 ${star.size}px rgba(255, 255, 255, 0.5)`
+          }}
+        />
+      ))}
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Перерисовываем только если изменился starCount
+  return prevProps.starCount === nextProps.starCount
+})
+
+// Компонент текстуры перфорации для лент
+function LentaPerforationTexture({ width, height, position = 'top', scale = 1 }) {
+  // Параметры текстуры - масштабируемые
+  // Отступы одинаковые: от краев ленты и между элементами
+  const gap = 5 * scale // Отступ между элементами и от краев (одинаковый)
+  const rectWidth = 20 * scale
+  const rectHeight = Math.min(height * 0.8, 16 * scale) // Адаптируем под высоту полосы
+  // Расстояние между началами элементов = ширина элемента + gap (отступ между элементами)
+  const rectSpacing = rectWidth + gap // Ширина элемента + один отступ
+  const borderRadius = 2 * scale // Меньше закругление
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  // Элемент начинается с 0, так как отступ от края уже учтен в позиции контейнера
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.2"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        [position]: 0,
+        left: `${gap}px`, // Отступ от левого края
+        width: `${width - gap * 2}px`, // Уменьшаем ширину на отступы с обеих сторон
+        height: `${height}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: '0 0',
+        pointerEvents: 'none',
+        zIndex: 1
+      }}
+    />
+  )
+}
+
+function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  
+  // Определяем список существующих файлов в папке (проверяем до 20 файлов)
+  const [existingFileNumbers, setExistingFileNumbers] = useState([])
+  
+  useEffect(() => {
+    if (!folderId) {
+      setExistingFileNumbers([])
+      return
+    }
+    
+    // Проверяем все файлы в папке (до 20) и собираем список существующих
+    // Это позволяет находить файлы даже если они не начинаются с 1.webp
+    const checkImageCount = async () => {
+      const maxCheck = 20 // Максимальное количество файлов для проверки
+      const existingFiles = []
+      
+      // Проверяем все файлы от 1 до maxCheck
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          
+          // Таймаут увеличен до 500ms для более надежной проверки
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      setExistingFileNumbers(existingFiles)
+    }
+    
+    checkImageCount()
+  }, [folderId])
+  
+  // Генерируем список путей к изображениям на основе найденных файлов
+  const frames = useMemo(() => {
+    if (existingFileNumbers.length > 0 && folderId) {
+      return existingFileNumbers.map((fileNum) => ({
+        type: 'image',
+        src: `/photos/${folderId}/${fileNum}.webp`
+      }))
+    }
+    // Fallback на случайные цвета если изображения не найдены
+    return Array.from({ length: 8 }, () => {
+      const r = Math.floor(Math.random() * 256)
+      const g = Math.floor(Math.random() * 256)
+      const b = Math.floor(Math.random() * 256)
+      return { type: 'color', value: `rgb(${r}, ${g}, ${b})` }
+    })
+  }, [existingFileNumbers, folderId])
+  
+  const frameCount = frames.length
+  
+  // Состояние для отслеживания hover на каждом кадре - временно отключено для производительности
+  // const [hoveredIndex, setHoveredIndex] = useState(null)
+
+  // progress может быть motion value или числом
+  // Прямое преобразование progress в позицию без spring - синхронно со скроллом
+  // Если progress - motion value, используем его напрямую, иначе создаем из числа
+  const progressMotion = typeof progress === 'object' && 'get' in progress 
+    ? progress 
+    : useMotionValue(typeof progress === 'number' ? (progress > 1 ? progress / 100 : progress) : 0)
+  
+  // Если progress - число, обновляем motion value
+  useEffect(() => {
+    if (typeof progress === 'number') {
+      const normalized = progress > 1 ? progress / 100 : progress
+      progressMotion.set(normalized)
+    }
+  }, [progress, progressMotion])
+  
+  // Прямое преобразование progress в позицию - без задержки, синхронно
+  const translateXValue = useTransform(progressMotion, (prog) => {
+    let targetLeftPosition = Math.max(-200, Math.min(200, (prog - center) * 500 * speed))
+    if (inverse) {
+      targetLeftPosition = -targetLeftPosition
+    }
+    return `translateX(${targetLeftPosition}vw)`
+  })
+
+  // Вычисляем zIndex на основе scale - крупные ленты должны быть выше визуально
+  // Базовый zIndex 1000, добавляем scale * 100 для правильного порядка
+  const zIndex = 1000 + Math.round(scale * 100)
+
+  return (
+    // Внешний контейнер - позиционирование относительно viewport
+    // Используем position: fixed для позиционирования относительно окна браузера
+          <div style={{
+      position: 'fixed',
+      top: `calc(50vh + ${topOffset}vh)`,
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      transformOrigin: 'center center',
+      zIndex: zIndex,
+      pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
+          }}>
+      {/* Контейнер поворота - поворачивается на angle градусов + параллакс */}
+            <motion.div
+        style={{
+        rotate: `${angle}deg`,
+        transformOrigin: 'center center',
+        pointerEvents: 'none',
+        x: isParallaxEnabled ? (parallaxX || 0) : 0,
+        y: isParallaxEnabled ? (parallaxY || 0) : 0,
+        rotateX: isParallaxEnabled ? (rotateX || 0) : 0,
+        rotateY: isParallaxEnabled ? (rotateY || 0) : 0,
+        perspective: '1000px'
+      }}>
+        {/* Контейнер движения - двигается по повернутой оси X */}
+        <motion.div
+          style={{
+            display: 'flex',
+            gap: 0, // Убираем отступы между кадрами для цельной ленты
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            pointerEvents: 'none', // Контейнер не перехватывает события - скролл проходит сквозь
+            transform: translateXValue,
+            position: 'relative' // Для позиционирования перфорации на уровне всей ленты
+          }}
+          onWheel={(e) => {
+            // Пробрасываем скролл событие - не блокируем его
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            // Не блокируем события мыши для скролла
+            e.stopPropagation()
+          }}
+        >
+          {(() => {
+            // Вычисляем параметры один раз для всей ленты
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale
+            const totalWidth = frameWidth * frameCount
+            
+            return (
+              <>
+                {/* Текстура перфорации на верхней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="top"
+                  scale={scale}
+                />
+                
+                {/* Текстура перфорации на нижней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="bottom"
+                  scale={scale}
+                />
+              </>
+            )
+          })()}
+          
+          {/* Кадры ленты */}
+          {frames.map((frame, index) => {
+            const isHovered = false // Временно отключено для производительности
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale // Высота черной полосы сверху/снизу
+            const holeSize = 4 * scale // Размер дырочек
+            const holeSpacing = 12 * scale // Расстояние между центрами дырочек
+            
+            return (
+              <div
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onFrameClick) onFrameClick(lentaId, index, frames)
+                }}
+                onWheel={(e) => {
+                  // Пробрасываем скролл событие родителю - не блокируем скролл
+                  if (containerRef && containerRef.current) {
+                    // Не вызываем preventDefault, чтобы скролл работал естественно
+                    // Просто пробрасываем событие
+                    const scrollEvent = new WheelEvent('wheel', {
+                      deltaY: e.deltaY,
+                      deltaX: e.deltaX,
+                      bubbles: true,
+                      cancelable: true
+                    })
+                    containerRef.current.dispatchEvent(scrollEvent)
+                  }
+                }}
+                onTouchMove={(e) => {
+                  // Для touch устройств тоже пробрасываем скролл
+                  if (containerRef && containerRef.current) {
+                    e.stopPropagation()
+                  }
+                }}
+                style={{
+                  width: `${frameWidth}px`,
+                  height: `${frameHeight + borderWidth * 2}px`,
+                  flexShrink: 0,
+                  position: 'relative',
+                  backgroundColor: '#000000', // Черный фон для полос сверху/снизу
+                  // Тени убраны для оптимизации производительности
+                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'pointer',
+                  pointerEvents: 'auto', // Кадры кликабельны
+                  touchAction: 'pan-y' // Разрешаем вертикальный скролл на touch устройствах
+                }}
+              >
+                {/* Сам кадр в центре */}
+                {frame.type === 'image' ? (
+                  <img
+                    src={frame.src}
+                    alt={`Frame ${index}`}
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      objectFit: 'cover',
+                      borderRadius: '2px'
+                    }}
+                    onError={(e) => {
+                      // При ошибке загрузки показываем серый фон
+                      e.target.style.display = 'none'
+                      e.target.parentElement.style.backgroundColor = '#333'
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      backgroundColor: frame.value || '#333',
+                      borderRadius: '2px'
+                    }}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </motion.div>
+      </motion.div>
+            </div>
+  )
+}
+
+export default function Home() {
+  const containerRef = useRef(null)
+  const firstScreenRef = useRef(null)
+  const secondScreenRef = useRef(null)
+  const thirdScreenRef = useRef(null)
+
+  // Zustand store для управления эффектами
+  const { isParallaxEnabled, toggleParallax, isGrainEnabled } = useParallaxStore()
+  
+  // Состояние для данных из Excel
+  const [filmographyData, setFilmographyData] = useState({ partners: [], projects: [] })
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  
+  // Загрузка данных из JSON файла
+  useEffect(() => {
+    fetch('/filmography.json')
+      .then(res => res.json())
+      .then(data => {
+        setFilmographyData(data)
+        setIsLoadingData(false)
+      })
+      .catch(err => {
+        console.error('Ошибка загрузки данных фильмографии:', err)
+        setIsLoadingData(false)
+      })
+  }, [])
+  
+  // Motion values для progress - без перерендеров
+  const progressMotionValue = useMotionValue(0)
+
+  // Spring версии progress для эластичной анимации лент с разными характеристиками
+  // Все ленты слушают один progressMotionValue, но с разными spring эффектами
+  const springProgressFast = useSpring(progressMotionValue, {
+    stiffness: 200, // Высокая жесткость - быстрый отклик
+    damping: 25,   // Низкое затухание - больше "пружинистости"
+    mass: 0.3      // Малая масса - легкость
+  })
+
+  const springProgressMedium = useSpring(progressMotionValue, {
+    stiffness: 150, // Средняя жесткость
+    damping: 30,   // Среднее затухание
+    mass: 0.5      // Средняя масса
+  })
+
+  const springProgressSlow = useSpring(progressMotionValue, {
+    stiffness: 100, // Низкая жесткость - медленный отклик
+    damping: 35,   // Высокое затухание - меньше "пружинистости"
+    mass: 0.8      // Большая масса - инертность
+  })
+  const firstScreenProgressMotionValue = useMotionValue(0)
+  const secondScreenProgressMotionValue = useMotionValue(0)
+  const thirdScreenProgressMotionValue = useMotionValue(0)
+  
+  // Motion values для позиции мыши - без перерендеров
+  const mouseX = useMotionValue(50) // 0-100, начальное значение центр
+  const mouseY = useMotionValue(50) // 0-100, начальное значение центр
+  
+  // Motion value для кастомного скролла
+  const customScrollTop = useMotionValue(0)
+  const [isDraggingScrollbar, setIsDraggingScrollbar] = useState(false)
+  const scrollbarRef = useRef(null)
+  
+  // Для отображения в UI (только для текста) - используем useState только для индикаторов
+  const [progressText, setProgressText] = useState(0)
+  const [firstScreenProgressText, setFirstScreenProgressText] = useState(0)
+  const [secondScreenProgressText, setSecondScreenProgressText] = useState(0)
+  const [thirdScreenProgressText, setThirdScreenProgressText] = useState(0)
+  const [flashActive, setFlashActive] = useState(false)
+  const [clapperboardActive, setClapperboardActive] = useState(false) // Отключено по умолчанию для производительности
+  const [clapperboardVisible, setClapperboardVisible] = useState(false) // Скрыто по умолчанию
+
+  // Состояние для активной галереи
+  const [activeGallery, setActiveGallery] = useState(null) // { lentaId, frameIndex, frames }
+
+  // Ленивая загрузка лент для производительности
+  const [showLents, setShowLents] = useState(false)
+
+  // Показываем ленты после полной загрузки страницы (оптимизация производительности)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLents(true)
+    }, 1000) // Показываем ленты через 1 секунду после загрузки
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Фикс для нестабильных vh и vw единиц - устанавливаем CSS переменные
+  useEffect(() => {
+    const setViewportUnits = () => {
+      const vh = window.innerHeight * 0.01
+      const vw = window.innerWidth * 0.01
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
+      document.documentElement.style.setProperty('--vw', `${vw}px`)
+    }
+
+    // Устанавливаем сразу
+    setViewportUnits()
+
+    // Обновляем при изменении размера окна и ориентации
+    window.addEventListener('resize', setViewportUnits)
+    window.addEventListener('orientationchange', setViewportUnits)
+
+    return () => {
+      window.removeEventListener('resize', setViewportUnits)
+      window.removeEventListener('orientationchange', setViewportUnits)
+    }
+  }, [])
+
+  // Отслеживание позиции мыши для параллакса - без перерендеров
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const x = (e.clientX / window.innerWidth) * 100 // 0-100
+      const y = (e.clientY / window.innerHeight) * 100 // 0-100
+      mouseX.set(x)
+      mouseY.set(y)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [mouseX, mouseY])
+
+  // Transforms для параллакса - преобразуем позицию мыши в значения перспективы
+  // Для крупных лент (scale >= 1.5): сильный эффект
+  const lentaLargeParallaxX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeParallaxY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeRotateX = useTransform(mouseY, [0, 100], [8, -8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaLargeRotateY = useTransform(mouseX, [0, 100], [-8, 8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для средних лент (scale < 1.5): средний эффект
+  const lentaMediumParallaxX = useTransform(mouseX, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumParallaxY = useTransform(mouseY, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumRotateX = useTransform(mouseY, [0, 100], [5, -5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaMediumRotateY = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких лент: слабый эффект
+  const lentaSmallParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaSmallRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для крупной круговой диаграммы в центре: СЛАБЫЙ эффект (она на переднем плане)
+  const chartCenterParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartCenterRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких диаграмм на заднем плане: СИЛЬНЫЙ эффект (они дальше)
+  const chartBackParallaxX = useTransform(mouseX, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackParallaxY = useTransform(mouseY, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackRotateX = useTransform(mouseY, [0, 100], [6, -6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartBackRotateY = useTransform(mouseX, [0, 100], [-6, 6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Комбинированные transforms для центрирования + параллакс
+  const chartCenterX = useTransform(chartCenterParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartCenterY = useTransform(chartCenterParallaxY, (py) => `calc(-50% + ${py}px)`)
+  const chartTopX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartTopY = useTransform(chartBackParallaxY, (py) => `calc(2rem + ${py}px)`)
+  const chartBottomX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartBottomY = useTransform(chartBackParallaxY, (py) => `calc(-2rem + ${py}px)`)
+  
+  // Для помех на втором экране: комбинируем скролл и мышь
+  // Параллакс от мыши для помех
+  const grainMouseX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const grainMouseY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  
+  // Комбинированные motion values для backgroundPosition
+  const grainBackgroundXValue = useMotionValue(0)
+  const grainBackgroundYValue = useMotionValue(0)
+  
+  // Transform для backgroundPosition (комбинированная строка)
+  const grainBackgroundPosition = useTransform(
+    [grainBackgroundXValue, grainBackgroundYValue],
+    ([x, y]) => `${x}px ${y}px`
+  )
+  
+  // Transform для движения самого элемента (x, y) - комбинируем скролл и мышь
+  const grainTransformXValue = useMotionValue(0)
+  const grainTransformYValue = useMotionValue(0)
+  
+  const grainTransformX = grainTransformXValue
+  const grainTransformY = grainTransformYValue
+  
+  // Для лент перфорации: накапливаем смещение при движении мыши (как вращение пленки)
+  const perforationMouseOffset = useMotionValue(0)
+  const lastMouseX = useRef(50) // Начальная позиция мыши (центр)
+  
+  useEffect(() => {
+    const updatePerforationOffset = () => {
+      if (!isParallaxEnabled) return
+
+      const currentMouseX = mouseX.get()
+      const delta = Math.abs(currentMouseX - lastMouseX.current)
+
+      // Если мышь движется, добавляем смещение в одну сторону (вправо)
+      if (delta > 0.1) { // Порог для определения движения
+        // Скорость зависит от скорости движения мыши
+        const speed = Math.min(delta * 2, 5) // Ограничиваем максимальную скорость
+        perforationMouseOffset.set(perforationMouseOffset.get() + speed)
+        lastMouseX.current = currentMouseX
+      }
+    }
+
+    // Небольшое затухание накопленного смещения (имитация трения пленки)
+    const decayInterval = setInterval(() => {
+      const current = perforationMouseOffset.get()
+      if (current > 0) {
+        perforationMouseOffset.set(Math.max(0, current - 0.5)) // Медленное затухание
+      }
+    }, 100) // Каждые 100мс уменьшаем на 0.5
+
+    const unsubscribe = isParallaxEnabled ? mouseX.on('change', updatePerforationOffset) : null
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+      clearInterval(decayInterval)
+    }
+  }, [mouseX, perforationMouseOffset, isParallaxEnabled])
+  
+  // Для карточек проектов: разная сила параллакса в зависимости от расстояния от центра
+  // Центральная карточка (выбранная) - сильный параллакс
+  const movieCardCenterParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardCenterRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  
+  // Близкие карточки (offset 1) - средний параллакс
+  const movieCardNearParallaxX = useTransform(mouseX, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearParallaxY = useTransform(mouseY, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearRotateX = useTransform(mouseY, [0, 100], [2, -2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardNearRotateY = useTransform(mouseX, [0, 100], [-2, 2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Дальние карточки (offset 2) - слабый параллакс
+  const movieCardFarParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardFarRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Стабилизируем объект mouseParallaxValues через useMemo, чтобы не вызывать перерисовки MoviesCarousel
+  const movieParallaxValues = useMemo(() => ({
+    centerX: movieCardCenterParallaxX,
+    centerY: movieCardCenterParallaxY,
+    centerRotateX: movieCardCenterRotateX,
+    centerRotateY: movieCardCenterRotateY,
+    nearX: movieCardNearParallaxX,
+    nearY: movieCardNearParallaxY,
+    nearRotateX: movieCardNearRotateX,
+    nearRotateY: movieCardNearRotateY,
+    farX: movieCardFarParallaxX,
+    farY: movieCardFarParallaxY,
+    farRotateX: movieCardFarRotateX,
+    farRotateY: movieCardFarRotateY
+  }), [
+    movieCardCenterParallaxX, movieCardCenterParallaxY, movieCardCenterRotateX, movieCardCenterRotateY,
+    movieCardNearParallaxX, movieCardNearParallaxY, movieCardNearRotateX, movieCardNearRotateY,
+    movieCardFarParallaxX, movieCardFarParallaxY, movieCardFarRotateX, movieCardFarRotateY
+  ])
+
+  // Партнеры из Excel файла (с fallback на старые данные)
+  const partners = useMemo(() => {
+    if (filmographyData.partners && filmographyData.partners.length > 0) {
+      return filmographyData.partners
+    }
+    // Fallback на старые данные, если JSON не загружен
+    return [
+      { name: 'Мосфильм' },
+      { name: 'Ленфильм' },
+      { name: 'СТВ' },
+      { name: 'Централ Партнершип' },
+      { name: 'ВГТРК' },
+      { name: 'Первый канал' }
+    ]
+  }, [filmographyData.partners])
+
+  // Проекты из Excel файла, преобразованные в формат для MoviesCarousel
+  const topMovies = useMemo(() => {
+    if (filmographyData.projects && filmographyData.projects.length > 0) {
+      return filmographyData.projects.map((project, index) => ({
+        title: project.title,
+        poster: project.poster || `data:image/svg+xml;base64,${btoa(`
+          <svg width="200" height="300" xmlns="http://www.w3.org/2000/svg">
+            <rect width="200" height="300" fill="#1a1a1a"/>
+            <text x="100" y="150" font-family="Arial" font-size="16" fill="#ffffff" text-anchor="middle">${project.title}</text>
+            <text x="100" y="170" font-family="Arial" font-size="12" fill="#888" text-anchor="middle">${project.studio}</text>
+          </svg>
+        `)}`,
+        kinopoiskId: project.kinopoiskId || null,
+        studio: project.studio,
+        period: project.period,
+        format: project.format
+      }))
+    }
+    // Fallback на старые данные, если JSON не загружен
+    return [
+      { title: 'Т-34', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1900788/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Движение вверх', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Холоп', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Серебряные коньки', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Огонь', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Вторжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Лёд 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Союз спасения', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Стриптизёрши', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Время первых', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Экипаж', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Притяжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Лёд', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: '28 панфиловцев', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Душа', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Селфи', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Холоп 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Чебурашка', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Сердце Пармы', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Вызов', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 }
+    ]
+  }, [filmographyData.projects])
+  
+  // Генерация frames для ленты на основе lentaId (для стабильности)
+  const generateFramesForLenta = (lentaId, frameCount) => {
+    // Используем lentaId как seed для генерации стабильных цветов
+    const seed = lentaId.split('-')[1] // Извлекаем номер из "lenta-1" -> "1"
+    const seedNum = parseInt(seed) || 0
+    
+    return Array.from({ length: frameCount }, (_, i) => {
+      // Простая детерминированная генерация на основе seed и индекса
+      const r = (seedNum * 17 + i * 23) % 256
+      const g = (seedNum * 31 + i * 37) % 256
+      const b = (seedNum * 41 + i * 43) % 256
+      return `rgb(${r}, ${g}, ${b})`
+    })
+  }
+
+  // Массив всех лент с их данными - используем folderId для генерации путей к изображениям
+  // Количество файлов будет определено динамически при загрузке
+  const allLentas = useMemo(() => {
+    return [
+      { id: 'lenta-1', folderId: '1' },
+      { id: 'lenta-6', folderId: '2' },
+      { id: 'lenta-9', folderId: '3' },
+      { id: 'lenta-2', folderId: '4' },
+      { id: 'lenta-3', folderId: '5' },
+      { id: 'lenta-4', folderId: '6' },
+      { id: 'lenta-7', folderId: '7' },
+      { id: 'lenta-8', folderId: '8' },
+      { id: 'lenta-12', folderId: '9' },
+      { id: 'lenta-5', folderId: '10' },
+      { id: 'lenta-10', folderId: '11' },
+      { id: 'lenta-11', folderId: '12' }
+    ]
+  }, [])
+
+  const handleFrameClick = (lentaId, frameIndex, frames) => {
+    // Находим индекс ленты в массиве
+    const lentaIndex = allLentas.findIndex(l => l.id === lentaId)
+    
+    // Используем переданные frames (они уже содержат реальные изображения)
+    // allLentas будет обновлен в Gallery при загрузке
+    setActiveGallery({ 
+      lentaId, 
+      frameIndex, 
+      frames, // Передаем реальные frames с изображениями
+      lentaIndex: lentaIndex >= 0 ? lentaIndex : 0,
+      allLentas // Передаем allLentas для навигации между лентами
+    })
+  }
+  
+  const handleCloseGallery = () => {
+    setActiveGallery(null)
+  }
+  
+  const handleSign = () => {
+    setFlashActive(true)
+  }
+  
+  const handleFlashComplete = () => {
+    setFlashActive(false)
+  }
+  
+  // Показываем хлопушку на 1/3 времени всех вспышек раньше (~1 сек)
+  // Без автозакрытия - окно остается открытым до ручного закрытия
+  // Но верхняя створка закрывается после падения
+  useEffect(() => {
+    if (flashActive) {
+      // Показываем на 1 сек (на 1/3 времени всех вспышек раньше)
+      const showTimeout = setTimeout(() => {
+        setClapperboardActive(true) // Открыта
+        setClapperboardVisible(true) // Показываем и падает сверху
+      }, 1000) // 1 сек - на 1/3 времени всех вспышек раньше
+      
+      // Закрываем верхнюю створку после падения (через ~1.5 сек после начала падения)
+      // 1000ms (показ) + 1500ms (время падения) = 2500ms
+      const closeFlapTimeout = setTimeout(() => {
+        setClapperboardActive(false) // Закрываем верхнюю створку
+      }, 2500)
+      
+      return () => {
+        clearTimeout(showTimeout)
+        clearTimeout(closeFlapTimeout)
+      }
+    }
+    // Убираем else блок - окно остается видимым до ручного закрытия
+  }, [flashActive])
+  
+  const handleClapperboardClose = useCallback(() => {
+    setClapperboardActive(false)
+    setTimeout(() => {
+      setClapperboardVisible(false)
+    }, 600) // Время на анимацию закрытия
+  }, [])
+
+  // Отслеживаем скролл контейнера с помощью framer-motion
+  const { scrollYProgress, scrollY } = useScroll({
+    container: containerRef,
+    layoutEffect: false
+  })
+
+  // Отслеживаем прогресс каждого экрана от появления до исчезновения
+  // offset: ["start end"] - когда верхний край экрана касается нижней части viewport (0%)
+  // offset: ["end start"] - когда нижний край экрана касается верхней части viewport (100%)
+  const { scrollYProgress: firstScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: firstScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: secondScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: secondScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: thirdScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: thirdScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  // Вычисляем прогресс через useTransform - без перерендеров, прямое обновление DOM
+  // Используем useTransform для преобразования scrollY в progress (0-1)
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const container = containerRef.current
+    const updateProgress = () => {
+      const viewportHeight = container.clientHeight
+      const containerHeight = container.scrollHeight
+      const full = containerHeight - viewportHeight
+      
+      if (full <= 0) {
+        progressMotionValue.set(0)
+        return
+      }
+      
+      // Подписываемся на изменения scrollY и обновляем progressMotionValue
+      const unsubscribe = scrollY.on("change", (latest) => {
+        const progressValue = Math.min(Math.max((latest / full) * 100, 0), 100) / 100
+        progressMotionValue.set(progressValue)
+      })
+      
+      return unsubscribe
+    }
+    
+    const unsubscribe = updateProgress()
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [scrollY, progressMotionValue])
+  
+  // Преобразуем scrollYProgress в motion value напрямую
+  useEffect(() => {
+    const unsubscribe1 = firstScreenScrollProgress.on("change", (latest) => {
+      firstScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe2 = secondScreenScrollProgress.on("change", (latest) => {
+      secondScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe3 = thirdScreenScrollProgress.on("change", (latest) => {
+      thirdScreenProgressMotionValue.set(latest)
+    })
+    
+    return () => {
+      unsubscribe1()
+      unsubscribe2()
+      unsubscribe3()
+    }
+  }, [firstScreenScrollProgress, secondScreenScrollProgress, thirdScreenScrollProgress, firstScreenProgressMotionValue, secondScreenProgressMotionValue, thirdScreenProgressMotionValue])
+  
+  // Motion values для изменения параметров шума (не движения, а изменения свойств)
+  const grainNoiseIntensity = useMotionValue(0.5) // Интенсивность шума
+  const grainNoiseOpacity = useMotionValue(0.6) // Прозрачность шума
+  
+  // Обновляем параметры шума при изменении скролла или мыши (не движение, а изменение)
+  useEffect(() => {
+    const updateNoise = () => {
+      const scroll = secondScreenScrollProgress.get()
+      const mouseXVal = mouseX.get() / 100 // 0-1
+      const mouseYVal = mouseY.get() / 100 // 0-1
+
+      // Изменяем backgroundPosition на основе скролла и мыши (движение фона)
+      if (isParallaxEnabled) {
+        grainBackgroundXValue.set(scroll * 200 + (mouseXVal - 0.5) * 50)
+        grainBackgroundYValue.set(scroll * 200 + (mouseYVal - 0.5) * 50)
+      } else {
+        grainBackgroundXValue.set(scroll * 200) // Только скролл, без мыши
+        grainBackgroundYValue.set(scroll * 200)
+      }
+
+      // Изменяем интенсивность шума на основе мыши и скролла (не движение, а изменение)
+      const mouseInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.1 : 0
+      const noiseIntensity = 0.4 + scroll * 0.3 + mouseInfluence
+      grainNoiseIntensity.set(Math.min(1, Math.max(0.3, noiseIntensity)))
+
+      const mouseOpacityInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.15 : 0
+      const noiseOpacity = 0.5 + scroll * 0.2 + mouseOpacityInfluence
+      grainNoiseOpacity.set(Math.min(1, Math.max(0.3, noiseOpacity)))
+    }
+    
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateNoise)
+    const unsubscribeMouseX = mouseX.on('change', updateNoise)
+    const unsubscribeMouseY = mouseY.on('change', updateNoise)
+    
+    // Инициализация
+    updateNoise()
+    
+    return () => {
+      unsubscribeScroll()
+      unsubscribeMouseX()
+      unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, grainBackgroundXValue, grainBackgroundYValue, grainNoiseIntensity, grainNoiseOpacity])
+  
+  // Motion values для перерисовки царапин (изменение их позиций)
+  const scratchRedrawTrigger = useMotionValue(0) // Триггер для перерисовки
+  
+  useEffect(() => {
+    const updateScratches = () => {
+      // Просто обновляем триггер, чтобы вызвать перерисовку
+      scratchRedrawTrigger.set(Date.now())
+    }
+
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateScratches)
+    const unsubscribeMouseX = isParallaxEnabled ? mouseX.on('change', updateScratches) : null
+    const unsubscribeMouseY = isParallaxEnabled ? mouseY.on('change', updateScratches) : null
+
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouseX) unsubscribeMouseX()
+      if (unsubscribeMouseY) unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, scratchRedrawTrigger, isParallaxEnabled])
+  
+  // UI обновления - синхронные для плавной работы (дебаунсинг только для тяжелых диаграмм)
+  useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    setProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(firstScreenProgressMotionValue, "change", (latest) => {
+    setFirstScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(secondScreenProgressMotionValue, "change", (latest) => {
+    setSecondScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(thirdScreenProgressMotionValue, "change", (latest) => {
+    setThirdScreenProgressText(Math.round(latest * 100))
+  })
+
+  return (
+    <>
+      {/* Компонент Вспышка */}
+      <Flash isActive={flashActive} onComplete={handleFlashComplete} />
+      
+      {/* Галерея для активированной ленты */}
+      {activeGallery && (
+        <Gallery
+          frames={activeGallery.frames}
+          initialIndex={activeGallery.frameIndex}
+          onClose={handleCloseGallery}
+          lentaIndex={activeGallery.lentaIndex}
+          allLentas={activeGallery.allLentas}
+        />
+      )}
+      
+      {/* Логотип SI-PRODUCTION в правом нижнем углу */}
+      <div 
+        className="si-production-logo"
+        style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          color: '#ffffff',
+          fontSize: 'clamp(32px, 6vw, 72px)',
+          fontFamily: "'Science Gothic', monospace",
+          fontWeight: 'bold',
+          zIndex: 10000,
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}
+      >
+        <span 
+          className="si-text"
+          style={{
+            fontFamily: "'Slovic', sans-serif",
+            color: '#ff0000',
+            transform: 'translateY(-3px)'
+          }}
+        >SI</span>
+        <span className="dash-text">-</span>
+        <span 
+          className="production-text"
+          style={{
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+          }}
+        >PRODUCTION</span>
+      </div>
+      
+      {/* Контейнер для хлопушки - fixed с overflow hidden */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        zIndex: 99999, // Ниже вспышки (100000)
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
+            </div>
+
+
+    <div 
+      ref={containerRef} 
+      className="main-scroll-container"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        overflowY: 'auto', // Нативный скролл
+        overflowX: 'hidden',
+        touchAction: 'pan-y' // Разрешаем вертикальный touch-скролл на мобильных
+      }}
+    >
+      {/* Ленты размещены внутри скроллящейся зоны */}
+      {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
+      {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
+      {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
+      {/* Каждая лента соответствует одной папке из public/photos (1-12) */}
+      {/* Центральные крупные ленты - быстрый spring для максимального эффекта */}
+      {/* Эти ленты самые заметные и должны реагировать мгновенно */}
+      <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Промежуточные ленты - средний spring */}
+      {/* Баланс между скоростью и плавностью */}
+      <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Фоновые ленты - медленный spring для subtle эффекта */}
+      {/* Эти ленты создают глубину и не должны отвлекать внимание */}
+      <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      
+      {/* Индикатор прогресса в левом верхнем углу */}
+      <div style={{
+        position: 'fixed',
+        top: '16px',
+        left: '16px',
+        color: '#ffffff',
+        fontSize: 'clamp(14px, 2vw, 18px)',
+        fontFamily: "'Science Gothic', monospace",
+        zIndex: 10000,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: '8px 16px',
+        borderRadius: '4px',
+        backdropFilter: 'blur(4px)',
+        pointerEvents: 'none'
+      }}>
+        Прогресс кинопроизводства: {progressText}%
+            </div>
+
+      {/* Первый экран */}
+      <section 
+        ref={firstScreenRef}
+        style={{ 
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a', // Чуть светлее черного
+          position: 'relative'
+        }}
+      >
+        {/* Индикатор прогресса первого экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '70px',
+          width: 'fit-content',
+          left: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Составление плана: {firstScreenProgressText}%
+            </div>
+
+        {/* Надпись ПЕРВЫЙ ЭКРАН */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+            Первый экран
+            </div>
+      </section>
+
+      {/* Второй экран */}
+      <section 
+        ref={secondScreenRef}
+        style={{ 
+        width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          overflowX: 'hidden'
+        }}
+      >
+        {/* Индикатор прогресса второго экрана - обертка для правильной работы sticky */}
+        <ProgressIndicator progressText={secondScreenProgressText} />
+        
+        {/* Эффекты помех - только если включены */}
+        {isGrainEnabled && (
+          <>
+            {/* Статические помехи как на старой пленке - зернистость */}
+            <GrainLayerComponent
+          zIndex={100}
+          opacity={0.6}
+          backgroundImage={`
+            radial-gradient(circle at 0 0, rgba(255,255,255,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 2px 2px, rgba(0,0,0,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 0.5px, transparent 0.5px)
+          `}
+          backgroundSize="4px 4px, 4px 4px, 2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2) brightness(0.85)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Дополнительный слой зернистости - точки */}
+        <GrainLayerComponent
+          zIndex={101}
+          opacity={0.5}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(255,255,255,0.1) 1px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 3px),
+            repeating-linear-gradient(90deg, transparent 0px, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 3px)
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="screen"
+          filter="contrast(1.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Третий слой - более крупная зернистость */}
+        <GrainLayerComponent
+          zIndex={102}
+          opacity={0.4}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px)
+          `}
+          backgroundSize="3px 3px"
+          mixBlendMode="multiply"
+          filter="contrast(1.5)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Четвертый слой - очень заметная зернистость с точками */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.7}
+          backgroundImage={`
+            repeating-conic-gradient(from 0deg at 50% 50%, 
+              rgba(255,255,255,0.2) 0deg, 
+              transparent 1deg, 
+              transparent 2deg, 
+              rgba(0,0,0,0.2) 2deg, 
+              rgba(0,0,0,0.2) 3deg, 
+              transparent 3deg, 
+              transparent 4deg
+            )
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2.5) brightness(0.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Горизонтальные царапины - перерисовываются при движении мыши */}
+        <ScratchesComponent count={15} scratchRedrawTrigger={scratchRedrawTrigger} />
+        
+        {/* Вертикальные полосы повреждений */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.25}
+          backgroundImage={`
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.15) 2px,
+              rgba(255, 255, 255, 0.15) 3px,
+              transparent 3px,
+              transparent 8px
+            )
+          `}
+          backgroundSize="60px 100%"
+          mixBlendMode="overlay"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+          </>
+        )}
+
+        {/* Движущиеся ленты перфорации по границам экрана */}
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" mouseOffset={perforationMouseOffset} />
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" mouseOffset={perforationMouseOffset} />
+        
+        {/* Линейная диаграмма на весь экран */}
+        <LineChartComponent key="line-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        
+        {/* Радарная диаграмма - сверху с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            top: '2rem',
+            x: chartTopX,
+            y: chartTopY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadarChartComponent key="radar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+        
+        {/* Радиальная столбчатая диаграмма - снизу с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            bottom: '2rem',
+            top: 'auto',
+            x: chartBottomX,
+            y: chartBottomY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadialBarChartComponent key="radial-bar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+
+        {/* Круговая диаграмма прогресса - по центру, передний план, СЛАБЫЙ параллакс */}
+        <CenterChartContainer
+          style={{
+            x: chartCenterX,
+            y: chartCenterY,
+            rotateX: chartCenterRotateX,
+            rotateY: chartCenterRotateY,
+          }}
+        >
+          <ProgressChart key="progress-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </CenterChartContainer>
+        
+          {/* Контейнер для договора */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(210mm, 90vw)',
+            height: 'min(297mm, calc(90vw * 1.414))',
+            maxHeight: 'calc(var(--vh, 1vh) * 90)',
+            zIndex: 20
+          }}>
+            {/* Сетчатый лист A4 - фон с сеткой */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backgroundImage: `
+                linear-gradient(to right, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px)
+              `,
+              backgroundSize: '1.5em 1.5em',
+              backgroundPosition: 'center center',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.6)'
+            }} />
+
+            {/* Контейнер с текстом договора */}
+            <div 
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                padding: 'clamp(16px, 3vw, 2rem)',
+                display: 'flex',
+                flexDirection: 'column',
+                fontSize: 'clamp(24px, 3vw, 36px)',
+                pointerEvents: 'auto',
+                zIndex: 1
+              }}
+            >
+            {/* Надпись ДОГОВОР сверху по центру */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: 'auto',
+              paddingTop: '1em'
+            }}>
+              <h1 
+                style={{
+                  fontSize: '2em',
+                  fontFamily: "'Slovic', sans-serif",
+                  color: '#ffffff',
+                  margin: 0
+                }}
+              >
+                ДОГОВОР
+              </h1>
+            </div>
+
+            {/* Список услуг с галочками в центре */}
+            <ContractItemsList progressMotionValue={secondScreenProgressMotionValue} />
+
+            {/* Кнопка Подписать снизу */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: 'auto',
+              paddingBottom: '1em'
+            }}>
+              <button 
+                onClick={handleSign}
+                style={{
+                  padding: '0.6em 1.6em',
+                  backgroundColor: '#ff0000',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0.2em',
+                  fontSize: '1em',
+                  fontFamily: "'Slovic', sans-serif",
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ff0000'
+                  e.currentTarget.style.color = '#ffffff'
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+              >
+                Подписать
+              </button>
+            </div>
+          </div>
+          </div>
+        
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+          Второй экран
+        </div>
+      </section>
+
+      {/* Третий экран */}
+      <section 
+        ref={thirdScreenRef}
+        style={{
+        width: '100vw',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
+          background: 'linear-gradient(to bottom, #000000 0%, #0a0a2e 50%, #1a1a3e 100%)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Упрощенное звездное небо для производительности */}
+        <StarrySky starCount={50} />
+
+        {/* Индикатор прогресса третьего экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '16px',
+          width: 'fit-content',
+          marginLeft: 'auto',
+          marginRight: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Монтаж: {thirdScreenProgressText}%
+        </div>
+
+        {/* Секция ПРОЕКТЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПРОЕКТЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1 
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПРОЕКТЫ
+            </h1>
+          </div>
+
+          {/* Карусель с фильмами */}
+          <div style={{ minHeight: '500px' }}>
+            <MoviesCarousel 
+              movies={topMovies}
+              mouseParallaxValues={movieParallaxValues}
+            />
+          </div>
+        </div>
+
+        {/* Секция ПАРТНЕРЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПАРТНЕРЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПАРТНЕРЫ
+            </h1>
+          </div>
+
+          {/* Сетка с логотипами партнеров */}
+          <PartnersGrid partners={partners} />
+          
+          {/* Футер - Made in Zvenigorod на звездном фоне */}
+          <footer style={{
+            width: '100%',
+            textAlign: 'center',
+            marginTop: '4rem',
+            marginBottom: '150px',
+            pointerEvents: 'none'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
+              fontFamily: "'Slovic', sans-serif",
+              fontWeight: 'bold'
+            }}>
+              <span>Made in</span>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontFamily: "'Slovic', sans-serif",
+                fontWeight: 'bold'
+              }}>
+                {/* Иконка православного купола из SVG файла */}
+                <img 
+                  src="/tampls.svg" 
+                  alt="Zvenigorod dome" 
+                  style={{ 
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    width: '24px',
+                    height: '24px'
+                  }}
+                />
+                <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
+              </span>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+    </div>
+    </>
+  )
+}
+
+// Компонент кастомного скроллбара
+function CustomScrollbar({ containerRef, scrollTop, isDragging, setIsDragging, scrollbarRef }) {
+  const [scrollbarHeight, setScrollbarHeight] = useState(0)
+  const [scrollbarTop, setScrollbarTop] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(0)
+  const [contentHeight, setContentHeight] = useState(0)
+  const dragStartY = useRef(0)
+  const dragStartScroll = useRef(0)
+  
+  // Вычисляем размеры скроллбара
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const updateScrollbar = () => {
+      const container = containerRef.current
+      if (!container) return
+      
+      const ch = container.clientHeight
+      const sh = container.scrollHeight
+      const st = scrollTop.get()
+      
+      setContainerHeight(ch)
+      setContentHeight(sh)
+      
+      // Высота скроллбара пропорциональна видимой области
+      const thumbHeight = Math.max(20, (ch / sh) * ch)
+      setScrollbarHeight(thumbHeight)
+      
+      // Позиция скроллбара пропорциональна scrollTop
+      const maxTop = ch - thumbHeight
+      const scrollProgress = sh > ch ? st / (sh - ch) : 0
+      setScrollbarTop(scrollProgress * maxTop)
+    }
+    
+    const unsubscribe = scrollTop.on('change', updateScrollbar)
+    updateScrollbar()
+    
+    // Обновляем при изменении размера окна
+    window.addEventListener('resize', updateScrollbar)
+    
+    return () => {
+      unsubscribe()
+      window.removeEventListener('resize', updateScrollbar)
+    }
+  }, [containerRef, scrollTop])
+  
+  // Обработка drag скроллбара
+  useEffect(() => {
+    if (!isDragging) return
+    
+    const handleMouseMove = (e) => {
+      if (!containerRef.current || !scrollbarRef.current) return
+      
+      const container = containerRef.current
+      const scrollbar = scrollbarRef.current
+      const containerRect = container.getBoundingClientRect()
+      const scrollbarRect = scrollbar.getBoundingClientRect()
+      
+      const deltaY = e.clientY - dragStartY.current
+      const scrollbarTrackHeight = containerHeight - scrollbarHeight
+      const scrollRatio = (deltaY / scrollbarTrackHeight) * (contentHeight - containerHeight)
+      
+      const newScroll = Math.max(0, Math.min(contentHeight - containerHeight, dragStartScroll.current + scrollRatio))
+      scrollTop.set(newScroll)
+    }
+    
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, containerRef, scrollbarRef, containerHeight, scrollbarHeight, contentHeight, scrollTop, setIsDragging])
+  
+  const handleMouseDown = (e) => {
+    e.preventDefault()
+    dragStartY.current = e.clientY
+    dragStartScroll.current = scrollTop.get()
+    setIsDragging(true)
+  }
+  
+  const handleTrackClick = (e) => {
+    if (!containerRef.current || !scrollbarRef.current) return
+    
+    const container = containerRef.current
+    const scrollbar = scrollbarRef.current
+    const containerRect = container.getBoundingClientRect()
+    const clickY = e.clientY - containerRect.top
+    
+    const scrollbarTrackHeight = containerHeight - scrollbarHeight
+    const clickRatio = clickY / scrollbarTrackHeight
+    const newScroll = clickRatio * (contentHeight - containerHeight)
+    
+    scrollTop.set(Math.max(0, Math.min(contentHeight - containerHeight, newScroll)))
+  }
+  
+  if (contentHeight <= containerHeight) return null // Не показываем скроллбар если контент помещается
+  
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        right: '10px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '8px',
+        height: `${containerHeight}px`,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '4px',
+        zIndex: 10000,
+        cursor: 'pointer'
+      }}
+      onClick={handleTrackClick}
+    >
+      <div
+        ref={scrollbarRef}
+        style={{
+          position: 'absolute',
+          top: `${scrollbarTop}px`,
+          left: 0,
+          width: '100%',
+          height: `${scrollbarHeight}px`,
+          backgroundColor: 'rgba(255, 255, 255, 0.5)',
+          borderRadius: '4px',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: isDragging ? 'none' : 'background-color 0.2s ease',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'
+        }}
+        onMouseLeave={(e) => {
+          if (!isDragging) {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+```
+
+Упрощаю генерацию постеров и проверяю ошибки:
+
+
+```javascript
+import React, { useRef, useState, useEffect, Suspense, memo, useMemo, useCallback } from 'react'
+import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
+import { useParallaxStore } from '../store/parallaxStore'
+
+// Компонент пункта договора с галочкой
+const ContractItem = memo(function ContractItem({ text, progress, threshold, textColor }) {
+  // progress может быть motion value или числом
+  const [progressValue, setProgressValue] = useState(typeof progress === 'number' ? progress : 0)
+  
+  // Если progress - motion value, подписываемся на изменения
+  useEffect(() => {
+    if (typeof progress === 'object' && 'on' in progress) {
+      const unsubscribe = progress.on('change', (latest) => {
+        setProgressValue(latest * 100)
+      })
+      return unsubscribe
+    } else if (typeof progress === 'number') {
+      setProgressValue(progress)
+    }
+  }, [progress])
+  
+  // Галочка ставится когда progress >= threshold
+  const isChecked = progressValue >= threshold
+
+  return (
+    <div style={{
+          display: 'flex',
+          alignItems: 'center',
+      gap: '0.8em',
+      fontSize: '0.7em',
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      marginBottom: '0.8em'
+    }}>
+      <div style={{
+          width: '1.2em',
+          height: '1.2em',
+          minWidth: '1.2em',
+          minHeight: '1.2em',
+          border: '0.1em solid #ff0000',
+          borderRadius: '0.2em',
+          flexShrink: 0,
+          backgroundColor: isChecked ? '#ff0000' : 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+          justifyContent: 'center',
+            position: 'relative',
+          transition: 'background-color 0.3s ease'
+        }}>
+        {isChecked && (
+          <svg
+            width="0.8em"
+            height="0.8em"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ flexShrink: 0 }}
+          >
+            <path
+              d="M3 8L6 11L13 4"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+        </div>
+      {textColor ? (
+        <motion.span style={{ color: textColor, fontWeight: 'bold' }}>{text}</motion.span>
+      ) : (
+        <span style={{ color: '#000000', fontWeight: 'bold' }}>{text}</span>
+      )}
+    </div>
+  )
+})
+
+// Компонент Вспышка
+function Flash({ isActive, onComplete }) {
+  if (!isActive) return null
+
+  // Несколько вспышек для калибровки (как на современных телефонах)
+  // Финальная вспышка длится столько же, сколько хлопушка на экране (~2.6 сек)
+  // Хлопушка появляется на 1/3 времени всех вспышек раньше (~1 сек)
+  const totalDuration = 4.5 // Общая длительность: 0.5 сек калибровка + 2.6 сек финальная вспышка + 1.4 сек затухание
+  const clapperboardShowTime = 1.0 // Хлопушка появляется на 1 сек (на 1/3 времени всех вспышек раньше)
+  const finalFlashStart = 0.22 // Финальная вспышка начинается на 0.22 (~1 сек) - синхронизировано с хлопушкой
+  const finalFlashPeak = 0.25 // Максимум финальной вспышки на 0.25 (~1.125 сек)
+  const finalFlashEnd = 0.78 // Финальная вспышка заканчивается на 0.78 (~3.51 сек) - примерно когда хлопушка скрывается
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ 
+        opacity: [
+          0, 1, 0,      // Первая вспышка (быстрая)
+          0, 0.8, 0,    // Вторая вспышка (средняя)
+          0, 0.6, 0,    // Третья вспышка (слабая)
+          0, 1, 1, 0    // Финальная длинная вспышка (длится столько же, сколько хлопушка на экране)
+        ]
+      }}
+      transition={{ 
+        duration: totalDuration,
+        times: [
+          0, 0.05, 0.1,           // Первая вспышка (0-0.45 сек)
+          0.12, 0.15, 0.18,       // Вторая вспышка (0.54-0.81 сек)
+          finalFlashStart, finalFlashPeak, finalFlashEnd, 1  // Финальная вспышка начинается раньше (~1 сек) и длится до ~3.51 сек
+        ],
+        onComplete: onComplete
+      }}
+        style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+        backgroundColor: '#ffffff',
+        zIndex: 100000,
+        pointerEvents: 'none'
+      }}
+    />
+  )
+}
+
+// Компонент Хлопушка (Clapperboard) - теперь окно контактов
+const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
+  const [isDragging, setIsDragging] = useState(false)
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+
+  // Оптимизируем вычисления размеров с useMemo
+  const dimensions = useMemo(() => ({
+    width: '80vw',
+    height: 'calc(80vw / 1.333)'
+  }), [])
+  
+  const handleDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleDragEnd = (event, info) => {
+    // Закрытие окна при смахивании в любую сторону
+    const threshold = Math.min(window.innerHeight, window.innerWidth) * 0.25 // 25% от меньшей стороны экрана
+    const distance = Math.sqrt(info.offset.x ** 2 + info.offset.y ** 2)
+    
+    if (distance > threshold) {
+      if (onClose) {
+        onClose()
+      }
+    }
+    setIsDragging(false)
+  }
+  
+  return (
+        <motion.div
+      className="clapperboard-container"
+      initial={false}
+      animate={{
+        y: isVisible
+          ? ['calc(var(--vh, 1vh) * -100)', 0, -30, 0, -15, 0, -8, 0] // Падение сверху с отскоками
+          : 'calc(var(--vh, 1vh) * -100)',
+        x: isVisible ? 0 : '100vw', // При показе x=0, при скрытии улетает вправо
+        opacity: isVisible ? 1 : 0
+      }}
+      transition={{
+        y: isVisible ? {
+          duration: 1.5,
+          times: [0, 0.4, 0.5, 0.65, 0.75, 0.85, 0.92, 1],
+          ease: [0.25, 0.46, 0.45, 0.94] // Ease out для падения
+        } : {
+          type: "spring",
+          stiffness: 200,
+          damping: 15,
+          bounce: 0.6
+        },
+        x: {
+          type: "spring",
+          stiffness: 150,
+          damping: 18,
+          bounce: 0.4
+        },
+        opacity: {
+          duration: 0.3
+        }
+      }}
+      drag={true}
+      dragConstraints={dragConstraints}
+      dragElastic={0.3}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+          style={{
+        position: 'relative',
+        width: dimensions.width,
+        height: dimensions.height,
+        minHeight: dimensions.height,
+        pointerEvents: 'auto',
+        transformOrigin: 'top right',
+        cursor: isDragging ? 'grabbing' : 'grab'
+      }}
+    >
+      {/* Верхняя створка - черная с текстом SI-PRODUCTION */}
+        <motion.div
+        className="clapperboard-top"
+        initial={false}
+        animate={{ rotate: isActive ? 90 : 0 }}
+        transition={{ 
+          duration: 0.6,
+          ease: [0.25, 0.46, 0.45, 0.94] // Плавная анимация без spring эффекта
+        }}
+          style={{
+            position: 'absolute',
+            top: 0,
+          right: 0,
+            width: '100%',
+          height: '40%', // Уменьшено с 50% до 40% чтобы освободить место для нижней зоны
+          backgroundColor: '#000000',
+          border: '2px solid #333',
+          transformOrigin: 'bottom right',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+                  color: '#ffffff',
+          fontSize: 'clamp(20px, 4vw, 48px)',
+                  fontFamily: "'Science Gothic', monospace",
+                        fontWeight: 'bold',
+          zIndex: 2
+        }}
+      >
+            <span style={{
+          fontFamily: "'Slovic', sans-serif",
+          color: '#ff0000',
+          transform: 'translateY(-3px)'
+        }}>SI</span>
+        <span style={{
+          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+        }}>-PRODUCTION</span>
+      </motion.div>
+
+      {/* Нижний блок - контакты с фейковыми данными */}
+      <div 
+        className="clapperboard-contacts"
+        style={{
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: '100%',
+        minHeight: '60%', // Минимальная высота 60%, но может расширяться
+        height: 'auto', // Высота адаптируется под содержимое
+        backgroundColor: '#000000',
+        border: '2px solid #333',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 'clamp(16px, 3vw, 32px)',
+        fontSize: 'clamp(14px, 2.5vw, 24px)',
+        fontFamily: "'Science Gothic', monospace",
+        color: '#ffffff',
+        zIndex: 1,
+        gap: '1rem',
+        overflowY: 'auto', // Добавляем скролл если контент не вписывается
+        boxSizing: 'border-box' // Учитываем padding в высоте
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '1rem'
+        }}>
+          <div style={{ fontSize: 'clamp(18px, 3vw, 28px)', fontWeight: 'bold' }}>КОНТАКТЫ</div>
+          <button
+            onClick={onClose}
+            style={{
+              backgroundColor: 'transparent',
+              border: '2px solid #ffffff',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              fontSize: 'clamp(12px, 2vw, 18px)',
+              fontFamily: "'Science Gothic', monospace",
+              cursor: 'pointer',
+              borderRadius: '4px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff'
+              e.currentTarget.style.color = '#000000'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.color = '#ffffff'
+            }}
+          >
+            ЗАКРЫТЬ
+          </button>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '1rem',
+          flex: 1
+        }}>
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телеграм:</div>
+            <a 
+              href="https://t.me/example" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ 
+                color: '#00a8ff',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
+            >
+              @example_contact
+            </a>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Email:</div>
+            <div>contact@example.com</div>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телефон:</div>
+            <div>+7 (999) 123-45-67</div>
+          </div>
+        </div>
+        </div>
+    </motion.div>
+  )
+})
+
+// Компонент Галерея для активированной ленты (слайдер)
+function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(initialIndex)
+  const [currentLentaIndex, setCurrentLentaIndex] = useState(lentaIndex || 0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [loadedLentas, setLoadedLentas] = useState({}) // Кэш загруженных лент
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+  
+  // Загружаем изображения для всех лент
+  useEffect(() => {
+    if (!allLentas || allLentas.length === 0) return
+    
+    const loadLentaImages = async (lenta) => {
+      if (loadedLentas[lenta.id]) return // Уже загружена
+      
+      const folderId = lenta.folderId
+      if (!folderId) return
+      
+      // Проверяем все файлы в папке (до 20) и собираем список существующих
+      const maxCheck = 20
+      const existingFiles = []
+      
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      if (existingFiles.length > 0) {
+        const lentaFrames = existingFiles.map((fileNum) => ({
+          type: 'image',
+          src: `/photos/${folderId}/${fileNum}.webp`
+        }))
+        
+        setLoadedLentas(prev => ({
+          ...prev,
+          [lenta.id]: lentaFrames
+        }))
+      }
+    }
+    
+    // Загружаем изображения для всех лент параллельно
+    allLentas.forEach(lenta => {
+      loadLentaImages(lenta)
+    })
+  }, [allLentas, loadedLentas])
+  
+  // Получаем текущую ленту и её frames
+  const currentLenta = allLentas && allLentas[currentLentaIndex] ? allLentas[currentLentaIndex] : null
+  // Используем загруженные frames если есть, иначе переданные frames
+  const currentFrames = currentLenta && loadedLentas[currentLenta.id] 
+    ? loadedLentas[currentLenta.id] 
+    : (currentLenta ? currentLenta.frames : frames)
+  
+  // Обновляем индексы при изменении initialIndex или lentaIndex
+  useEffect(() => {
+    setCurrentFrameIndex(initialIndex)
+    if (lentaIndex !== undefined) {
+      setCurrentLentaIndex(lentaIndex)
+    }
+  }, [initialIndex, lentaIndex])
+
+  // Обработка клавиатуры для навигации
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        handlePrevFrame()
+      } else if (e.key === 'ArrowRight') {
+        handleNextFrame()
+      } else if (e.key === 'ArrowUp') {
+        handlePrevLenta()
+      } else if (e.key === 'ArrowDown') {
+        handleNextLenta()
+      } else if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentFrameIndex, currentLentaIndex, currentFrames, allLentas])
+
+  // Навигация по кадрам (горизонтально)
+  const handlePrevFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev > 0 ? prev - 1 : currentFrames.length - 1))
+  }
+
+  const handleNextFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev < currentFrames.length - 1 ? prev + 1 : 0))
+  }
+
+  // Навигация по лентам (вертикально)
+  const handlePrevLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev > 0 ? prev - 1 : allLentas.length - 1
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleNextLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev < allLentas.length - 1 ? prev + 1 : 0
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleVerticalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleVerticalDragEnd = (event, info) => {
+    // Вертикальный drag - переключение между лентами
+    if (!allLentas || allLentas.length === 0) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены ленты
+    if (info.offset.y > threshold) {
+      handlePrevLenta()
+    } else if (info.offset.y < -threshold) {
+      handleNextLenta()
+    }
+    setIsDragging(false)
+  }
+
+  const handleHorizontalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleHorizontalDragEnd = (event, info) => {
+    // Горизонтальный drag - смена кадров в ленте
+    if (!currentFrames) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены кадра
+    if (info.offset.x > threshold) {
+      handlePrevFrame()
+    } else if (info.offset.x < -threshold) {
+      handleNextFrame()
+    }
+    setIsDragging(false)
+  }
+
+  return (
+    <>
+      {/* Overlay с затемнением */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          zIndex: 100000,
+          cursor: 'pointer'
+        }}
+      />
+      
+      {/* Слайдер */}
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        drag="y"
+        dragConstraints={dragConstraints}
+        dragElastic={0.3}
+        onDragStart={handleVerticalDragStart}
+        onDragEnd={handleVerticalDragEnd}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100001,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Вертикальная карусель всех лент */}
+        {allLentas && allLentas.length > 0 ? (
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Все ленты вертикально */}
+            {allLentas.map((lenta, lentaIdx) => {
+              const isLentaActive = lentaIdx === currentLentaIndex
+              // Используем загруженные frames если есть, иначе генерируем пути
+              const lentaFrames = loadedLentas[lenta.id] || (lenta.folderId ? 
+                Array.from({ length: 20 }, (_, i) => ({
+                  type: 'image',
+                  src: `/photos/${lenta.folderId}/${i + 1}.webp`
+                })) : [])
+              
+              return (
+                <motion.div
+                  key={lenta.id}
+                  initial={false}
+                  animate={{
+                    opacity: isLentaActive ? 1 : 0,
+                    y: isLentaActive ? 0 : (lentaIdx < currentLentaIndex ? -100 : 100),
+                    scale: isLentaActive ? 1 : 0.8
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isLentaActive ? 'auto' : 'none'
+                  }}
+                >
+                  {/* Кадры текущей ленты горизонтально */}
+                  {isLentaActive && lentaFrames.map((frame, frameIdx) => {
+                    const isFrameActive = frameIdx === currentFrameIndex
+                    return (
+                      <motion.div
+                        key={`${lenta.id}-${frameIdx}`}
+                        initial={false}
+                        animate={{
+                          opacity: isFrameActive ? 1 : 0,
+                          scale: isFrameActive ? 1 : 0.8,
+                          x: isFrameActive ? 0 : (frameIdx < currentFrameIndex ? -100 : 100)
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          ease: [0.25, 0.46, 0.45, 0.94]
+                        }}
+                        drag="x"
+                        dragConstraints={dragConstraints}
+                        dragElastic={0.2}
+                        onDragStart={handleHorizontalDragStart}
+                        onDragEnd={handleHorizontalDragEnd}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          pointerEvents: isFrameActive ? 'auto' : 'none',
+                          cursor: isDragging ? 'grabbing' : 'grab'
+                        }}
+                      >
+                        {frame.type === 'image' ? (
+                          <img
+                            src={frame.src}
+                            alt={`Frame ${frameIdx}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                            }}
+                            onError={(e) => {
+                              // При ошибке показываем серый фон
+                              e.target.style.display = 'none'
+                              const parent = e.target.parentElement
+                              if (parent && !parent.querySelector('.fallback-bg')) {
+                                const fallback = document.createElement('div')
+                                fallback.className = 'fallback-bg'
+                                fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                                parent.appendChild(fallback)
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: frame.value || frame || '#333',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    )
+                  })}
+                </motion.div>
+              )
+            })}
+          </div>
+        ) : (
+          /* Fallback для старого режима без всех лент */
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px'
+            }}
+          >
+            {currentFrames && currentFrames.map((frame, index) => {
+              const isActive = index === currentFrameIndex
+              // Поддерживаем обратную совместимость: если frame - строка (старый формат), преобразуем в объект
+              const frameData = typeof frame === 'string' ? { type: 'color', value: frame } : frame
+              
+              return (
+                <motion.div
+                  key={index}
+                  initial={false}
+                  animate={{
+                    opacity: isActive ? 1 : 0,
+                    scale: isActive ? 1 : 0.8,
+                    x: isActive ? 0 : (index < currentFrameIndex ? -100 : 100)
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  drag="x"
+                  dragConstraints={dragConstraints}
+                  dragElastic={0.2}
+                  onDragStart={handleHorizontalDragStart}
+                  onDragEnd={handleHorizontalDragEnd}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isActive ? 'auto' : 'none',
+                    cursor: isDragging ? 'grabbing' : 'grab'
+                  }}
+                >
+                  {frameData.type === 'image' ? (
+                    <img
+                      src={frameData.src}
+                      alt={`Frame ${index}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                      }}
+                      onError={(e) => {
+                        // При ошибке показываем серый фон
+                        e.target.style.display = 'none'
+                        const parent = e.target.parentElement
+                        if (parent && !parent.querySelector('.fallback-bg')) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'fallback-bg'
+                          fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: frameData.value || frameData || '#333',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    />
+                  )}
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Кнопка закрытия в левом верхнем углу */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          style={{
+            position: 'absolute',
+            top: '32px',
+            left: '32px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ×
+        </button>
+
+        {/* Кнопки навигации по кадрам (горизонтально) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handlePrevFrame()
+          }}
+          style={{
+            position: 'absolute',
+            left: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ‹
+        </button>
+        
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleNextFrame()
+          }}
+          style={{
+            position: 'absolute',
+            right: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ›
+        </button>
+
+        {/* Кнопки навигации по лентам (вертикально) - только если есть все ленты */}
+        {allLentas && allLentas.length > 0 && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePrevLenta()
+              }}
+              style={{
+                position: 'absolute',
+                top: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↑
+            </button>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleNextLenta()
+              }}
+              style={{
+                position: 'absolute',
+                bottom: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↓
+            </button>
+          </>
+        )}
+
+        {/* Индикатор текущего кадра и ленты */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: allLentas && allLentas.length > 0 ? '100px' : '32px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            zIndex: 100002,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          {allLentas && allLentas.length > 0 && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '14px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              Лента {currentLentaIndex + 1} / {allLentas.length}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              display: 'flex',
+              gap: '8px'
+            }}>
+              {currentFrames.map((_, index) => (
+                <div
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCurrentFrameIndex(index)
+                  }}
+                  style={{
+                    width: index === currentFrameIndex ? '32px' : '8px',
+                    height: '8px',
+                    borderRadius: '4px',
+                    backgroundColor: index === currentFrameIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '12px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              {currentFrameIndex + 1} / {currentFrames.length}
+            </div>
+          )}
+        </div>
+
+      </motion.div>
+    </>
+  )
+}
+
+const ProgressChart = memo(function ProgressChart({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Внешний круг - больше элементов, зависящих от скролла
+  const outerData = [
+    { name: 'P1', value: progress }, // 0-100%
+    { name: 'P2', value: progress * 0.7 }, // 0-70%
+    { name: 'P3', value: progress * 0.5 }, // 0-50%
+    { name: 'P4', value: progress * 0.3 }, // 0-30%
+    { name: 'A', value: 25 + progress * 0.2 }, // Двигается вверх
+    { name: 'B', value: 30 - progress * 0.15 }, // Двигается вниз
+    { name: 'C', value: 20 + progress * 0.4 }, // Двигается вверх
+    { name: 'D', value: 35 - progress * 0.25 }, // Двигается вниз
+    { name: 'E', value: 15 + progress * 0.35 }, // Двигается вверх
+    { name: 'F', value: 40 - progress * 0.2 } // Двигается вниз
+  ]
+
+  // Внутренний круг - тоже с движущимися элементами
+  const innerData = [
+    { name: 'IP1', value: progress * 0.8 }, // 0-80%
+    { name: 'IP2', value: progress * 0.6 }, // 0-60%
+    { name: 'IP3', value: progress * 0.4 }, // 0-40%
+    { name: 'IA', value: 20 + progress * 0.3 }, // Двигается вверх
+    { name: 'IB', value: 25 - progress * 0.2 }, // Двигается вниз
+    { name: 'IC', value: 15 + progress * 0.5 }, // Двигается вверх
+    { name: 'ID', value: 30 - progress * 0.3 } // Двигается вниз
+  ]
+
+  return (
+    <div key="progress-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <PieChart key="pie-chart" width={600} height={600}>
+        {/* Внешний круг */}
+        <Pie
+          data={outerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={120}
+          outerRadius={200}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={3}
+          paddingAngle={2}
+        >
+          {outerData.map((entry, index) => (
+            <Cell 
+              key={`outer-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={3}
+            />
+          ))}
+        </Pie>
+        {/* Внутренний круг */}
+        <Pie
+          data={innerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={20}
+          outerRadius={110}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={2}
+          paddingAngle={1.5}
+        >
+          {innerData.map((entry, index) => (
+            <Cell 
+              key={`inner-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={2}
+            />
+          ))}
+        </Pie>
+      </PieChart>
+    </div>
+  )
+})
+
+// Компонент линейной диаграммы с точками, зависящими от скролла
+const LineChartComponent = memo(function LineChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки точек (Dots)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, value2: 30 - progress * 0.2 }, // Первая линия вверх, вторая вниз
+    { name: 'B', value: 50 - progress * 0.2, value2: 40 + progress * 0.3 }, // Первая вниз, вторая вверх
+    { name: 'C', value: 30 + progress * 0.4, value2: 50 - progress * 0.25 }, // Первая вверх, вторая вниз
+    { name: 'D', value: 60 - progress * 0.3, value2: 35 + progress * 0.4 }, // Первая вниз, вторая вверх
+    { name: 'E', value: 40 + progress * 0.25, value2: 55 - progress * 0.15 }, // Первая вверх, вторая вниз
+    { name: 'F', value: 70 - progress * 0.35, value2: 25 + progress * 0.5 }, // Первая вниз, вторая вверх
+    { name: 'G', value: 25 + progress * 0.5, value2: 60 - progress * 0.3 }, // Первая вверх, вторая вниз
+    { name: 'H', value: 55 - progress * 0.15, value2: 45 + progress * 0.2 }, // Первая вниз, вторая вверх
+    { name: 'I', value: 35 + progress * 0.3, value2: 50 - progress * 0.35 }, // Первая вверх, вторая вниз
+    { name: 'J', value: 65 - progress * 0.4, value2: 30 + progress * 0.45 }  // Первая вниз, вторая вверх
+  ], [progress])
+
+  return (
+    <div
+      key="line-chart-container"
+      style={{
+      width: '100%',
+      height: '100%',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      padding: 0,
+      zIndex: 1,
+      pointerEvents: 'none'
+    }}>
+      <ResponsiveContainer key="line-responsive-container" width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+          <XAxis 
+            dataKey="name" 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            hide={true}
+          />
+          <YAxis 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            domain={[0, 100]}
+            hide={true}
+          />
+          <Tooltip
+            key="line-tooltip"
+            cursor={false}
+            isAnimationActive={false}
+            contentStyle={{
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#ffffff'
+            }}
+          />
+          {/* Старая линия с точками */}
+          <Line
+            key="line1"
+            type="monotone"
+            dataKey="value"
+            stroke="#ffffff"
+            strokeWidth={3}
+            dot={{ fill: '#ffffff', r: 6 }}
+            activeDot={{ r: 8 }}
+          />
+          {/* Новая угловатая линия без точек */}
+          <Line
+            key="line2"
+            type="step"
+            dataKey="value2"
+            stroke="#ffffff"
+            strokeWidth={2}
+            dot={false}
+            strokeOpacity={0.7}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радарной диаграммы
+const RadarChartComponent = memo(function RadarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const data = [
+    { subject: 'A', value: 50 + progress * 0.3, fullMark: 100 },
+    { subject: 'B', value: 60 - progress * 0.2, fullMark: 100 },
+    { subject: 'C', value: 40 + progress * 0.4, fullMark: 100 },
+    { subject: 'D', value: 70 - progress * 0.3, fullMark: 100 },
+    { subject: 'E', value: 55 + progress * 0.25, fullMark: 100 },
+    { subject: 'F', value: 45 - progress * 0.35, fullMark: 100 }
+  ]
+
+  return (
+    <div key="radar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radar-responsive-container" width="100%" height="100%">
+        <RadarChart key="radar-chart" data={data}>
+          <PolarGrid stroke="#ffffff" strokeOpacity={0.3} />
+          <PolarAngleAxis 
+            dataKey="subject" 
+            tick={{ fill: '#ffffff', fontSize: 12 }}
+          />
+          <PolarRadiusAxis 
+            angle={90} 
+            domain={[0, 100]}
+            tick={{ fill: '#ffffff', fontSize: 10 }}
+          />
+          <Radar 
+            name="Value" 
+            dataKey="value" 
+            stroke="#ffffff" 
+            fill="#ffffff" 
+            fillOpacity={0.3}
+            strokeWidth={2}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радиальной столбчатой диаграммы, зависимый от скролла
+const RadialBarChartComponent = memo(function RadialBarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки секторов (RadialBarSectors)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, fill: '#ffffff' },
+    { name: 'B', value: 40 - progress * 0.2, fill: '#ffffff' },
+    { name: 'C', value: 60 + progress * 0.4, fill: '#ffffff' },
+    { name: 'D', value: 30 - progress * 0.3, fill: '#ffffff' },
+    { name: 'E', value: 50 + progress * 0.25, fill: '#ffffff' },
+    { name: 'F', value: 70 - progress * 0.35, fill: '#ffffff' }
+  ], [progress])
+
+  return (
+    <div key="radial-bar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radial-responsive-container" width="100%" height="100%">
+        <RadialBarChart
+          key="radial-bar-chart" 
+          cx="50%" 
+          cy="50%" 
+          innerRadius="20%" 
+          outerRadius="80%" 
+          data={data}
+          startAngle={90}
+          endAngle={-270}
+        >
+          <RadialBar
+            key="radial-bar"
+            dataKey="value"
+            cornerRadius={4}
+            fill="rgba(255, 255, 255, 0.3)"
+            stroke="#ffffff"
+            strokeWidth={2}
+          />
+        </RadialBarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент карусели с постерами фильмов (вращающаяся карусель)
+const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValues = null }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [wasDragging, setWasDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [dragOffset, setDragOffset] = useState(0)
+  const carouselRef = useRef(null)
+  const autoPlayRef = useRef(null)
+  const [isInViewport, setIsInViewport] = useState(false)
+
+  // Проверка видимости компонента в viewport
+  useEffect(() => {
+    if (!carouselRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsInViewport(entry.isIntersecting)
+        })
+      },
+      {
+        threshold: 0.1 // Компонент считается видимым, если видно хотя бы 10%
+      }
+    )
+
+    observer.observe(carouselRef.current)
+
+    return () => {
+      if (carouselRef.current) {
+        observer.unobserve(carouselRef.current)
+      }
+    }
+  }, [])
+
+  // Автоматическое вращение карусели (но не скролл страницы)
+  useEffect(() => {
+    // Автоплей работает только когда компонент виден
+    if (!isDragging && isInViewport) {
+      autoPlayRef.current = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }, 3000) // Меняем каждые 3 секунды
+    } else {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+
+    return () => {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+  }, [movies.length, isDragging, isInViewport])
+
+  // Обработчики для перетаскивания
+  const handleMouseDown = (e) => {
+    setIsDragging(true)
+    setStartX(e.clientX)
+    setDragOffset(0)
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current)
+    }
+  }
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return
+    const diff = e.clientX - startX
+    setDragOffset(diff)
+  }
+
+  const handleMouseUp = () => {
+    if (!isDragging) return
+    
+    const hadDrag = Math.abs(dragOffset) > 10
+    setWasDragging(hadDrag)
+    
+    // Если перетащили достаточно далеко, меняем слайд
+    if (Math.abs(dragOffset) > 100) {
+      if (dragOffset > 0) {
+        setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length)
+      } else {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }
+    }
+    
+    setIsDragging(false)
+    setDragOffset(0)
+    
+    // Сбрасываем флаг через небольшую задержку
+    setTimeout(() => setWasDragging(false), 100)
+  }
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false)
+      setDragOffset(0)
+    }
+  }
+
+  // Вычисляем позиции для карусели (3D эффект)
+  const getTransform = (index) => {
+    const offset = index - currentIndex
+    const absOffset = Math.abs(offset)
+    const direction = offset > 0 ? 1 : -1
+    
+    // Если элемент далеко, скрываем его
+    if (absOffset > 3) {
+      return {
+        transform: `translateX(${direction * 400}px) translateZ(-200px) scale(0.5)`,
+        opacity: 0,
+        zIndex: 0
+      }
+    }
+
+    // Близкие элементы видны
+    const scale = 1 - absOffset * 0.15
+    const translateX = offset * 220 + (isDragging ? dragOffset : 0)
+    const translateZ = -absOffset * 100
+    const opacity = 1 - absOffset * 0.3
+
+    return {
+      transform: `translateX(${translateX}px) translateZ(${translateZ}px) scale(${scale})`,
+      opacity: Math.max(0, opacity),
+      zIndex: movies.length - absOffset
+    }
+  }
+
+  return (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem 0',
+      perspective: '1000px',
+      perspectiveOrigin: 'center center'
+    }}>
+      <div 
+        ref={carouselRef}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '400px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transformStyle: 'preserve-3d',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
+        {movies.map((movie, index) => {
+          const baseStyle = getTransform(index)
+          const offset = Math.abs(index - currentIndex)
+          
+          // Определяем параллакс в зависимости от расстояния от центра
+          // Параллакс работает только когда компонент в viewport и параллакс включен
+          let parallaxX, parallaxY, rotateX, rotateY
+          if (!isInViewport || !isParallaxEnabled) {
+            // Если не в viewport или параллакс отключен - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          } else if (offset === 0) {
+            // Центральная карточка - сильный параллакс
+            parallaxX = mouseParallaxValues?.centerX || 0
+            parallaxY = mouseParallaxValues?.centerY || 0
+            rotateX = mouseParallaxValues?.centerRotateX || 0
+            rotateY = mouseParallaxValues?.centerRotateY || 0
+          } else if (offset === 1) {
+            // Близкие карточки - средний параллакс
+            parallaxX = mouseParallaxValues?.nearX || 0
+            parallaxY = mouseParallaxValues?.nearY || 0
+            rotateX = mouseParallaxValues?.nearRotateX || 0
+            rotateY = mouseParallaxValues?.nearRotateY || 0
+          } else if (offset === 2) {
+            // Дальние карточки - слабый параллакс
+            parallaxX = mouseParallaxValues?.farX || 0
+            parallaxY = mouseParallaxValues?.farY || 0
+            rotateX = mouseParallaxValues?.farRotateX || 0
+            rotateY = mouseParallaxValues?.farRotateY || 0
+          } else {
+            // Очень дальние карточки - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          }
+          
+          const handleClick = (e) => {
+            // Не открываем ссылку, если был drag
+            if (wasDragging || isDragging) {
+              e.preventDefault()
+              return
+            }
+            if (movie.kinopoiskId) {
+              window.open(`https://www.kinopoisk.ru/film/${movie.kinopoiskId}/`, '_blank')
+            }
+          }
+
+          return (
+            <motion.div
+              key={index}
+              style={{
+                position: 'absolute',
+                width: '200px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.6s ease',
+                ...baseStyle
+              }}
+              onClick={handleClick}
+            >
+              {/* Внутренний элемент для параллакса, чтобы не ломать существующий transform */}
+              <motion.div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  x: parallaxX,
+                  y: parallaxY,
+                  rotateX: rotateX,
+                  rotateY: rotateY,
+                  perspective: '1000px',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+              <div style={{
+                width: '100%',
+                height: '300px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                backgroundColor: '#333',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <img
+                  src={movie.poster}
+                  alt={movie.title}
+                  draggable={false}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    userSelect: 'none',
+                    pointerEvents: 'none'
+                  }}
+                  onError={(e) => {
+                    // При ошибке скрываем изображение и показываем название
+                    e.target.style.display = 'none'
+                    const parent = e.target.parentElement
+                    if (!parent.querySelector('.fallback-text')) {
+                      const fallback = document.createElement('div')
+                      fallback.className = 'fallback-text'
+                      fallback.style.cssText = 'color: #ffffff; font-family: "Slovic", sans-serif; font-size: 1.2rem; text-align: center; padding: 1rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%;'
+                      fallback.textContent = movie.title
+                      parent.appendChild(fallback)
+                    }
+                  }}
+                />
+              </div>
+              <div style={{
+                color: '#ffffff',
+                fontSize: '0.9rem',
+                fontFamily: "'Slovic', sans-serif",
+                textAlign: 'center',
+                padding: '0.5rem',
+                lineHeight: '1.3'
+              }}>
+                {movie.title}
+              </div>
+              </motion.div>
+            </motion.div>
+          )
+        })}
+      </div>
+      
+      {/* Индикаторы точек */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        marginTop: '2rem'
+      }}>
+        {movies.map((_, index) => (
+          <div
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            style={{
+              width: index === currentIndex ? '24px' : '8px',
+              height: '8px',
+              borderRadius: '4px',
+              backgroundColor: index === currentIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Кастомная функция сравнения - перерисовываем только если изменились movies
+  // mouseParallaxValues - это motion values, они не должны вызывать перерисовки
+  return prevProps.movies === nextProps.movies
+})
+
+// Компонент текстуры с закругленными прямоугольниками для границ экрана
+function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset = null }) {
+  // Параметры текстуры - одинаковые отступы
+  const gap = 5 // Отступ между элементами и от краев
+  const rectWidth = 20
+  const rectHeight = 16
+  const rectSpacing = rectWidth + gap * 2 // Ширина элемента + отступы с обеих сторон
+  const borderRadius = 2 // Меньше закругление
+  const edgeOffset = 20 // Отступ от края экрана
+
+  // Преобразуем scrollProgress в смещение текстуры с spring эффектом
+  const scrollOffsetRaw = useTransform(scrollProgress, [0, 1], [0, 600]) // Увеличено в 3 раза (200 -> 600)
+  const scrollOffset = useSpring(scrollOffsetRaw, {
+    stiffness: 50,
+    damping: 20,
+    mass: 1
+  })
+  
+  // Комбинируем скролл и накопленное смещение от мыши (всегда в одну сторону)
+  const combinedOffset = useMotionValue(0)
+  
+  useEffect(() => {
+    const updateOffset = () => {
+      const scroll = scrollOffset.get()
+      const mouse = mouseOffset ? mouseOffset.get() : 0
+      // Мышь всегда добавляет смещение в одну сторону (вправо)
+      combinedOffset.set(scroll + mouse)
+    }
+    
+    const unsubscribeScroll = scrollOffset.on('change', updateOffset)
+    const unsubscribeMouse = mouseOffset ? mouseOffset.on('change', updateOffset) : null
+    
+    updateOffset()
+    
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouse) unsubscribeMouse()
+    }
+  }, [scrollOffset, mouseOffset, combinedOffset])
+  
+  const backgroundPosition = useTransform(combinedOffset, (value) => `${value}px 0`)
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="${gap}" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.4"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        [position]: `${edgeOffset}px`, // Отступ от края
+        left: 0,
+        width: '100%',
+        height: `${rectHeight + 4}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: backgroundPosition,
+        pointerEvents: 'none',
+        zIndex: 25
+      }}
+    />
+  )
+}
+
+// Компонент для горизонтальных царапин, которые перерисовываются при движении мыши
+function ScratchesComponent({ count = 15, scratchRedrawTrigger }) {
+  const [scratches, setScratches] = useState([])
+  const [renderKey, setRenderKey] = useState(0)
+  
+  // Перерисовываем царапины при изменении триггера
+  useMotionValueEvent(scratchRedrawTrigger, 'change', () => {
+    // Генерируем новые позиции и параметры для всех царапин
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+    // Меняем key для полной перерисовки элементов
+    setRenderKey(prev => prev + 1)
+  })
+  
+  // Инициализация при монтировании
+  useEffect(() => {
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+  }, [count])
+  
+  return (
+    <>
+      {scratches.map((scratch) => (
+        <div
+          key={`${scratch.id}-${renderKey}`} // Меняем key для полной перерисовки
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '2px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: scratch.opacity,
+            transform: `rotate(${scratch.rotate}deg)`,
+            boxShadow: '0 0 3px rgba(255, 255, 255, 0.2)'
+            // Убрали transition - элементы появляются мгновенно в новых местах
+          }}
+        />
+      ))}
+    </>
+  )
+}
+
+// Компонент слоя помех с поддержкой скролла и мыши (без движения, только изменение параметров)
+function GrainLayerComponent({ zIndex, opacity, backgroundImage, backgroundSize, mixBlendMode, filter, grainBackgroundPosition, grainNoiseOpacity = null }) {
+  const layerRef = useRef(null)
+  
+  useMotionValueEvent(grainBackgroundPosition, 'change', (latest) => {
+    if (layerRef.current) {
+      layerRef.current.style.backgroundPosition = latest
+    }
+  })
+  
+  // Изменяем opacity на основе мыши и скролла
+  useEffect(() => {
+    if (!grainNoiseOpacity) return
+    
+    const unsubscribe = grainNoiseOpacity.on('change', (latest) => {
+      if (layerRef.current) {
+        layerRef.current.style.opacity = latest * opacity
+      }
+    })
+    
+    return () => unsubscribe()
+  }, [grainNoiseOpacity, opacity])
+  
+  return (
+    <div
+      ref={layerRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex,
+        opacity: grainNoiseOpacity ? undefined : opacity,
+        backgroundImage,
+        backgroundSize,
+        mixBlendMode,
+        filter
+      }}
+    />
+  )
+}
+
+// Мемоизированный контейнер для диаграмм с параллаксом
+const ChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      left: '50%',
+      top: '2rem', // default top
+      zIndex: 12,
+      width: '25vw',
+      height: '25vw',
+      maxWidth: '300px',
+      maxHeight: '300px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный контейнер для центральной большой диаграммы
+const CenterChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      zIndex: 18,
+      width: '80vw',
+      height: '80vw',
+      maxWidth: '1000px',
+      maxHeight: '1000px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный индикатор прогресса
+const ProgressIndicator = memo(({ progressText }) => (
+  <div style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+    pointerEvents: 'none',
+    zIndex: 1000
+  }}>
+    <div style={{
+      position: 'sticky',
+      top: '45px',
+      width: 'fit-content',
+      marginLeft: 'auto',
+      marginRight: '16px',
+      color: '#ffffff',
+      fontSize: 'clamp(14px, 2vw, 18px)',
+      fontFamily: "'Science Gothic', monospace",
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      padding: '8px 16px',
+      borderRadius: '4px',
+      backdropFilter: 'blur(4px)',
+      pointerEvents: 'none'
+    }}>
+      Запуск процессов: {progressText}%
+    </div>
+  </div>
+))
+
+// Мемоизированный список пунктов договора
+const ContractItemsList = memo(({ progressMotionValue }) => (
+  <div style={{
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 'clamp(16px, 3vw, 2em)',
+    paddingRight: 'clamp(16px, 3vw, 2em)'
+  }}>
+    <ContractItem text="Подбор и согласование локаций любой сложности по всей России" progress={progressMotionValue} threshold={35} textColor="#ffffff" />
+    <ContractItem text="Согласуем все договоренности и разрешения" progress={progressMotionValue} threshold={40} textColor="#ffffff" />
+    <ContractItem text="Полное сопровождение съемок и постродакшен" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
+    <ContractItem text="Кинопроизводство полного цикла" progress={progressMotionValue} threshold={60} textColor="#ffffff" />
+    <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={progressMotionValue} threshold={65} textColor="#ffffff" />
+  </div>
+))
+
+// Компонент эффекта помех/повреждения пленки для второго экрана
+function FilmGrainEffect({ scrollProgress }) {
+  const [grainIntensity, setGrainIntensity] = useState(0)
+  const [scratchOffset, setScratchOffset] = useState(0)
+  const [rgbSplit, setRgbSplit] = useState(0)
+  const [flicker, setFlicker] = useState(1)
+
+  // Обновляем интенсивность эффектов на основе скролла
+  useMotionValueEvent(scrollProgress, "change", (latest) => {
+    const progress = Math.min(Math.max(latest, 0), 1)
+    setGrainIntensity(progress)
+    setScratchOffset(progress * 200)
+    setRgbSplit(progress * 8) // Максимальное смещение RGB каналов 8px
+    // Flicker эффект - случайные вспышки при скролле
+    setFlicker(1 - (Math.random() * 0.15 * progress))
+  })
+
+  // Генерируем случайные царапины
+  const scratches = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    top: Math.random() * 100,
+    left: Math.random() * 100,
+    width: Math.random() * 300 + 100,
+    opacity: Math.random() * 0.5 + 0.2,
+    delay: Math.random() * 2
+  }))
+
+  return (
+    <>
+      {/* Основной слой зернистости - более заметный */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 100,
+          opacity: Math.max(0.3, grainIntensity * 0.8),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.3) 3px),
+            repeating-linear-gradient(90deg, rgba(0,0,0,0.2) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.2) 3px),
+            repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.05) 3px)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.3) brightness(0.85)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 100}% ${Math.random() * 100}%`,
+            `${Math.random() * 100}% ${Math.random() * 100}%`
+          ]
+        }}
+        transition={{
+          duration: 0.05,
+          repeat: Infinity,
+          repeatType: 'reverse'
+        }}
+      />
+
+      {/* RGB Split эффект - смещение цветовых каналов */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 101,
+          opacity: Math.max(0.2, grainIntensity * 0.7),
+          background: `
+            linear-gradient(to right, 
+              rgba(255, 0, 0, 0.2) 0%, 
+              transparent ${rgbSplit}px,
+              transparent calc(100% - ${rgbSplit}px),
+              rgba(0, 0, 255, 0.2) 100%)
+          `,
+          mixBlendMode: 'screen',
+          transform: `translateX(${rgbSplit * 0.3}px)`,
+          filter: `blur(${rgbSplit * 0.1}px)`
+        }}
+      />
+
+      {/* Горизонтальные царапины */}
+      {scratches.map((scratch) => (
+        <motion.div
+          key={scratch.id}
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '3px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.6), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity)),
+            transform: `translateX(${scratchOffset * 0.5}px)`,
+            boxShadow: '0 0 4px rgba(255, 255, 255, 0.3)'
+          }}
+          animate={{
+            x: [0, scratchOffset * 0.5, 0],
+            opacity: [
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5),
+              Math.max(0.2, scratch.opacity * Math.max(0.3, grainIntensity)),
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5)
+            ]
+          }}
+          transition={{
+            duration: 1.5 + Math.random() * 2,
+            repeat: Infinity,
+            delay: scratch.delay,
+            ease: 'linear'
+          }}
+        />
+      ))}
+
+      {/* Вертикальные полосы повреждений */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 103,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          backgroundImage: `
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.1) 2px,
+              rgba(255, 255, 255, 0.1) 3px,
+              transparent 3px,
+              transparent 5px
+            )
+          `,
+          backgroundSize: '80px 100%',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          backgroundPosition: [`${scratchOffset * 0.3}px 0`, `${scratchOffset * 0.3 + 80}px 0`]
+        }}
+        transition={{
+          duration: 0.3,
+          repeat: Infinity,
+          ease: 'linear'
+        }}
+      />
+
+      {/* Flicker эффект - мерцание */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 104,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          opacity: [flicker * 0.4, flicker * 0.8, flicker * 0.4]
+        }}
+        transition={{
+          duration: 0.08 + Math.random() * 0.15,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+
+      {/* Дополнительный шум через canvas-like эффект */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 99,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          background: `
+            radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.04) 0%, transparent 40%),
+            radial-gradient(circle at 90% 20%, rgba(0, 0, 0, 0.04) 0%, transparent 40%)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'difference',
+          filter: 'blur(1px)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 50}% ${Math.random() * 50}%`,
+            `${Math.random() * 50 + 50}% ${Math.random() * 50 + 50}%`
+          ]
+        }}
+        transition={{
+          duration: 2 + Math.random() * 1.5,
+          repeat: Infinity,
+          repeatType: 'reverse',
+          ease: 'easeInOut'
+        }}
+      />
+      
+      {/* Дополнительный слой статического шума */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 105,
+          opacity: Math.max(0.15, grainIntensity * 0.5),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px)
+          `,
+          backgroundSize: '4px 4px',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.5)'
+        }}
+        animate={{
+          opacity: [
+            Math.max(0.15, grainIntensity * 0.5),
+            Math.max(0.25, grainIntensity * 0.7),
+            Math.max(0.15, grainIntensity * 0.5)
+          ]
+        }}
+        transition={{
+          duration: 0.1,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+    </>
+  )
+}
+
+// Компонент звездного неба с мерцающими звездами
+// Компонент сетки с названиями партнеров
+function PartnersGrid({ partners }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: '2rem',
+      width: '100%',
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '2rem'
+    }}>
+      {partners.map((partner, index) => (
+        <div
+          key={index}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer',
+            minHeight: '150px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+            e.currentTarget.style.transform = 'scale(1.05)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <div style={{
+            color: '#ffffff',
+            fontFamily: "'Slovic', sans-serif",
+            fontSize: '1.5rem',
+            textAlign: 'center',
+            fontWeight: 'bold'
+          }}>
+            {partner.name}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
+  const [stars] = useState(() => {
+    return Array.from({ length: starCount }, () => ({
+      x: Math.random() * 100, // Позиция X в процентах
+      y: Math.random() * 100, // Позиция Y в процентах
+      size: Math.random() * 2 + 0.5, // Размер от 0.5px до 2.5px (меньше)
+      baseOpacity: Math.random() * 0.4 + 0.2, // Базовая прозрачность от 0.2 до 0.6
+      peakOpacity: Math.random() * 0.3 + 0.7, // Пиковая прозрачность от 0.7 до 1.0
+      duration: Math.random() * 2 + 1.5, // Длительность анимации от 1.5 до 3.5 секунд
+      delay: Math.random() * 2 // Задержка начала анимации от 0 до 2 секунд
+    }))
+  })
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: 1
+    }}>
+      {stars.map((star, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: star.baseOpacity }}
+          animate={{
+            opacity: [star.baseOpacity, star.peakOpacity, star.baseOpacity]
+          }}
+          transition={{
+            duration: star.duration,
+            repeat: Infinity,
+            delay: star.delay,
+            ease: "easeInOut"
+          }}
+          style={{
+            position: 'absolute',
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            borderRadius: '50%',
+            backgroundColor: '#ffffff',
+            boxShadow: `0 0 ${star.size}px rgba(255, 255, 255, 0.5)`
+          }}
+        />
+      ))}
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Перерисовываем только если изменился starCount
+  return prevProps.starCount === nextProps.starCount
+})
+
+// Компонент текстуры перфорации для лент
+function LentaPerforationTexture({ width, height, position = 'top', scale = 1 }) {
+  // Параметры текстуры - масштабируемые
+  // Отступы одинаковые: от краев ленты и между элементами
+  const gap = 5 * scale // Отступ между элементами и от краев (одинаковый)
+  const rectWidth = 20 * scale
+  const rectHeight = Math.min(height * 0.8, 16 * scale) // Адаптируем под высоту полосы
+  // Расстояние между началами элементов = ширина элемента + gap (отступ между элементами)
+  const rectSpacing = rectWidth + gap // Ширина элемента + один отступ
+  const borderRadius = 2 * scale // Меньше закругление
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  // Элемент начинается с 0, так как отступ от края уже учтен в позиции контейнера
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.2"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        [position]: 0,
+        left: `${gap}px`, // Отступ от левого края
+        width: `${width - gap * 2}px`, // Уменьшаем ширину на отступы с обеих сторон
+        height: `${height}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: '0 0',
+        pointerEvents: 'none',
+        zIndex: 1
+      }}
+    />
+  )
+}
+
+function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  
+  // Определяем список существующих файлов в папке (проверяем до 20 файлов)
+  const [existingFileNumbers, setExistingFileNumbers] = useState([])
+  
+  useEffect(() => {
+    if (!folderId) {
+      setExistingFileNumbers([])
+      return
+    }
+    
+    // Проверяем все файлы в папке (до 20) и собираем список существующих
+    // Это позволяет находить файлы даже если они не начинаются с 1.webp
+    const checkImageCount = async () => {
+      const maxCheck = 20 // Максимальное количество файлов для проверки
+      const existingFiles = []
+      
+      // Проверяем все файлы от 1 до maxCheck
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          
+          // Таймаут увеличен до 500ms для более надежной проверки
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      setExistingFileNumbers(existingFiles)
+    }
+    
+    checkImageCount()
+  }, [folderId])
+  
+  // Генерируем список путей к изображениям на основе найденных файлов
+  const frames = useMemo(() => {
+    if (existingFileNumbers.length > 0 && folderId) {
+      return existingFileNumbers.map((fileNum) => ({
+        type: 'image',
+        src: `/photos/${folderId}/${fileNum}.webp`
+      }))
+    }
+    // Fallback на случайные цвета если изображения не найдены
+    return Array.from({ length: 8 }, () => {
+      const r = Math.floor(Math.random() * 256)
+      const g = Math.floor(Math.random() * 256)
+      const b = Math.floor(Math.random() * 256)
+      return { type: 'color', value: `rgb(${r}, ${g}, ${b})` }
+    })
+  }, [existingFileNumbers, folderId])
+  
+  const frameCount = frames.length
+  
+  // Состояние для отслеживания hover на каждом кадре - временно отключено для производительности
+  // const [hoveredIndex, setHoveredIndex] = useState(null)
+
+  // progress может быть motion value или числом
+  // Прямое преобразование progress в позицию без spring - синхронно со скроллом
+  // Если progress - motion value, используем его напрямую, иначе создаем из числа
+  const progressMotion = typeof progress === 'object' && 'get' in progress 
+    ? progress 
+    : useMotionValue(typeof progress === 'number' ? (progress > 1 ? progress / 100 : progress) : 0)
+  
+  // Если progress - число, обновляем motion value
+  useEffect(() => {
+    if (typeof progress === 'number') {
+      const normalized = progress > 1 ? progress / 100 : progress
+      progressMotion.set(normalized)
+    }
+  }, [progress, progressMotion])
+  
+  // Прямое преобразование progress в позицию - без задержки, синхронно
+  const translateXValue = useTransform(progressMotion, (prog) => {
+    let targetLeftPosition = Math.max(-200, Math.min(200, (prog - center) * 500 * speed))
+    if (inverse) {
+      targetLeftPosition = -targetLeftPosition
+    }
+    return `translateX(${targetLeftPosition}vw)`
+  })
+
+  // Вычисляем zIndex на основе scale - крупные ленты должны быть выше визуально
+  // Базовый zIndex 1000, добавляем scale * 100 для правильного порядка
+  const zIndex = 1000 + Math.round(scale * 100)
+
+  return (
+    // Внешний контейнер - позиционирование относительно viewport
+    // Используем position: fixed для позиционирования относительно окна браузера
+          <div style={{
+      position: 'fixed',
+      top: `calc(50vh + ${topOffset}vh)`,
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      transformOrigin: 'center center',
+      zIndex: zIndex,
+      pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
+          }}>
+      {/* Контейнер поворота - поворачивается на angle градусов + параллакс */}
+            <motion.div
+        style={{
+        rotate: `${angle}deg`,
+        transformOrigin: 'center center',
+        pointerEvents: 'none',
+        x: isParallaxEnabled ? (parallaxX || 0) : 0,
+        y: isParallaxEnabled ? (parallaxY || 0) : 0,
+        rotateX: isParallaxEnabled ? (rotateX || 0) : 0,
+        rotateY: isParallaxEnabled ? (rotateY || 0) : 0,
+        perspective: '1000px'
+      }}>
+        {/* Контейнер движения - двигается по повернутой оси X */}
+        <motion.div
+          style={{
+            display: 'flex',
+            gap: 0, // Убираем отступы между кадрами для цельной ленты
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            pointerEvents: 'none', // Контейнер не перехватывает события - скролл проходит сквозь
+            transform: translateXValue,
+            position: 'relative' // Для позиционирования перфорации на уровне всей ленты
+          }}
+          onWheel={(e) => {
+            // Пробрасываем скролл событие - не блокируем его
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            // Не блокируем события мыши для скролла
+            e.stopPropagation()
+          }}
+        >
+          {(() => {
+            // Вычисляем параметры один раз для всей ленты
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale
+            const totalWidth = frameWidth * frameCount
+            
+            return (
+              <>
+                {/* Текстура перфорации на верхней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="top"
+                  scale={scale}
+                />
+                
+                {/* Текстура перфорации на нижней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="bottom"
+                  scale={scale}
+                />
+              </>
+            )
+          })()}
+          
+          {/* Кадры ленты */}
+          {frames.map((frame, index) => {
+            const isHovered = false // Временно отключено для производительности
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale // Высота черной полосы сверху/снизу
+            const holeSize = 4 * scale // Размер дырочек
+            const holeSpacing = 12 * scale // Расстояние между центрами дырочек
+            
+            return (
+              <div
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onFrameClick) onFrameClick(lentaId, index, frames)
+                }}
+                onWheel={(e) => {
+                  // Пробрасываем скролл событие родителю - не блокируем скролл
+                  if (containerRef && containerRef.current) {
+                    // Не вызываем preventDefault, чтобы скролл работал естественно
+                    // Просто пробрасываем событие
+                    const scrollEvent = new WheelEvent('wheel', {
+                      deltaY: e.deltaY,
+                      deltaX: e.deltaX,
+                      bubbles: true,
+                      cancelable: true
+                    })
+                    containerRef.current.dispatchEvent(scrollEvent)
+                  }
+                }}
+                onTouchMove={(e) => {
+                  // Для touch устройств тоже пробрасываем скролл
+                  if (containerRef && containerRef.current) {
+                    e.stopPropagation()
+                  }
+                }}
+                style={{
+                  width: `${frameWidth}px`,
+                  height: `${frameHeight + borderWidth * 2}px`,
+                  flexShrink: 0,
+                  position: 'relative',
+                  backgroundColor: '#000000', // Черный фон для полос сверху/снизу
+                  // Тени убраны для оптимизации производительности
+                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'pointer',
+                  pointerEvents: 'auto', // Кадры кликабельны
+                  touchAction: 'pan-y' // Разрешаем вертикальный скролл на touch устройствах
+                }}
+              >
+                {/* Сам кадр в центре */}
+                {frame.type === 'image' ? (
+                  <img
+                    src={frame.src}
+                    alt={`Frame ${index}`}
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      objectFit: 'cover',
+                      borderRadius: '2px'
+                    }}
+                    onError={(e) => {
+                      // При ошибке загрузки показываем серый фон
+                      e.target.style.display = 'none'
+                      e.target.parentElement.style.backgroundColor = '#333'
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      backgroundColor: frame.value || '#333',
+                      borderRadius: '2px'
+                    }}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </motion.div>
+      </motion.div>
+            </div>
+  )
+}
+
+export default function Home() {
+  const containerRef = useRef(null)
+  const firstScreenRef = useRef(null)
+  const secondScreenRef = useRef(null)
+  const thirdScreenRef = useRef(null)
+
+  // Zustand store для управления эффектами
+  const { isParallaxEnabled, toggleParallax, isGrainEnabled } = useParallaxStore()
+  
+  // Состояние для данных из Excel
+  const [filmographyData, setFilmographyData] = useState({ partners: [], projects: [] })
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  
+  // Загрузка данных из JSON файла
+  useEffect(() => {
+    fetch('/filmography.json')
+      .then(res => res.json())
+      .then(data => {
+        setFilmographyData(data)
+        setIsLoadingData(false)
+      })
+      .catch(err => {
+        console.error('Ошибка загрузки данных фильмографии:', err)
+        setIsLoadingData(false)
+      })
+  }, [])
+  
+  // Motion values для progress - без перерендеров
+  const progressMotionValue = useMotionValue(0)
+
+  // Spring версии progress для эластичной анимации лент с разными характеристиками
+  // Все ленты слушают один progressMotionValue, но с разными spring эффектами
+  const springProgressFast = useSpring(progressMotionValue, {
+    stiffness: 200, // Высокая жесткость - быстрый отклик
+    damping: 25,   // Низкое затухание - больше "пружинистости"
+    mass: 0.3      // Малая масса - легкость
+  })
+
+  const springProgressMedium = useSpring(progressMotionValue, {
+    stiffness: 150, // Средняя жесткость
+    damping: 30,   // Среднее затухание
+    mass: 0.5      // Средняя масса
+  })
+
+  const springProgressSlow = useSpring(progressMotionValue, {
+    stiffness: 100, // Низкая жесткость - медленный отклик
+    damping: 35,   // Высокое затухание - меньше "пружинистости"
+    mass: 0.8      // Большая масса - инертность
+  })
+  const firstScreenProgressMotionValue = useMotionValue(0)
+  const secondScreenProgressMotionValue = useMotionValue(0)
+  const thirdScreenProgressMotionValue = useMotionValue(0)
+  
+  // Motion values для позиции мыши - без перерендеров
+  const mouseX = useMotionValue(50) // 0-100, начальное значение центр
+  const mouseY = useMotionValue(50) // 0-100, начальное значение центр
+  
+  // Motion value для кастомного скролла
+  const customScrollTop = useMotionValue(0)
+  const [isDraggingScrollbar, setIsDraggingScrollbar] = useState(false)
+  const scrollbarRef = useRef(null)
+  
+  // Для отображения в UI (только для текста) - используем useState только для индикаторов
+  const [progressText, setProgressText] = useState(0)
+  const [firstScreenProgressText, setFirstScreenProgressText] = useState(0)
+  const [secondScreenProgressText, setSecondScreenProgressText] = useState(0)
+  const [thirdScreenProgressText, setThirdScreenProgressText] = useState(0)
+  const [flashActive, setFlashActive] = useState(false)
+  const [clapperboardActive, setClapperboardActive] = useState(false) // Отключено по умолчанию для производительности
+  const [clapperboardVisible, setClapperboardVisible] = useState(false) // Скрыто по умолчанию
+
+  // Состояние для активной галереи
+  const [activeGallery, setActiveGallery] = useState(null) // { lentaId, frameIndex, frames }
+
+  // Ленивая загрузка лент для производительности
+  const [showLents, setShowLents] = useState(false)
+
+  // Показываем ленты после полной загрузки страницы (оптимизация производительности)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLents(true)
+    }, 1000) // Показываем ленты через 1 секунду после загрузки
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Фикс для нестабильных vh и vw единиц - устанавливаем CSS переменные
+  useEffect(() => {
+    const setViewportUnits = () => {
+      const vh = window.innerHeight * 0.01
+      const vw = window.innerWidth * 0.01
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
+      document.documentElement.style.setProperty('--vw', `${vw}px`)
+    }
+
+    // Устанавливаем сразу
+    setViewportUnits()
+
+    // Обновляем при изменении размера окна и ориентации
+    window.addEventListener('resize', setViewportUnits)
+    window.addEventListener('orientationchange', setViewportUnits)
+
+    return () => {
+      window.removeEventListener('resize', setViewportUnits)
+      window.removeEventListener('orientationchange', setViewportUnits)
+    }
+  }, [])
+
+  // Отслеживание позиции мыши для параллакса - без перерендеров
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const x = (e.clientX / window.innerWidth) * 100 // 0-100
+      const y = (e.clientY / window.innerHeight) * 100 // 0-100
+      mouseX.set(x)
+      mouseY.set(y)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [mouseX, mouseY])
+
+  // Transforms для параллакса - преобразуем позицию мыши в значения перспективы
+  // Для крупных лент (scale >= 1.5): сильный эффект
+  const lentaLargeParallaxX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeParallaxY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeRotateX = useTransform(mouseY, [0, 100], [8, -8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaLargeRotateY = useTransform(mouseX, [0, 100], [-8, 8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для средних лент (scale < 1.5): средний эффект
+  const lentaMediumParallaxX = useTransform(mouseX, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumParallaxY = useTransform(mouseY, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumRotateX = useTransform(mouseY, [0, 100], [5, -5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaMediumRotateY = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких лент: слабый эффект
+  const lentaSmallParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaSmallRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для крупной круговой диаграммы в центре: СЛАБЫЙ эффект (она на переднем плане)
+  const chartCenterParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartCenterRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких диаграмм на заднем плане: СИЛЬНЫЙ эффект (они дальше)
+  const chartBackParallaxX = useTransform(mouseX, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackParallaxY = useTransform(mouseY, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackRotateX = useTransform(mouseY, [0, 100], [6, -6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartBackRotateY = useTransform(mouseX, [0, 100], [-6, 6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Комбинированные transforms для центрирования + параллакс
+  const chartCenterX = useTransform(chartCenterParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartCenterY = useTransform(chartCenterParallaxY, (py) => `calc(-50% + ${py}px)`)
+  const chartTopX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartTopY = useTransform(chartBackParallaxY, (py) => `calc(2rem + ${py}px)`)
+  const chartBottomX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartBottomY = useTransform(chartBackParallaxY, (py) => `calc(-2rem + ${py}px)`)
+  
+  // Для помех на втором экране: комбинируем скролл и мышь
+  // Параллакс от мыши для помех
+  const grainMouseX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const grainMouseY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  
+  // Комбинированные motion values для backgroundPosition
+  const grainBackgroundXValue = useMotionValue(0)
+  const grainBackgroundYValue = useMotionValue(0)
+  
+  // Transform для backgroundPosition (комбинированная строка)
+  const grainBackgroundPosition = useTransform(
+    [grainBackgroundXValue, grainBackgroundYValue],
+    ([x, y]) => `${x}px ${y}px`
+  )
+  
+  // Transform для движения самого элемента (x, y) - комбинируем скролл и мышь
+  const grainTransformXValue = useMotionValue(0)
+  const grainTransformYValue = useMotionValue(0)
+  
+  const grainTransformX = grainTransformXValue
+  const grainTransformY = grainTransformYValue
+  
+  // Для лент перфорации: накапливаем смещение при движении мыши (как вращение пленки)
+  const perforationMouseOffset = useMotionValue(0)
+  const lastMouseX = useRef(50) // Начальная позиция мыши (центр)
+  
+  useEffect(() => {
+    const updatePerforationOffset = () => {
+      if (!isParallaxEnabled) return
+
+      const currentMouseX = mouseX.get()
+      const delta = Math.abs(currentMouseX - lastMouseX.current)
+
+      // Если мышь движется, добавляем смещение в одну сторону (вправо)
+      if (delta > 0.1) { // Порог для определения движения
+        // Скорость зависит от скорости движения мыши
+        const speed = Math.min(delta * 2, 5) // Ограничиваем максимальную скорость
+        perforationMouseOffset.set(perforationMouseOffset.get() + speed)
+        lastMouseX.current = currentMouseX
+      }
+    }
+
+    // Небольшое затухание накопленного смещения (имитация трения пленки)
+    const decayInterval = setInterval(() => {
+      const current = perforationMouseOffset.get()
+      if (current > 0) {
+        perforationMouseOffset.set(Math.max(0, current - 0.5)) // Медленное затухание
+      }
+    }, 100) // Каждые 100мс уменьшаем на 0.5
+
+    const unsubscribe = isParallaxEnabled ? mouseX.on('change', updatePerforationOffset) : null
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+      clearInterval(decayInterval)
+    }
+  }, [mouseX, perforationMouseOffset, isParallaxEnabled])
+  
+  // Для карточек проектов: разная сила параллакса в зависимости от расстояния от центра
+  // Центральная карточка (выбранная) - сильный параллакс
+  const movieCardCenterParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardCenterRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  
+  // Близкие карточки (offset 1) - средний параллакс
+  const movieCardNearParallaxX = useTransform(mouseX, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearParallaxY = useTransform(mouseY, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearRotateX = useTransform(mouseY, [0, 100], [2, -2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardNearRotateY = useTransform(mouseX, [0, 100], [-2, 2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Дальние карточки (offset 2) - слабый параллакс
+  const movieCardFarParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardFarRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Стабилизируем объект mouseParallaxValues через useMemo, чтобы не вызывать перерисовки MoviesCarousel
+  const movieParallaxValues = useMemo(() => ({
+    centerX: movieCardCenterParallaxX,
+    centerY: movieCardCenterParallaxY,
+    centerRotateX: movieCardCenterRotateX,
+    centerRotateY: movieCardCenterRotateY,
+    nearX: movieCardNearParallaxX,
+    nearY: movieCardNearParallaxY,
+    nearRotateX: movieCardNearRotateX,
+    nearRotateY: movieCardNearRotateY,
+    farX: movieCardFarParallaxX,
+    farY: movieCardFarParallaxY,
+    farRotateX: movieCardFarRotateX,
+    farRotateY: movieCardFarRotateY
+  }), [
+    movieCardCenterParallaxX, movieCardCenterParallaxY, movieCardCenterRotateX, movieCardCenterRotateY,
+    movieCardNearParallaxX, movieCardNearParallaxY, movieCardNearRotateX, movieCardNearRotateY,
+    movieCardFarParallaxX, movieCardFarParallaxY, movieCardFarRotateX, movieCardFarRotateY
+  ])
+
+  // Партнеры из Excel файла (с fallback на старые данные)
+  const partners = useMemo(() => {
+    if (filmographyData.partners && filmographyData.partners.length > 0) {
+      return filmographyData.partners
+    }
+    // Fallback на старые данные, если JSON не загружен
+    return [
+      { name: 'Мосфильм' },
+      { name: 'Ленфильм' },
+      { name: 'СТВ' },
+      { name: 'Централ Партнершип' },
+      { name: 'ВГТРК' },
+      { name: 'Первый канал' }
+    ]
+  }, [filmographyData.partners])
+
+  // Проекты из Excel файла, преобразованные в формат для MoviesCarousel
+  const topMovies = useMemo(() => {
+    if (filmographyData.projects && filmographyData.projects.length > 0) {
+      return filmographyData.projects.map((project, index) => {
+        // Создаем простой SVG placeholder для постера
+        const svgContent = `<svg width="200" height="300" xmlns="http://www.w3.org/2000/svg">
+          <rect width="200" height="300" fill="#1a1a1a"/>
+          <text x="100" y="140" font-family="Arial, sans-serif" font-size="14" fill="#ffffff" text-anchor="middle">${project.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+          <text x="100" y="160" font-family="Arial, sans-serif" font-size="11" fill="#888" text-anchor="middle">${(project.studio || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+          <text x="100" y="180" font-family="Arial, sans-serif" font-size="10" fill="#666" text-anchor="middle">${(project.period || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+        </svg>`
+        const svgDataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent)
+        
+        return {
+          title: project.title,
+          poster: project.poster || svgDataUri,
+          kinopoiskId: project.kinopoiskId || null,
+          studio: project.studio,
+          period: project.period,
+          format: project.format
+        }
+      })
+    }
+    // Fallback на старые данные, если JSON не загружен
+    return [
+      { title: 'Т-34', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1900788/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Движение вверх', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Холоп', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Серебряные коньки', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Огонь', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Вторжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Лёд 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Союз спасения', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Стриптизёрши', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Время первых', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Экипаж', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Притяжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Лёд', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: '28 панфиловцев', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Душа', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Селфи', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Холоп 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Чебурашка', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Сердце Пармы', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Вызов', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 }
+    ]
+  }, [filmographyData.projects])
+  
+  // Генерация frames для ленты на основе lentaId (для стабильности)
+  const generateFramesForLenta = (lentaId, frameCount) => {
+    // Используем lentaId как seed для генерации стабильных цветов
+    const seed = lentaId.split('-')[1] // Извлекаем номер из "lenta-1" -> "1"
+    const seedNum = parseInt(seed) || 0
+    
+    return Array.from({ length: frameCount }, (_, i) => {
+      // Простая детерминированная генерация на основе seed и индекса
+      const r = (seedNum * 17 + i * 23) % 256
+      const g = (seedNum * 31 + i * 37) % 256
+      const b = (seedNum * 41 + i * 43) % 256
+      return `rgb(${r}, ${g}, ${b})`
+    })
+  }
+
+  // Массив всех лент с их данными - используем folderId для генерации путей к изображениям
+  // Количество файлов будет определено динамически при загрузке
+  const allLentas = useMemo(() => {
+    return [
+      { id: 'lenta-1', folderId: '1' },
+      { id: 'lenta-6', folderId: '2' },
+      { id: 'lenta-9', folderId: '3' },
+      { id: 'lenta-2', folderId: '4' },
+      { id: 'lenta-3', folderId: '5' },
+      { id: 'lenta-4', folderId: '6' },
+      { id: 'lenta-7', folderId: '7' },
+      { id: 'lenta-8', folderId: '8' },
+      { id: 'lenta-12', folderId: '9' },
+      { id: 'lenta-5', folderId: '10' },
+      { id: 'lenta-10', folderId: '11' },
+      { id: 'lenta-11', folderId: '12' }
+    ]
+  }, [])
+
+  const handleFrameClick = (lentaId, frameIndex, frames) => {
+    // Находим индекс ленты в массиве
+    const lentaIndex = allLentas.findIndex(l => l.id === lentaId)
+    
+    // Используем переданные frames (они уже содержат реальные изображения)
+    // allLentas будет обновлен в Gallery при загрузке
+    setActiveGallery({ 
+      lentaId, 
+      frameIndex, 
+      frames, // Передаем реальные frames с изображениями
+      lentaIndex: lentaIndex >= 0 ? lentaIndex : 0,
+      allLentas // Передаем allLentas для навигации между лентами
+    })
+  }
+  
+  const handleCloseGallery = () => {
+    setActiveGallery(null)
+  }
+  
+  const handleSign = () => {
+    setFlashActive(true)
+  }
+  
+  const handleFlashComplete = () => {
+    setFlashActive(false)
+  }
+  
+  // Показываем хлопушку на 1/3 времени всех вспышек раньше (~1 сек)
+  // Без автозакрытия - окно остается открытым до ручного закрытия
+  // Но верхняя створка закрывается после падения
+  useEffect(() => {
+    if (flashActive) {
+      // Показываем на 1 сек (на 1/3 времени всех вспышек раньше)
+      const showTimeout = setTimeout(() => {
+        setClapperboardActive(true) // Открыта
+        setClapperboardVisible(true) // Показываем и падает сверху
+      }, 1000) // 1 сек - на 1/3 времени всех вспышек раньше
+      
+      // Закрываем верхнюю створку после падения (через ~1.5 сек после начала падения)
+      // 1000ms (показ) + 1500ms (время падения) = 2500ms
+      const closeFlapTimeout = setTimeout(() => {
+        setClapperboardActive(false) // Закрываем верхнюю створку
+      }, 2500)
+      
+      return () => {
+        clearTimeout(showTimeout)
+        clearTimeout(closeFlapTimeout)
+      }
+    }
+    // Убираем else блок - окно остается видимым до ручного закрытия
+  }, [flashActive])
+  
+  const handleClapperboardClose = useCallback(() => {
+    setClapperboardActive(false)
+    setTimeout(() => {
+      setClapperboardVisible(false)
+    }, 600) // Время на анимацию закрытия
+  }, [])
+
+  // Отслеживаем скролл контейнера с помощью framer-motion
+  const { scrollYProgress, scrollY } = useScroll({
+    container: containerRef,
+    layoutEffect: false
+  })
+
+  // Отслеживаем прогресс каждого экрана от появления до исчезновения
+  // offset: ["start end"] - когда верхний край экрана касается нижней части viewport (0%)
+  // offset: ["end start"] - когда нижний край экрана касается верхней части viewport (100%)
+  const { scrollYProgress: firstScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: firstScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: secondScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: secondScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: thirdScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: thirdScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  // Вычисляем прогресс через useTransform - без перерендеров, прямое обновление DOM
+  // Используем useTransform для преобразования scrollY в progress (0-1)
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const container = containerRef.current
+    const updateProgress = () => {
+      const viewportHeight = container.clientHeight
+      const containerHeight = container.scrollHeight
+      const full = containerHeight - viewportHeight
+      
+      if (full <= 0) {
+        progressMotionValue.set(0)
+        return
+      }
+      
+      // Подписываемся на изменения scrollY и обновляем progressMotionValue
+      const unsubscribe = scrollY.on("change", (latest) => {
+        const progressValue = Math.min(Math.max((latest / full) * 100, 0), 100) / 100
+        progressMotionValue.set(progressValue)
+      })
+      
+      return unsubscribe
+    }
+    
+    const unsubscribe = updateProgress()
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [scrollY, progressMotionValue])
+  
+  // Преобразуем scrollYProgress в motion value напрямую
+  useEffect(() => {
+    const unsubscribe1 = firstScreenScrollProgress.on("change", (latest) => {
+      firstScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe2 = secondScreenScrollProgress.on("change", (latest) => {
+      secondScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe3 = thirdScreenScrollProgress.on("change", (latest) => {
+      thirdScreenProgressMotionValue.set(latest)
+    })
+    
+    return () => {
+      unsubscribe1()
+      unsubscribe2()
+      unsubscribe3()
+    }
+  }, [firstScreenScrollProgress, secondScreenScrollProgress, thirdScreenScrollProgress, firstScreenProgressMotionValue, secondScreenProgressMotionValue, thirdScreenProgressMotionValue])
+  
+  // Motion values для изменения параметров шума (не движения, а изменения свойств)
+  const grainNoiseIntensity = useMotionValue(0.5) // Интенсивность шума
+  const grainNoiseOpacity = useMotionValue(0.6) // Прозрачность шума
+  
+  // Обновляем параметры шума при изменении скролла или мыши (не движение, а изменение)
+  useEffect(() => {
+    const updateNoise = () => {
+      const scroll = secondScreenScrollProgress.get()
+      const mouseXVal = mouseX.get() / 100 // 0-1
+      const mouseYVal = mouseY.get() / 100 // 0-1
+
+      // Изменяем backgroundPosition на основе скролла и мыши (движение фона)
+      if (isParallaxEnabled) {
+        grainBackgroundXValue.set(scroll * 200 + (mouseXVal - 0.5) * 50)
+        grainBackgroundYValue.set(scroll * 200 + (mouseYVal - 0.5) * 50)
+      } else {
+        grainBackgroundXValue.set(scroll * 200) // Только скролл, без мыши
+        grainBackgroundYValue.set(scroll * 200)
+      }
+
+      // Изменяем интенсивность шума на основе мыши и скролла (не движение, а изменение)
+      const mouseInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.1 : 0
+      const noiseIntensity = 0.4 + scroll * 0.3 + mouseInfluence
+      grainNoiseIntensity.set(Math.min(1, Math.max(0.3, noiseIntensity)))
+
+      const mouseOpacityInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.15 : 0
+      const noiseOpacity = 0.5 + scroll * 0.2 + mouseOpacityInfluence
+      grainNoiseOpacity.set(Math.min(1, Math.max(0.3, noiseOpacity)))
+    }
+    
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateNoise)
+    const unsubscribeMouseX = mouseX.on('change', updateNoise)
+    const unsubscribeMouseY = mouseY.on('change', updateNoise)
+    
+    // Инициализация
+    updateNoise()
+    
+    return () => {
+      unsubscribeScroll()
+      unsubscribeMouseX()
+      unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, grainBackgroundXValue, grainBackgroundYValue, grainNoiseIntensity, grainNoiseOpacity])
+  
+  // Motion values для перерисовки царапин (изменение их позиций)
+  const scratchRedrawTrigger = useMotionValue(0) // Триггер для перерисовки
+  
+  useEffect(() => {
+    const updateScratches = () => {
+      // Просто обновляем триггер, чтобы вызвать перерисовку
+      scratchRedrawTrigger.set(Date.now())
+    }
+
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateScratches)
+    const unsubscribeMouseX = isParallaxEnabled ? mouseX.on('change', updateScratches) : null
+    const unsubscribeMouseY = isParallaxEnabled ? mouseY.on('change', updateScratches) : null
+
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouseX) unsubscribeMouseX()
+      if (unsubscribeMouseY) unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, scratchRedrawTrigger, isParallaxEnabled])
+  
+  // UI обновления - синхронные для плавной работы (дебаунсинг только для тяжелых диаграмм)
+  useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    setProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(firstScreenProgressMotionValue, "change", (latest) => {
+    setFirstScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(secondScreenProgressMotionValue, "change", (latest) => {
+    setSecondScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(thirdScreenProgressMotionValue, "change", (latest) => {
+    setThirdScreenProgressText(Math.round(latest * 100))
+  })
+
+  return (
+    <>
+      {/* Компонент Вспышка */}
+      <Flash isActive={flashActive} onComplete={handleFlashComplete} />
+      
+      {/* Галерея для активированной ленты */}
+      {activeGallery && (
+        <Gallery
+          frames={activeGallery.frames}
+          initialIndex={activeGallery.frameIndex}
+          onClose={handleCloseGallery}
+          lentaIndex={activeGallery.lentaIndex}
+          allLentas={activeGallery.allLentas}
+        />
+      )}
+      
+      {/* Логотип SI-PRODUCTION в правом нижнем углу */}
+      <div 
+        className="si-production-logo"
+        style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          color: '#ffffff',
+          fontSize: 'clamp(32px, 6vw, 72px)',
+          fontFamily: "'Science Gothic', monospace",
+          fontWeight: 'bold',
+          zIndex: 10000,
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}
+      >
+        <span 
+          className="si-text"
+          style={{
+            fontFamily: "'Slovic', sans-serif",
+            color: '#ff0000',
+            transform: 'translateY(-3px)'
+          }}
+        >SI</span>
+        <span className="dash-text">-</span>
+        <span 
+          className="production-text"
+          style={{
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+          }}
+        >PRODUCTION</span>
+      </div>
+      
+      {/* Контейнер для хлопушки - fixed с overflow hidden */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        zIndex: 99999, // Ниже вспышки (100000)
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
+            </div>
+
+
+    <div 
+      ref={containerRef} 
+      className="main-scroll-container"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        overflowY: 'auto', // Нативный скролл
+        overflowX: 'hidden',
+        touchAction: 'pan-y' // Разрешаем вертикальный touch-скролл на мобильных
+      }}
+    >
+      {/* Ленты размещены внутри скроллящейся зоны */}
+      {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
+      {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
+      {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
+      {/* Каждая лента соответствует одной папке из public/photos (1-12) */}
+      {/* Центральные крупные ленты - быстрый spring для максимального эффекта */}
+      {/* Эти ленты самые заметные и должны реагировать мгновенно */}
+      <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Промежуточные ленты - средний spring */}
+      {/* Баланс между скоростью и плавностью */}
+      <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Фоновые ленты - медленный spring для subtle эффекта */}
+      {/* Эти ленты создают глубину и не должны отвлекать внимание */}
+      <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      
+      {/* Индикатор прогресса в левом верхнем углу */}
+      <div style={{
+        position: 'fixed',
+        top: '16px',
+        left: '16px',
+        color: '#ffffff',
+        fontSize: 'clamp(14px, 2vw, 18px)',
+        fontFamily: "'Science Gothic', monospace",
+        zIndex: 10000,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: '8px 16px',
+        borderRadius: '4px',
+        backdropFilter: 'blur(4px)',
+        pointerEvents: 'none'
+      }}>
+        Прогресс кинопроизводства: {progressText}%
+            </div>
+
+      {/* Первый экран */}
+      <section 
+        ref={firstScreenRef}
+        style={{ 
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a', // Чуть светлее черного
+          position: 'relative'
+        }}
+      >
+        {/* Индикатор прогресса первого экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '70px',
+          width: 'fit-content',
+          left: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Составление плана: {firstScreenProgressText}%
+            </div>
+
+        {/* Надпись ПЕРВЫЙ ЭКРАН */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+            Первый экран
+            </div>
+      </section>
+
+      {/* Второй экран */}
+      <section 
+        ref={secondScreenRef}
+        style={{ 
+        width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          overflowX: 'hidden'
+        }}
+      >
+        {/* Индикатор прогресса второго экрана - обертка для правильной работы sticky */}
+        <ProgressIndicator progressText={secondScreenProgressText} />
+        
+        {/* Эффекты помех - только если включены */}
+        {isGrainEnabled && (
+          <>
+            {/* Статические помехи как на старой пленке - зернистость */}
+            <GrainLayerComponent
+          zIndex={100}
+          opacity={0.6}
+          backgroundImage={`
+            radial-gradient(circle at 0 0, rgba(255,255,255,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 2px 2px, rgba(0,0,0,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 0.5px, transparent 0.5px)
+          `}
+          backgroundSize="4px 4px, 4px 4px, 2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2) brightness(0.85)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Дополнительный слой зернистости - точки */}
+        <GrainLayerComponent
+          zIndex={101}
+          opacity={0.5}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(255,255,255,0.1) 1px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 3px),
+            repeating-linear-gradient(90deg, transparent 0px, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 3px)
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="screen"
+          filter="contrast(1.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Третий слой - более крупная зернистость */}
+        <GrainLayerComponent
+          zIndex={102}
+          opacity={0.4}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px)
+          `}
+          backgroundSize="3px 3px"
+          mixBlendMode="multiply"
+          filter="contrast(1.5)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Четвертый слой - очень заметная зернистость с точками */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.7}
+          backgroundImage={`
+            repeating-conic-gradient(from 0deg at 50% 50%, 
+              rgba(255,255,255,0.2) 0deg, 
+              transparent 1deg, 
+              transparent 2deg, 
+              rgba(0,0,0,0.2) 2deg, 
+              rgba(0,0,0,0.2) 3deg, 
+              transparent 3deg, 
+              transparent 4deg
+            )
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2.5) brightness(0.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Горизонтальные царапины - перерисовываются при движении мыши */}
+        <ScratchesComponent count={15} scratchRedrawTrigger={scratchRedrawTrigger} />
+        
+        {/* Вертикальные полосы повреждений */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.25}
+          backgroundImage={`
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.15) 2px,
+              rgba(255, 255, 255, 0.15) 3px,
+              transparent 3px,
+              transparent 8px
+            )
+          `}
+          backgroundSize="60px 100%"
+          mixBlendMode="overlay"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+          </>
+        )}
+
+        {/* Движущиеся ленты перфорации по границам экрана */}
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" mouseOffset={perforationMouseOffset} />
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" mouseOffset={perforationMouseOffset} />
+        
+        {/* Линейная диаграмма на весь экран */}
+        <LineChartComponent key="line-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        
+        {/* Радарная диаграмма - сверху с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            top: '2rem',
+            x: chartTopX,
+            y: chartTopY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadarChartComponent key="radar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+        
+        {/* Радиальная столбчатая диаграмма - снизу с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            bottom: '2rem',
+            top: 'auto',
+            x: chartBottomX,
+            y: chartBottomY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadialBarChartComponent key="radial-bar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+
+        {/* Круговая диаграмма прогресса - по центру, передний план, СЛАБЫЙ параллакс */}
+        <CenterChartContainer
+          style={{
+            x: chartCenterX,
+            y: chartCenterY,
+            rotateX: chartCenterRotateX,
+            rotateY: chartCenterRotateY,
+          }}
+        >
+          <ProgressChart key="progress-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </CenterChartContainer>
+        
+          {/* Контейнер для договора */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(210mm, 90vw)',
+            height: 'min(297mm, calc(90vw * 1.414))',
+            maxHeight: 'calc(var(--vh, 1vh) * 90)',
+            zIndex: 20
+          }}>
+            {/* Сетчатый лист A4 - фон с сеткой */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backgroundImage: `
+                linear-gradient(to right, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px)
+              `,
+              backgroundSize: '1.5em 1.5em',
+              backgroundPosition: 'center center',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.6)'
+            }} />
+
+            {/* Контейнер с текстом договора */}
+            <div 
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                padding: 'clamp(16px, 3vw, 2rem)',
+                display: 'flex',
+                flexDirection: 'column',
+                fontSize: 'clamp(24px, 3vw, 36px)',
+                pointerEvents: 'auto',
+                zIndex: 1
+              }}
+            >
+            {/* Надпись ДОГОВОР сверху по центру */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: 'auto',
+              paddingTop: '1em'
+            }}>
+              <h1 
+                style={{
+                  fontSize: '2em',
+                  fontFamily: "'Slovic', sans-serif",
+                  color: '#ffffff',
+                  margin: 0
+                }}
+              >
+                ДОГОВОР
+              </h1>
+            </div>
+
+            {/* Список услуг с галочками в центре */}
+            <ContractItemsList progressMotionValue={secondScreenProgressMotionValue} />
+
+            {/* Кнопка Подписать снизу */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: 'auto',
+              paddingBottom: '1em'
+            }}>
+              <button 
+                onClick={handleSign}
+                style={{
+                  padding: '0.6em 1.6em',
+                  backgroundColor: '#ff0000',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0.2em',
+                  fontSize: '1em',
+                  fontFamily: "'Slovic', sans-serif",
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ff0000'
+                  e.currentTarget.style.color = '#ffffff'
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+              >
+                Подписать
+              </button>
+            </div>
+          </div>
+          </div>
+        
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+          Второй экран
+        </div>
+      </section>
+
+      {/* Третий экран */}
+      <section 
+        ref={thirdScreenRef}
+        style={{
+        width: '100vw',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
+          background: 'linear-gradient(to bottom, #000000 0%, #0a0a2e 50%, #1a1a3e 100%)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Упрощенное звездное небо для производительности */}
+        <StarrySky starCount={50} />
+
+        {/* Индикатор прогресса третьего экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '16px',
+          width: 'fit-content',
+          marginLeft: 'auto',
+          marginRight: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Монтаж: {thirdScreenProgressText}%
+        </div>
+
+        {/* Секция ПРОЕКТЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПРОЕКТЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1 
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПРОЕКТЫ
+            </h1>
+          </div>
+
+          {/* Карусель с фильмами */}
+          <div style={{ minHeight: '500px' }}>
+            <MoviesCarousel 
+              movies={topMovies}
+              mouseParallaxValues={movieParallaxValues}
+            />
+          </div>
+        </div>
+
+        {/* Секция ПАРТНЕРЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПАРТНЕРЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПАРТНЕРЫ
+            </h1>
+          </div>
+
+          {/* Сетка с логотипами партнеров */}
+          <PartnersGrid partners={partners} />
+          
+          {/* Футер - Made in Zvenigorod на звездном фоне */}
+          <footer style={{
+            width: '100%',
+            textAlign: 'center',
+            marginTop: '4rem',
+            marginBottom: '150px',
+            pointerEvents: 'none'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
+              fontFamily: "'Slovic', sans-serif",
+              fontWeight: 'bold'
+            }}>
+              <span>Made in</span>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontFamily: "'Slovic', sans-serif",
+                fontWeight: 'bold'
+              }}>
+                {/* Иконка православного купола из SVG файла */}
+                <img 
+                  src="/tampls.svg" 
+                  alt="Zvenigorod dome" 
+                  style={{ 
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    width: '24px',
+                    height: '24px'
+                  }}
+                />
+                <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
+              </span>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+    </div>
+    </>
+  )
+}
+
+// Компонент кастомного скроллбара
+function CustomScrollbar({ containerRef, scrollTop, isDragging, setIsDragging, scrollbarRef }) {
+  const [scrollbarHeight, setScrollbarHeight] = useState(0)
+  const [scrollbarTop, setScrollbarTop] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(0)
+  const [contentHeight, setContentHeight] = useState(0)
+  const dragStartY = useRef(0)
+  const dragStartScroll = useRef(0)
+  
+  // Вычисляем размеры скроллбара
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const updateScrollbar = () => {
+      const container = containerRef.current
+      if (!container) return
+      
+      const ch = container.clientHeight
+      const sh = container.scrollHeight
+      const st = scrollTop.get()
+      
+      setContainerHeight(ch)
+      setContentHeight(sh)
+      
+      // Высота скроллбара пропорциональна видимой области
+      const thumbHeight = Math.max(20, (ch / sh) * ch)
+      setScrollbarHeight(thumbHeight)
+      
+      // Позиция скроллбара пропорциональна scrollTop
+      const maxTop = ch - thumbHeight
+      const scrollProgress = sh > ch ? st / (sh - ch) : 0
+      setScrollbarTop(scrollProgress * maxTop)
+    }
+    
+    const unsubscribe = scrollTop.on('change', updateScrollbar)
+    updateScrollbar()
+    
+    // Обновляем при изменении размера окна
+    window.addEventListener('resize', updateScrollbar)
+    
+    return () => {
+      unsubscribe()
+      window.removeEventListener('resize', updateScrollbar)
+    }
+  }, [containerRef, scrollTop])
+  
+  // Обработка drag скроллбара
+  useEffect(() => {
+    if (!isDragging) return
+    
+    const handleMouseMove = (e) => {
+      if (!containerRef.current || !scrollbarRef.current) return
+      
+      const container = containerRef.current
+      const scrollbar = scrollbarRef.current
+      const containerRect = container.getBoundingClientRect()
+      const scrollbarRect = scrollbar.getBoundingClientRect()
+      
+      const deltaY = e.clientY - dragStartY.current
+      const scrollbarTrackHeight = containerHeight - scrollbarHeight
+      const scrollRatio = (deltaY / scrollbarTrackHeight) * (contentHeight - containerHeight)
+      
+      const newScroll = Math.max(0, Math.min(contentHeight - containerHeight, dragStartScroll.current + scrollRatio))
+      scrollTop.set(newScroll)
+    }
+    
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, containerRef, scrollbarRef, containerHeight, scrollbarHeight, contentHeight, scrollTop, setIsDragging])
+  
+  const handleMouseDown = (e) => {
+    e.preventDefault()
+    dragStartY.current = e.clientY
+    dragStartScroll.current = scrollTop.get()
+    setIsDragging(true)
+  }
+  
+  const handleTrackClick = (e) => {
+    if (!containerRef.current || !scrollbarRef.current) return
+    
+    const container = containerRef.current
+    const scrollbar = scrollbarRef.current
+    const containerRect = container.getBoundingClientRect()
+    const clickY = e.clientY - containerRect.top
+    
+    const scrollbarTrackHeight = containerHeight - scrollbarHeight
+    const clickRatio = clickY / scrollbarTrackHeight
+    const newScroll = clickRatio * (contentHeight - containerHeight)
+    
+    scrollTop.set(Math.max(0, Math.min(contentHeight - containerHeight, newScroll)))
+  }
+  
+  if (contentHeight <= containerHeight) return null // Не показываем скроллбар если контент помещается
+  
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        right: '10px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '8px',
+        height: `${containerHeight}px`,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '4px',
+        zIndex: 10000,
+        cursor: 'pointer'
+      }}
+      onClick={handleTrackClick}
+    >
+      <div
+        ref={scrollbarRef}
+        style={{
+          position: 'absolute',
+          top: `${scrollbarTop}px`,
+          left: 0,
+          width: '100%',
+          height: `${scrollbarHeight}px`,
+          backgroundColor: 'rgba(255, 255, 255, 0.5)',
+          borderRadius: '4px',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: isDragging ? 'none' : 'background-color 0.2s ease',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'
+        }}
+        onMouseLeave={(e) => {
+          if (!isDragging) {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+```
+
+Проверяю, что JSON файл создан корректно, и тестирую загрузку:
+
+
+Обновляю скрипт для автоматического копирования JSON в public:
+
+
+```python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import pandas as pd
+import json
+
+# Читаем Excel файл
+df = pd.read_excel('/home/ae/Загрузки/si_production_files/Фильмография_Щербаков.xlsx', header=None)
+
+# Заголовки находятся в строке 4 (индекс 4)
+# Переименовываем колонки
+df.columns = df.iloc[4].values
+df = df.iloc[5:].reset_index(drop=True)
+
+# Удаляем строки, где все значения NaN
+df = df.dropna(how='all')
+
+# Заполняем пропущенные значения в колонке Период и Студия предыдущими значениями
+df['Период'] = df['Период'].ffill()
+df['Студия'] = df['Студия'].ffill()
+
+# Удаляем строки, где нет названия проекта
+df = df.dropna(subset=['Проект'])
+
+# Очищаем данные от лишних пробелов
+df['Проект'] = df['Проект'].astype(str).str.strip()
+df['Студия'] = df['Студия'].astype(str).str.strip()
+df['Период'] = df['Период'].astype(str).str.strip()
+df['Формат'] = df['Формат'].astype(str).str.strip()
+
+# Удаляем строки с 'nan' как текстом
+df = df[df['Проект'] != 'nan']
+df = df[df['Студия'] != 'nan']
+
+# Получаем уникальные студии (партнеры)
+partners = df['Студия'].unique().tolist()
+partners = [p for p in partners if p and p != 'nan']
+partners = sorted(partners)
+
+# Получаем проекты
+projects = []
+for _, row in df.iterrows():
+    project = {
+        'title': str(row['Проект']),
+        'studio': str(row['Студия']),
+        'period': str(row['Период']),
+        'format': str(row['Формат']) if pd.notna(row['Формат']) else ''
+    }
+    projects.append(project)
+
+# Создаем JSON структуру
+output = {
+    'partners': [{'name': p} for p in partners],
+    'projects': projects
+}
+
+# Сохраняем в JSON файл
+import os
+import shutil
+
+data_dir = '/home/ae/si-production/data'
+public_dir = '/home/ae/si-production/public'
+
+# Создаем директорию data, если её нет
+os.makedirs(data_dir, exist_ok=True)
+
+# Сохраняем в data
+data_path = os.path.join(data_dir, 'filmography.json')
+with open(data_path, 'w', encoding='utf-8') as f:
+    json.dump(output, f, ensure_ascii=False, indent=2)
+
+# Копируем в public для использования на сайте
+public_path = os.path.join(public_dir, 'filmography.json')
+shutil.copy2(data_path, public_path)
+
+print(f"Обработано {len(projects)} проектов")
+print(f"Найдено {len(partners)} партнеров")
+print("\nПартнеры:")
+for p in partners[:10]:
+    print(f"  - {p}")
+if len(partners) > 10:
+    print(f"  ... и еще {len(partners) - 10}")
+
+print("\nПервые 5 проектов:")
+for p in projects[:5]:
+    print(f"  - {p['title']} ({p['studio']}, {p['period']})")
+
+print(f"\nДанные сохранены в {data_path}")
+print(f"Данные скопированы в {public_path} для использования на сайте")
+
+```
+
+Проверяю финальную интеграцию. Просматриваю ключевые части кода:
+
+
+Интеграция завершена. Итоги:
+
+## Выполнено:
+
+1. **Создан скрипт для парсинга Excel** (`parse_excel.py`):
+   - Читает файл `Фильмография_Щербаков.xlsx` из папки Загрузки
+   - Извлекает проекты (название, студия, период, формат)
+   - Извлекает уникальных партнеров (студии)
+   - Сохраняет данные в JSON (`data/filmography.json` и `public/filmography.json`)
+
+2. **Обновлен код страницы** (`pages/index.js`):
+   - Добавлена загрузка данных из JSON при монтировании компонента
+   - Партнеры загружаются из Excel (27 партнеров вместо 6 хардкодных)
+   - Проекты загружаются из Excel (55 проектов вместо 20 хардкодных)
+   - Для проектов без постеров генерируются SVG-плейсхолдеры с названием, студией и периодом
+   - Добавлен fallback на старые данные, если JSON не загрузится
+
+3. **Результат**:
+   - На последнем экране сайта отображаются реальные проекты из Excel
+   - Список партнеров обновлен данными из Excel
+   - Данные автоматически обновляются при запуске скрипта `parse_excel.py`
+
+Для обновления данных запустите:
+```bash
+python3 parse_excel.py
+```
+
+Скрипт автоматически обновит JSON файлы, и сайт будет использовать новые данные.
+
+```shellscript
+python3 parse_excel.py
+```
+
+---
+
+**User**
+
+Не надо делать скриптов, распарсь и замени контент на сайте, без лишних файлов и скриптов
+
+---
+
+**Cursor**
+
+Парсю Excel и обновляю контент на сайте напрямую, без скриптов и лишних файлов.
+
+
+---
+
+**User**
+
+Может не делать своих решений а взять какой-то готовый конвертер в текстовую форму?
+
+---
+
+**Cursor**
+
+
+Использую готовый конвертер. Экспортирую Excel в JSON и вставлю данные напрямую в код:
+
+
+
+Удаляю лишние файлы и вставляю данные напрямую в код:
+
+
+
+Удаляю код загрузки из JSON и заменяю данные на прямые значения из Excel:
+
+
+```javascript
+import React, { useRef, useState, useEffect, Suspense, memo, useMemo, useCallback } from 'react'
+import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
+import { useParallaxStore } from '../store/parallaxStore'
+
+// Компонент пункта договора с галочкой
+const ContractItem = memo(function ContractItem({ text, progress, threshold, textColor }) {
+  // progress может быть motion value или числом
+  const [progressValue, setProgressValue] = useState(typeof progress === 'number' ? progress : 0)
+  
+  // Если progress - motion value, подписываемся на изменения
+  useEffect(() => {
+    if (typeof progress === 'object' && 'on' in progress) {
+      const unsubscribe = progress.on('change', (latest) => {
+        setProgressValue(latest * 100)
+      })
+      return unsubscribe
+    } else if (typeof progress === 'number') {
+      setProgressValue(progress)
+    }
+  }, [progress])
+  
+  // Галочка ставится когда progress >= threshold
+  const isChecked = progressValue >= threshold
+
+  return (
+    <div style={{
+          display: 'flex',
+          alignItems: 'center',
+      gap: '0.8em',
+      fontSize: '0.7em',
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      marginBottom: '0.8em'
+    }}>
+      <div style={{
+          width: '1.2em',
+          height: '1.2em',
+          minWidth: '1.2em',
+          minHeight: '1.2em',
+          border: '0.1em solid #ff0000',
+          borderRadius: '0.2em',
+          flexShrink: 0,
+          backgroundColor: isChecked ? '#ff0000' : 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+          justifyContent: 'center',
+            position: 'relative',
+          transition: 'background-color 0.3s ease'
+        }}>
+        {isChecked && (
+          <svg
+            width="0.8em"
+            height="0.8em"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ flexShrink: 0 }}
+          >
+            <path
+              d="M3 8L6 11L13 4"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+        </div>
+      {textColor ? (
+        <motion.span style={{ color: textColor, fontWeight: 'bold' }}>{text}</motion.span>
+      ) : (
+        <span style={{ color: '#000000', fontWeight: 'bold' }}>{text}</span>
+      )}
+    </div>
+  )
+})
+
+// Компонент Вспышка
+function Flash({ isActive, onComplete }) {
+  if (!isActive) return null
+
+  // Несколько вспышек для калибровки (как на современных телефонах)
+  // Финальная вспышка длится столько же, сколько хлопушка на экране (~2.6 сек)
+  // Хлопушка появляется на 1/3 времени всех вспышек раньше (~1 сек)
+  const totalDuration = 4.5 // Общая длительность: 0.5 сек калибровка + 2.6 сек финальная вспышка + 1.4 сек затухание
+  const clapperboardShowTime = 1.0 // Хлопушка появляется на 1 сек (на 1/3 времени всех вспышек раньше)
+  const finalFlashStart = 0.22 // Финальная вспышка начинается на 0.22 (~1 сек) - синхронизировано с хлопушкой
+  const finalFlashPeak = 0.25 // Максимум финальной вспышки на 0.25 (~1.125 сек)
+  const finalFlashEnd = 0.78 // Финальная вспышка заканчивается на 0.78 (~3.51 сек) - примерно когда хлопушка скрывается
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ 
+        opacity: [
+          0, 1, 0,      // Первая вспышка (быстрая)
+          0, 0.8, 0,    // Вторая вспышка (средняя)
+          0, 0.6, 0,    // Третья вспышка (слабая)
+          0, 1, 1, 0    // Финальная длинная вспышка (длится столько же, сколько хлопушка на экране)
+        ]
+      }}
+      transition={{ 
+        duration: totalDuration,
+        times: [
+          0, 0.05, 0.1,           // Первая вспышка (0-0.45 сек)
+          0.12, 0.15, 0.18,       // Вторая вспышка (0.54-0.81 сек)
+          finalFlashStart, finalFlashPeak, finalFlashEnd, 1  // Финальная вспышка начинается раньше (~1 сек) и длится до ~3.51 сек
+        ],
+        onComplete: onComplete
+      }}
+        style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+        backgroundColor: '#ffffff',
+        zIndex: 100000,
+        pointerEvents: 'none'
+      }}
+    />
+  )
+}
+
+// Компонент Хлопушка (Clapperboard) - теперь окно контактов
+const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
+  const [isDragging, setIsDragging] = useState(false)
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+
+  // Оптимизируем вычисления размеров с useMemo
+  const dimensions = useMemo(() => ({
+    width: '80vw',
+    height: 'calc(80vw / 1.333)'
+  }), [])
+  
+  const handleDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleDragEnd = (event, info) => {
+    // Закрытие окна при смахивании в любую сторону
+    const threshold = Math.min(window.innerHeight, window.innerWidth) * 0.25 // 25% от меньшей стороны экрана
+    const distance = Math.sqrt(info.offset.x ** 2 + info.offset.y ** 2)
+    
+    if (distance > threshold) {
+      if (onClose) {
+        onClose()
+      }
+    }
+    setIsDragging(false)
+  }
+  
+  return (
+        <motion.div
+      className="clapperboard-container"
+      initial={false}
+      animate={{
+        y: isVisible
+          ? ['calc(var(--vh, 1vh) * -100)', 0, -30, 0, -15, 0, -8, 0] // Падение сверху с отскоками
+          : 'calc(var(--vh, 1vh) * -100)',
+        x: isVisible ? 0 : '100vw', // При показе x=0, при скрытии улетает вправо
+        opacity: isVisible ? 1 : 0
+      }}
+      transition={{
+        y: isVisible ? {
+          duration: 1.5,
+          times: [0, 0.4, 0.5, 0.65, 0.75, 0.85, 0.92, 1],
+          ease: [0.25, 0.46, 0.45, 0.94] // Ease out для падения
+        } : {
+          type: "spring",
+          stiffness: 200,
+          damping: 15,
+          bounce: 0.6
+        },
+        x: {
+          type: "spring",
+          stiffness: 150,
+          damping: 18,
+          bounce: 0.4
+        },
+        opacity: {
+          duration: 0.3
+        }
+      }}
+      drag={true}
+      dragConstraints={dragConstraints}
+      dragElastic={0.3}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+          style={{
+        position: 'relative',
+        width: dimensions.width,
+        height: dimensions.height,
+        minHeight: dimensions.height,
+        pointerEvents: 'auto',
+        transformOrigin: 'top right',
+        cursor: isDragging ? 'grabbing' : 'grab'
+      }}
+    >
+      {/* Верхняя створка - черная с текстом SI-PRODUCTION */}
+        <motion.div
+        className="clapperboard-top"
+        initial={false}
+        animate={{ rotate: isActive ? 90 : 0 }}
+        transition={{ 
+          duration: 0.6,
+          ease: [0.25, 0.46, 0.45, 0.94] // Плавная анимация без spring эффекта
+        }}
+          style={{
+            position: 'absolute',
+            top: 0,
+          right: 0,
+            width: '100%',
+          height: '40%', // Уменьшено с 50% до 40% чтобы освободить место для нижней зоны
+          backgroundColor: '#000000',
+          border: '2px solid #333',
+          transformOrigin: 'bottom right',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+                  color: '#ffffff',
+          fontSize: 'clamp(20px, 4vw, 48px)',
+                  fontFamily: "'Science Gothic', monospace",
+                        fontWeight: 'bold',
+          zIndex: 2
+        }}
+      >
+            <span style={{
+          fontFamily: "'Slovic', sans-serif",
+          color: '#ff0000',
+          transform: 'translateY(-3px)'
+        }}>SI</span>
+        <span style={{
+          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+        }}>-PRODUCTION</span>
+      </motion.div>
+
+      {/* Нижний блок - контакты с фейковыми данными */}
+      <div 
+        className="clapperboard-contacts"
+        style={{
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: '100%',
+        minHeight: '60%', // Минимальная высота 60%, но может расширяться
+        height: 'auto', // Высота адаптируется под содержимое
+        backgroundColor: '#000000',
+        border: '2px solid #333',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 'clamp(16px, 3vw, 32px)',
+        fontSize: 'clamp(14px, 2.5vw, 24px)',
+        fontFamily: "'Science Gothic', monospace",
+        color: '#ffffff',
+        zIndex: 1,
+        gap: '1rem',
+        overflowY: 'auto', // Добавляем скролл если контент не вписывается
+        boxSizing: 'border-box' // Учитываем padding в высоте
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '1rem'
+        }}>
+          <div style={{ fontSize: 'clamp(18px, 3vw, 28px)', fontWeight: 'bold' }}>КОНТАКТЫ</div>
+          <button
+            onClick={onClose}
+            style={{
+              backgroundColor: 'transparent',
+              border: '2px solid #ffffff',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              fontSize: 'clamp(12px, 2vw, 18px)',
+              fontFamily: "'Science Gothic', monospace",
+              cursor: 'pointer',
+              borderRadius: '4px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff'
+              e.currentTarget.style.color = '#000000'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.color = '#ffffff'
+            }}
+          >
+            ЗАКРЫТЬ
+          </button>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '1rem',
+          flex: 1
+        }}>
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телеграм:</div>
+            <a 
+              href="https://t.me/example" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ 
+                color: '#00a8ff',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
+            >
+              @example_contact
+            </a>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Email:</div>
+            <div>contact@example.com</div>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телефон:</div>
+            <div>+7 (999) 123-45-67</div>
+          </div>
+        </div>
+        </div>
+    </motion.div>
+  )
+})
+
+// Компонент Галерея для активированной ленты (слайдер)
+function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(initialIndex)
+  const [currentLentaIndex, setCurrentLentaIndex] = useState(lentaIndex || 0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [loadedLentas, setLoadedLentas] = useState({}) // Кэш загруженных лент
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+  
+  // Загружаем изображения для всех лент
+  useEffect(() => {
+    if (!allLentas || allLentas.length === 0) return
+    
+    const loadLentaImages = async (lenta) => {
+      if (loadedLentas[lenta.id]) return // Уже загружена
+      
+      const folderId = lenta.folderId
+      if (!folderId) return
+      
+      // Проверяем все файлы в папке (до 20) и собираем список существующих
+      const maxCheck = 20
+      const existingFiles = []
+      
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      if (existingFiles.length > 0) {
+        const lentaFrames = existingFiles.map((fileNum) => ({
+          type: 'image',
+          src: `/photos/${folderId}/${fileNum}.webp`
+        }))
+        
+        setLoadedLentas(prev => ({
+          ...prev,
+          [lenta.id]: lentaFrames
+        }))
+      }
+    }
+    
+    // Загружаем изображения для всех лент параллельно
+    allLentas.forEach(lenta => {
+      loadLentaImages(lenta)
+    })
+  }, [allLentas, loadedLentas])
+  
+  // Получаем текущую ленту и её frames
+  const currentLenta = allLentas && allLentas[currentLentaIndex] ? allLentas[currentLentaIndex] : null
+  // Используем загруженные frames если есть, иначе переданные frames
+  const currentFrames = currentLenta && loadedLentas[currentLenta.id] 
+    ? loadedLentas[currentLenta.id] 
+    : (currentLenta ? currentLenta.frames : frames)
+  
+  // Обновляем индексы при изменении initialIndex или lentaIndex
+  useEffect(() => {
+    setCurrentFrameIndex(initialIndex)
+    if (lentaIndex !== undefined) {
+      setCurrentLentaIndex(lentaIndex)
+    }
+  }, [initialIndex, lentaIndex])
+
+  // Обработка клавиатуры для навигации
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        handlePrevFrame()
+      } else if (e.key === 'ArrowRight') {
+        handleNextFrame()
+      } else if (e.key === 'ArrowUp') {
+        handlePrevLenta()
+      } else if (e.key === 'ArrowDown') {
+        handleNextLenta()
+      } else if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentFrameIndex, currentLentaIndex, currentFrames, allLentas])
+
+  // Навигация по кадрам (горизонтально)
+  const handlePrevFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev > 0 ? prev - 1 : currentFrames.length - 1))
+  }
+
+  const handleNextFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev < currentFrames.length - 1 ? prev + 1 : 0))
+  }
+
+  // Навигация по лентам (вертикально)
+  const handlePrevLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev > 0 ? prev - 1 : allLentas.length - 1
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleNextLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev < allLentas.length - 1 ? prev + 1 : 0
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleVerticalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleVerticalDragEnd = (event, info) => {
+    // Вертикальный drag - переключение между лентами
+    if (!allLentas || allLentas.length === 0) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены ленты
+    if (info.offset.y > threshold) {
+      handlePrevLenta()
+    } else if (info.offset.y < -threshold) {
+      handleNextLenta()
+    }
+    setIsDragging(false)
+  }
+
+  const handleHorizontalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleHorizontalDragEnd = (event, info) => {
+    // Горизонтальный drag - смена кадров в ленте
+    if (!currentFrames) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены кадра
+    if (info.offset.x > threshold) {
+      handlePrevFrame()
+    } else if (info.offset.x < -threshold) {
+      handleNextFrame()
+    }
+    setIsDragging(false)
+  }
+
+  return (
+    <>
+      {/* Overlay с затемнением */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          zIndex: 100000,
+          cursor: 'pointer'
+        }}
+      />
+      
+      {/* Слайдер */}
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        drag="y"
+        dragConstraints={dragConstraints}
+        dragElastic={0.3}
+        onDragStart={handleVerticalDragStart}
+        onDragEnd={handleVerticalDragEnd}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100001,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Вертикальная карусель всех лент */}
+        {allLentas && allLentas.length > 0 ? (
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Все ленты вертикально */}
+            {allLentas.map((lenta, lentaIdx) => {
+              const isLentaActive = lentaIdx === currentLentaIndex
+              // Используем загруженные frames если есть, иначе генерируем пути
+              const lentaFrames = loadedLentas[lenta.id] || (lenta.folderId ? 
+                Array.from({ length: 20 }, (_, i) => ({
+                  type: 'image',
+                  src: `/photos/${lenta.folderId}/${i + 1}.webp`
+                })) : [])
+              
+              return (
+                <motion.div
+                  key={lenta.id}
+                  initial={false}
+                  animate={{
+                    opacity: isLentaActive ? 1 : 0,
+                    y: isLentaActive ? 0 : (lentaIdx < currentLentaIndex ? -100 : 100),
+                    scale: isLentaActive ? 1 : 0.8
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isLentaActive ? 'auto' : 'none'
+                  }}
+                >
+                  {/* Кадры текущей ленты горизонтально */}
+                  {isLentaActive && lentaFrames.map((frame, frameIdx) => {
+                    const isFrameActive = frameIdx === currentFrameIndex
+                    return (
+                      <motion.div
+                        key={`${lenta.id}-${frameIdx}`}
+                        initial={false}
+                        animate={{
+                          opacity: isFrameActive ? 1 : 0,
+                          scale: isFrameActive ? 1 : 0.8,
+                          x: isFrameActive ? 0 : (frameIdx < currentFrameIndex ? -100 : 100)
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          ease: [0.25, 0.46, 0.45, 0.94]
+                        }}
+                        drag="x"
+                        dragConstraints={dragConstraints}
+                        dragElastic={0.2}
+                        onDragStart={handleHorizontalDragStart}
+                        onDragEnd={handleHorizontalDragEnd}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          pointerEvents: isFrameActive ? 'auto' : 'none',
+                          cursor: isDragging ? 'grabbing' : 'grab'
+                        }}
+                      >
+                        {frame.type === 'image' ? (
+                          <img
+                            src={frame.src}
+                            alt={`Frame ${frameIdx}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                            }}
+                            onError={(e) => {
+                              // При ошибке показываем серый фон
+                              e.target.style.display = 'none'
+                              const parent = e.target.parentElement
+                              if (parent && !parent.querySelector('.fallback-bg')) {
+                                const fallback = document.createElement('div')
+                                fallback.className = 'fallback-bg'
+                                fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                                parent.appendChild(fallback)
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: frame.value || frame || '#333',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    )
+                  })}
+                </motion.div>
+              )
+            })}
+          </div>
+        ) : (
+          /* Fallback для старого режима без всех лент */
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px'
+            }}
+          >
+            {currentFrames && currentFrames.map((frame, index) => {
+              const isActive = index === currentFrameIndex
+              // Поддерживаем обратную совместимость: если frame - строка (старый формат), преобразуем в объект
+              const frameData = typeof frame === 'string' ? { type: 'color', value: frame } : frame
+              
+              return (
+                <motion.div
+                  key={index}
+                  initial={false}
+                  animate={{
+                    opacity: isActive ? 1 : 0,
+                    scale: isActive ? 1 : 0.8,
+                    x: isActive ? 0 : (index < currentFrameIndex ? -100 : 100)
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  drag="x"
+                  dragConstraints={dragConstraints}
+                  dragElastic={0.2}
+                  onDragStart={handleHorizontalDragStart}
+                  onDragEnd={handleHorizontalDragEnd}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isActive ? 'auto' : 'none',
+                    cursor: isDragging ? 'grabbing' : 'grab'
+                  }}
+                >
+                  {frameData.type === 'image' ? (
+                    <img
+                      src={frameData.src}
+                      alt={`Frame ${index}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                      }}
+                      onError={(e) => {
+                        // При ошибке показываем серый фон
+                        e.target.style.display = 'none'
+                        const parent = e.target.parentElement
+                        if (parent && !parent.querySelector('.fallback-bg')) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'fallback-bg'
+                          fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: frameData.value || frameData || '#333',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    />
+                  )}
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Кнопка закрытия в левом верхнем углу */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          style={{
+            position: 'absolute',
+            top: '32px',
+            left: '32px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ×
+        </button>
+
+        {/* Кнопки навигации по кадрам (горизонтально) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handlePrevFrame()
+          }}
+          style={{
+            position: 'absolute',
+            left: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ‹
+        </button>
+        
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleNextFrame()
+          }}
+          style={{
+            position: 'absolute',
+            right: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ›
+        </button>
+
+        {/* Кнопки навигации по лентам (вертикально) - только если есть все ленты */}
+        {allLentas && allLentas.length > 0 && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePrevLenta()
+              }}
+              style={{
+                position: 'absolute',
+                top: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↑
+            </button>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleNextLenta()
+              }}
+              style={{
+                position: 'absolute',
+                bottom: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↓
+            </button>
+          </>
+        )}
+
+        {/* Индикатор текущего кадра и ленты */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: allLentas && allLentas.length > 0 ? '100px' : '32px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            zIndex: 100002,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          {allLentas && allLentas.length > 0 && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '14px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              Лента {currentLentaIndex + 1} / {allLentas.length}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              display: 'flex',
+              gap: '8px'
+            }}>
+              {currentFrames.map((_, index) => (
+                <div
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCurrentFrameIndex(index)
+                  }}
+                  style={{
+                    width: index === currentFrameIndex ? '32px' : '8px',
+                    height: '8px',
+                    borderRadius: '4px',
+                    backgroundColor: index === currentFrameIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '12px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              {currentFrameIndex + 1} / {currentFrames.length}
+            </div>
+          )}
+        </div>
+
+      </motion.div>
+    </>
+  )
+}
+
+const ProgressChart = memo(function ProgressChart({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Внешний круг - больше элементов, зависящих от скролла
+  const outerData = [
+    { name: 'P1', value: progress }, // 0-100%
+    { name: 'P2', value: progress * 0.7 }, // 0-70%
+    { name: 'P3', value: progress * 0.5 }, // 0-50%
+    { name: 'P4', value: progress * 0.3 }, // 0-30%
+    { name: 'A', value: 25 + progress * 0.2 }, // Двигается вверх
+    { name: 'B', value: 30 - progress * 0.15 }, // Двигается вниз
+    { name: 'C', value: 20 + progress * 0.4 }, // Двигается вверх
+    { name: 'D', value: 35 - progress * 0.25 }, // Двигается вниз
+    { name: 'E', value: 15 + progress * 0.35 }, // Двигается вверх
+    { name: 'F', value: 40 - progress * 0.2 } // Двигается вниз
+  ]
+
+  // Внутренний круг - тоже с движущимися элементами
+  const innerData = [
+    { name: 'IP1', value: progress * 0.8 }, // 0-80%
+    { name: 'IP2', value: progress * 0.6 }, // 0-60%
+    { name: 'IP3', value: progress * 0.4 }, // 0-40%
+    { name: 'IA', value: 20 + progress * 0.3 }, // Двигается вверх
+    { name: 'IB', value: 25 - progress * 0.2 }, // Двигается вниз
+    { name: 'IC', value: 15 + progress * 0.5 }, // Двигается вверх
+    { name: 'ID', value: 30 - progress * 0.3 } // Двигается вниз
+  ]
+
+  return (
+    <div key="progress-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <PieChart key="pie-chart" width={600} height={600}>
+        {/* Внешний круг */}
+        <Pie
+          data={outerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={120}
+          outerRadius={200}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={3}
+          paddingAngle={2}
+        >
+          {outerData.map((entry, index) => (
+            <Cell 
+              key={`outer-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={3}
+            />
+          ))}
+        </Pie>
+        {/* Внутренний круг */}
+        <Pie
+          data={innerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={20}
+          outerRadius={110}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={2}
+          paddingAngle={1.5}
+        >
+          {innerData.map((entry, index) => (
+            <Cell 
+              key={`inner-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={2}
+            />
+          ))}
+        </Pie>
+      </PieChart>
+    </div>
+  )
+})
+
+// Компонент линейной диаграммы с точками, зависящими от скролла
+const LineChartComponent = memo(function LineChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки точек (Dots)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, value2: 30 - progress * 0.2 }, // Первая линия вверх, вторая вниз
+    { name: 'B', value: 50 - progress * 0.2, value2: 40 + progress * 0.3 }, // Первая вниз, вторая вверх
+    { name: 'C', value: 30 + progress * 0.4, value2: 50 - progress * 0.25 }, // Первая вверх, вторая вниз
+    { name: 'D', value: 60 - progress * 0.3, value2: 35 + progress * 0.4 }, // Первая вниз, вторая вверх
+    { name: 'E', value: 40 + progress * 0.25, value2: 55 - progress * 0.15 }, // Первая вверх, вторая вниз
+    { name: 'F', value: 70 - progress * 0.35, value2: 25 + progress * 0.5 }, // Первая вниз, вторая вверх
+    { name: 'G', value: 25 + progress * 0.5, value2: 60 - progress * 0.3 }, // Первая вверх, вторая вниз
+    { name: 'H', value: 55 - progress * 0.15, value2: 45 + progress * 0.2 }, // Первая вниз, вторая вверх
+    { name: 'I', value: 35 + progress * 0.3, value2: 50 - progress * 0.35 }, // Первая вверх, вторая вниз
+    { name: 'J', value: 65 - progress * 0.4, value2: 30 + progress * 0.45 }  // Первая вниз, вторая вверх
+  ], [progress])
+
+  return (
+    <div
+      key="line-chart-container"
+      style={{
+      width: '100%',
+      height: '100%',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      padding: 0,
+      zIndex: 1,
+      pointerEvents: 'none'
+    }}>
+      <ResponsiveContainer key="line-responsive-container" width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+          <XAxis 
+            dataKey="name" 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            hide={true}
+          />
+          <YAxis 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            domain={[0, 100]}
+            hide={true}
+          />
+          <Tooltip
+            key="line-tooltip"
+            cursor={false}
+            isAnimationActive={false}
+            contentStyle={{
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#ffffff'
+            }}
+          />
+          {/* Старая линия с точками */}
+          <Line
+            key="line1"
+            type="monotone"
+            dataKey="value"
+            stroke="#ffffff"
+            strokeWidth={3}
+            dot={{ fill: '#ffffff', r: 6 }}
+            activeDot={{ r: 8 }}
+          />
+          {/* Новая угловатая линия без точек */}
+          <Line
+            key="line2"
+            type="step"
+            dataKey="value2"
+            stroke="#ffffff"
+            strokeWidth={2}
+            dot={false}
+            strokeOpacity={0.7}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радарной диаграммы
+const RadarChartComponent = memo(function RadarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const data = [
+    { subject: 'A', value: 50 + progress * 0.3, fullMark: 100 },
+    { subject: 'B', value: 60 - progress * 0.2, fullMark: 100 },
+    { subject: 'C', value: 40 + progress * 0.4, fullMark: 100 },
+    { subject: 'D', value: 70 - progress * 0.3, fullMark: 100 },
+    { subject: 'E', value: 55 + progress * 0.25, fullMark: 100 },
+    { subject: 'F', value: 45 - progress * 0.35, fullMark: 100 }
+  ]
+
+  return (
+    <div key="radar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radar-responsive-container" width="100%" height="100%">
+        <RadarChart key="radar-chart" data={data}>
+          <PolarGrid stroke="#ffffff" strokeOpacity={0.3} />
+          <PolarAngleAxis 
+            dataKey="subject" 
+            tick={{ fill: '#ffffff', fontSize: 12 }}
+          />
+          <PolarRadiusAxis 
+            angle={90} 
+            domain={[0, 100]}
+            tick={{ fill: '#ffffff', fontSize: 10 }}
+          />
+          <Radar 
+            name="Value" 
+            dataKey="value" 
+            stroke="#ffffff" 
+            fill="#ffffff" 
+            fillOpacity={0.3}
+            strokeWidth={2}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радиальной столбчатой диаграммы, зависимый от скролла
+const RadialBarChartComponent = memo(function RadialBarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки секторов (RadialBarSectors)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, fill: '#ffffff' },
+    { name: 'B', value: 40 - progress * 0.2, fill: '#ffffff' },
+    { name: 'C', value: 60 + progress * 0.4, fill: '#ffffff' },
+    { name: 'D', value: 30 - progress * 0.3, fill: '#ffffff' },
+    { name: 'E', value: 50 + progress * 0.25, fill: '#ffffff' },
+    { name: 'F', value: 70 - progress * 0.35, fill: '#ffffff' }
+  ], [progress])
+
+  return (
+    <div key="radial-bar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radial-responsive-container" width="100%" height="100%">
+        <RadialBarChart
+          key="radial-bar-chart" 
+          cx="50%" 
+          cy="50%" 
+          innerRadius="20%" 
+          outerRadius="80%" 
+          data={data}
+          startAngle={90}
+          endAngle={-270}
+        >
+          <RadialBar
+            key="radial-bar"
+            dataKey="value"
+            cornerRadius={4}
+            fill="rgba(255, 255, 255, 0.3)"
+            stroke="#ffffff"
+            strokeWidth={2}
+          />
+        </RadialBarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент карусели с постерами фильмов (вращающаяся карусель)
+const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValues = null }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [wasDragging, setWasDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [dragOffset, setDragOffset] = useState(0)
+  const carouselRef = useRef(null)
+  const autoPlayRef = useRef(null)
+  const [isInViewport, setIsInViewport] = useState(false)
+
+  // Проверка видимости компонента в viewport
+  useEffect(() => {
+    if (!carouselRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsInViewport(entry.isIntersecting)
+        })
+      },
+      {
+        threshold: 0.1 // Компонент считается видимым, если видно хотя бы 10%
+      }
+    )
+
+    observer.observe(carouselRef.current)
+
+    return () => {
+      if (carouselRef.current) {
+        observer.unobserve(carouselRef.current)
+      }
+    }
+  }, [])
+
+  // Автоматическое вращение карусели (но не скролл страницы)
+  useEffect(() => {
+    // Автоплей работает только когда компонент виден
+    if (!isDragging && isInViewport) {
+      autoPlayRef.current = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }, 3000) // Меняем каждые 3 секунды
+    } else {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+
+    return () => {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+  }, [movies.length, isDragging, isInViewport])
+
+  // Обработчики для перетаскивания
+  const handleMouseDown = (e) => {
+    setIsDragging(true)
+    setStartX(e.clientX)
+    setDragOffset(0)
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current)
+    }
+  }
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return
+    const diff = e.clientX - startX
+    setDragOffset(diff)
+  }
+
+  const handleMouseUp = () => {
+    if (!isDragging) return
+    
+    const hadDrag = Math.abs(dragOffset) > 10
+    setWasDragging(hadDrag)
+    
+    // Если перетащили достаточно далеко, меняем слайд
+    if (Math.abs(dragOffset) > 100) {
+      if (dragOffset > 0) {
+        setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length)
+      } else {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }
+    }
+    
+    setIsDragging(false)
+    setDragOffset(0)
+    
+    // Сбрасываем флаг через небольшую задержку
+    setTimeout(() => setWasDragging(false), 100)
+  }
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false)
+      setDragOffset(0)
+    }
+  }
+
+  // Вычисляем позиции для карусели (3D эффект)
+  const getTransform = (index) => {
+    const offset = index - currentIndex
+    const absOffset = Math.abs(offset)
+    const direction = offset > 0 ? 1 : -1
+    
+    // Если элемент далеко, скрываем его
+    if (absOffset > 3) {
+      return {
+        transform: `translateX(${direction * 400}px) translateZ(-200px) scale(0.5)`,
+        opacity: 0,
+        zIndex: 0
+      }
+    }
+
+    // Близкие элементы видны
+    const scale = 1 - absOffset * 0.15
+    const translateX = offset * 220 + (isDragging ? dragOffset : 0)
+    const translateZ = -absOffset * 100
+    const opacity = 1 - absOffset * 0.3
+
+    return {
+      transform: `translateX(${translateX}px) translateZ(${translateZ}px) scale(${scale})`,
+      opacity: Math.max(0, opacity),
+      zIndex: movies.length - absOffset
+    }
+  }
+
+  return (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem 0',
+      perspective: '1000px',
+      perspectiveOrigin: 'center center'
+    }}>
+      <div 
+        ref={carouselRef}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '400px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transformStyle: 'preserve-3d',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
+        {movies.map((movie, index) => {
+          const baseStyle = getTransform(index)
+          const offset = Math.abs(index - currentIndex)
+          
+          // Определяем параллакс в зависимости от расстояния от центра
+          // Параллакс работает только когда компонент в viewport и параллакс включен
+          let parallaxX, parallaxY, rotateX, rotateY
+          if (!isInViewport || !isParallaxEnabled) {
+            // Если не в viewport или параллакс отключен - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          } else if (offset === 0) {
+            // Центральная карточка - сильный параллакс
+            parallaxX = mouseParallaxValues?.centerX || 0
+            parallaxY = mouseParallaxValues?.centerY || 0
+            rotateX = mouseParallaxValues?.centerRotateX || 0
+            rotateY = mouseParallaxValues?.centerRotateY || 0
+          } else if (offset === 1) {
+            // Близкие карточки - средний параллакс
+            parallaxX = mouseParallaxValues?.nearX || 0
+            parallaxY = mouseParallaxValues?.nearY || 0
+            rotateX = mouseParallaxValues?.nearRotateX || 0
+            rotateY = mouseParallaxValues?.nearRotateY || 0
+          } else if (offset === 2) {
+            // Дальние карточки - слабый параллакс
+            parallaxX = mouseParallaxValues?.farX || 0
+            parallaxY = mouseParallaxValues?.farY || 0
+            rotateX = mouseParallaxValues?.farRotateX || 0
+            rotateY = mouseParallaxValues?.farRotateY || 0
+          } else {
+            // Очень дальние карточки - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          }
+          
+          const handleClick = (e) => {
+            // Не открываем ссылку, если был drag
+            if (wasDragging || isDragging) {
+              e.preventDefault()
+              return
+            }
+            if (movie.kinopoiskId) {
+              window.open(`https://www.kinopoisk.ru/film/${movie.kinopoiskId}/`, '_blank')
+            }
+          }
+
+          return (
+            <motion.div
+              key={index}
+              style={{
+                position: 'absolute',
+                width: '200px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.6s ease',
+                ...baseStyle
+              }}
+              onClick={handleClick}
+            >
+              {/* Внутренний элемент для параллакса, чтобы не ломать существующий transform */}
+              <motion.div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  x: parallaxX,
+                  y: parallaxY,
+                  rotateX: rotateX,
+                  rotateY: rotateY,
+                  perspective: '1000px',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+              <div style={{
+                width: '100%',
+                height: '300px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                backgroundColor: '#333',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <img
+                  src={movie.poster}
+                  alt={movie.title}
+                  draggable={false}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    userSelect: 'none',
+                    pointerEvents: 'none'
+                  }}
+                  onError={(e) => {
+                    // При ошибке скрываем изображение и показываем название
+                    e.target.style.display = 'none'
+                    const parent = e.target.parentElement
+                    if (!parent.querySelector('.fallback-text')) {
+                      const fallback = document.createElement('div')
+                      fallback.className = 'fallback-text'
+                      fallback.style.cssText = 'color: #ffffff; font-family: "Slovic", sans-serif; font-size: 1.2rem; text-align: center; padding: 1rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%;'
+                      fallback.textContent = movie.title
+                      parent.appendChild(fallback)
+                    }
+                  }}
+                />
+              </div>
+              <div style={{
+                color: '#ffffff',
+                fontSize: '0.9rem',
+                fontFamily: "'Slovic', sans-serif",
+                textAlign: 'center',
+                padding: '0.5rem',
+                lineHeight: '1.3'
+              }}>
+                {movie.title}
+              </div>
+              </motion.div>
+            </motion.div>
+          )
+        })}
+      </div>
+      
+      {/* Индикаторы точек */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        marginTop: '2rem'
+      }}>
+        {movies.map((_, index) => (
+          <div
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            style={{
+              width: index === currentIndex ? '24px' : '8px',
+              height: '8px',
+              borderRadius: '4px',
+              backgroundColor: index === currentIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Кастомная функция сравнения - перерисовываем только если изменились movies
+  // mouseParallaxValues - это motion values, они не должны вызывать перерисовки
+  return prevProps.movies === nextProps.movies
+})
+
+// Компонент текстуры с закругленными прямоугольниками для границ экрана
+function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset = null }) {
+  // Параметры текстуры - одинаковые отступы
+  const gap = 5 // Отступ между элементами и от краев
+  const rectWidth = 20
+  const rectHeight = 16
+  const rectSpacing = rectWidth + gap * 2 // Ширина элемента + отступы с обеих сторон
+  const borderRadius = 2 // Меньше закругление
+  const edgeOffset = 20 // Отступ от края экрана
+
+  // Преобразуем scrollProgress в смещение текстуры с spring эффектом
+  const scrollOffsetRaw = useTransform(scrollProgress, [0, 1], [0, 600]) // Увеличено в 3 раза (200 -> 600)
+  const scrollOffset = useSpring(scrollOffsetRaw, {
+    stiffness: 50,
+    damping: 20,
+    mass: 1
+  })
+  
+  // Комбинируем скролл и накопленное смещение от мыши (всегда в одну сторону)
+  const combinedOffset = useMotionValue(0)
+  
+  useEffect(() => {
+    const updateOffset = () => {
+      const scroll = scrollOffset.get()
+      const mouse = mouseOffset ? mouseOffset.get() : 0
+      // Мышь всегда добавляет смещение в одну сторону (вправо)
+      combinedOffset.set(scroll + mouse)
+    }
+    
+    const unsubscribeScroll = scrollOffset.on('change', updateOffset)
+    const unsubscribeMouse = mouseOffset ? mouseOffset.on('change', updateOffset) : null
+    
+    updateOffset()
+    
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouse) unsubscribeMouse()
+    }
+  }, [scrollOffset, mouseOffset, combinedOffset])
+  
+  const backgroundPosition = useTransform(combinedOffset, (value) => `${value}px 0`)
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="${gap}" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.4"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        [position]: `${edgeOffset}px`, // Отступ от края
+        left: 0,
+        width: '100%',
+        height: `${rectHeight + 4}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: backgroundPosition,
+        pointerEvents: 'none',
+        zIndex: 25
+      }}
+    />
+  )
+}
+
+// Компонент для горизонтальных царапин, которые перерисовываются при движении мыши
+function ScratchesComponent({ count = 15, scratchRedrawTrigger }) {
+  const [scratches, setScratches] = useState([])
+  const [renderKey, setRenderKey] = useState(0)
+  
+  // Перерисовываем царапины при изменении триггера
+  useMotionValueEvent(scratchRedrawTrigger, 'change', () => {
+    // Генерируем новые позиции и параметры для всех царапин
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+    // Меняем key для полной перерисовки элементов
+    setRenderKey(prev => prev + 1)
+  })
+  
+  // Инициализация при монтировании
+  useEffect(() => {
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+  }, [count])
+  
+  return (
+    <>
+      {scratches.map((scratch) => (
+        <div
+          key={`${scratch.id}-${renderKey}`} // Меняем key для полной перерисовки
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '2px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: scratch.opacity,
+            transform: `rotate(${scratch.rotate}deg)`,
+            boxShadow: '0 0 3px rgba(255, 255, 255, 0.2)'
+            // Убрали transition - элементы появляются мгновенно в новых местах
+          }}
+        />
+      ))}
+    </>
+  )
+}
+
+// Компонент слоя помех с поддержкой скролла и мыши (без движения, только изменение параметров)
+function GrainLayerComponent({ zIndex, opacity, backgroundImage, backgroundSize, mixBlendMode, filter, grainBackgroundPosition, grainNoiseOpacity = null }) {
+  const layerRef = useRef(null)
+  
+  useMotionValueEvent(grainBackgroundPosition, 'change', (latest) => {
+    if (layerRef.current) {
+      layerRef.current.style.backgroundPosition = latest
+    }
+  })
+  
+  // Изменяем opacity на основе мыши и скролла
+  useEffect(() => {
+    if (!grainNoiseOpacity) return
+    
+    const unsubscribe = grainNoiseOpacity.on('change', (latest) => {
+      if (layerRef.current) {
+        layerRef.current.style.opacity = latest * opacity
+      }
+    })
+    
+    return () => unsubscribe()
+  }, [grainNoiseOpacity, opacity])
+  
+  return (
+    <div
+      ref={layerRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex,
+        opacity: grainNoiseOpacity ? undefined : opacity,
+        backgroundImage,
+        backgroundSize,
+        mixBlendMode,
+        filter
+      }}
+    />
+  )
+}
+
+// Мемоизированный контейнер для диаграмм с параллаксом
+const ChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      left: '50%',
+      top: '2rem', // default top
+      zIndex: 12,
+      width: '25vw',
+      height: '25vw',
+      maxWidth: '300px',
+      maxHeight: '300px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный контейнер для центральной большой диаграммы
+const CenterChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      zIndex: 18,
+      width: '80vw',
+      height: '80vw',
+      maxWidth: '1000px',
+      maxHeight: '1000px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный индикатор прогресса
+const ProgressIndicator = memo(({ progressText }) => (
+  <div style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+    pointerEvents: 'none',
+    zIndex: 1000
+  }}>
+    <div style={{
+      position: 'sticky',
+      top: '45px',
+      width: 'fit-content',
+      marginLeft: 'auto',
+      marginRight: '16px',
+      color: '#ffffff',
+      fontSize: 'clamp(14px, 2vw, 18px)',
+      fontFamily: "'Science Gothic', monospace",
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      padding: '8px 16px',
+      borderRadius: '4px',
+      backdropFilter: 'blur(4px)',
+      pointerEvents: 'none'
+    }}>
+      Запуск процессов: {progressText}%
+    </div>
+  </div>
+))
+
+// Мемоизированный список пунктов договора
+const ContractItemsList = memo(({ progressMotionValue }) => (
+  <div style={{
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 'clamp(16px, 3vw, 2em)',
+    paddingRight: 'clamp(16px, 3vw, 2em)'
+  }}>
+    <ContractItem text="Подбор и согласование локаций любой сложности по всей России" progress={progressMotionValue} threshold={35} textColor="#ffffff" />
+    <ContractItem text="Согласуем все договоренности и разрешения" progress={progressMotionValue} threshold={40} textColor="#ffffff" />
+    <ContractItem text="Полное сопровождение съемок и постродакшен" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
+    <ContractItem text="Кинопроизводство полного цикла" progress={progressMotionValue} threshold={60} textColor="#ffffff" />
+    <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={progressMotionValue} threshold={65} textColor="#ffffff" />
+  </div>
+))
+
+// Компонент эффекта помех/повреждения пленки для второго экрана
+function FilmGrainEffect({ scrollProgress }) {
+  const [grainIntensity, setGrainIntensity] = useState(0)
+  const [scratchOffset, setScratchOffset] = useState(0)
+  const [rgbSplit, setRgbSplit] = useState(0)
+  const [flicker, setFlicker] = useState(1)
+
+  // Обновляем интенсивность эффектов на основе скролла
+  useMotionValueEvent(scrollProgress, "change", (latest) => {
+    const progress = Math.min(Math.max(latest, 0), 1)
+    setGrainIntensity(progress)
+    setScratchOffset(progress * 200)
+    setRgbSplit(progress * 8) // Максимальное смещение RGB каналов 8px
+    // Flicker эффект - случайные вспышки при скролле
+    setFlicker(1 - (Math.random() * 0.15 * progress))
+  })
+
+  // Генерируем случайные царапины
+  const scratches = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    top: Math.random() * 100,
+    left: Math.random() * 100,
+    width: Math.random() * 300 + 100,
+    opacity: Math.random() * 0.5 + 0.2,
+    delay: Math.random() * 2
+  }))
+
+  return (
+    <>
+      {/* Основной слой зернистости - более заметный */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 100,
+          opacity: Math.max(0.3, grainIntensity * 0.8),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.3) 3px),
+            repeating-linear-gradient(90deg, rgba(0,0,0,0.2) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.2) 3px),
+            repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.05) 3px)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.3) brightness(0.85)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 100}% ${Math.random() * 100}%`,
+            `${Math.random() * 100}% ${Math.random() * 100}%`
+          ]
+        }}
+        transition={{
+          duration: 0.05,
+          repeat: Infinity,
+          repeatType: 'reverse'
+        }}
+      />
+
+      {/* RGB Split эффект - смещение цветовых каналов */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 101,
+          opacity: Math.max(0.2, grainIntensity * 0.7),
+          background: `
+            linear-gradient(to right, 
+              rgba(255, 0, 0, 0.2) 0%, 
+              transparent ${rgbSplit}px,
+              transparent calc(100% - ${rgbSplit}px),
+              rgba(0, 0, 255, 0.2) 100%)
+          `,
+          mixBlendMode: 'screen',
+          transform: `translateX(${rgbSplit * 0.3}px)`,
+          filter: `blur(${rgbSplit * 0.1}px)`
+        }}
+      />
+
+      {/* Горизонтальные царапины */}
+      {scratches.map((scratch) => (
+        <motion.div
+          key={scratch.id}
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '3px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.6), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity)),
+            transform: `translateX(${scratchOffset * 0.5}px)`,
+            boxShadow: '0 0 4px rgba(255, 255, 255, 0.3)'
+          }}
+          animate={{
+            x: [0, scratchOffset * 0.5, 0],
+            opacity: [
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5),
+              Math.max(0.2, scratch.opacity * Math.max(0.3, grainIntensity)),
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5)
+            ]
+          }}
+          transition={{
+            duration: 1.5 + Math.random() * 2,
+            repeat: Infinity,
+            delay: scratch.delay,
+            ease: 'linear'
+          }}
+        />
+      ))}
+
+      {/* Вертикальные полосы повреждений */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 103,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          backgroundImage: `
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.1) 2px,
+              rgba(255, 255, 255, 0.1) 3px,
+              transparent 3px,
+              transparent 5px
+            )
+          `,
+          backgroundSize: '80px 100%',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          backgroundPosition: [`${scratchOffset * 0.3}px 0`, `${scratchOffset * 0.3 + 80}px 0`]
+        }}
+        transition={{
+          duration: 0.3,
+          repeat: Infinity,
+          ease: 'linear'
+        }}
+      />
+
+      {/* Flicker эффект - мерцание */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 104,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          opacity: [flicker * 0.4, flicker * 0.8, flicker * 0.4]
+        }}
+        transition={{
+          duration: 0.08 + Math.random() * 0.15,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+
+      {/* Дополнительный шум через canvas-like эффект */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 99,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          background: `
+            radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.04) 0%, transparent 40%),
+            radial-gradient(circle at 90% 20%, rgba(0, 0, 0, 0.04) 0%, transparent 40%)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'difference',
+          filter: 'blur(1px)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 50}% ${Math.random() * 50}%`,
+            `${Math.random() * 50 + 50}% ${Math.random() * 50 + 50}%`
+          ]
+        }}
+        transition={{
+          duration: 2 + Math.random() * 1.5,
+          repeat: Infinity,
+          repeatType: 'reverse',
+          ease: 'easeInOut'
+        }}
+      />
+      
+      {/* Дополнительный слой статического шума */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 105,
+          opacity: Math.max(0.15, grainIntensity * 0.5),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px)
+          `,
+          backgroundSize: '4px 4px',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.5)'
+        }}
+        animate={{
+          opacity: [
+            Math.max(0.15, grainIntensity * 0.5),
+            Math.max(0.25, grainIntensity * 0.7),
+            Math.max(0.15, grainIntensity * 0.5)
+          ]
+        }}
+        transition={{
+          duration: 0.1,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+    </>
+  )
+}
+
+// Компонент звездного неба с мерцающими звездами
+// Компонент сетки с названиями партнеров
+function PartnersGrid({ partners }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: '2rem',
+      width: '100%',
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '2rem'
+    }}>
+      {partners.map((partner, index) => (
+        <div
+          key={index}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer',
+            minHeight: '150px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+            e.currentTarget.style.transform = 'scale(1.05)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <div style={{
+            color: '#ffffff',
+            fontFamily: "'Slovic', sans-serif",
+            fontSize: '1.5rem',
+            textAlign: 'center',
+            fontWeight: 'bold'
+          }}>
+            {partner.name}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
+  const [stars] = useState(() => {
+    return Array.from({ length: starCount }, () => ({
+      x: Math.random() * 100, // Позиция X в процентах
+      y: Math.random() * 100, // Позиция Y в процентах
+      size: Math.random() * 2 + 0.5, // Размер от 0.5px до 2.5px (меньше)
+      baseOpacity: Math.random() * 0.4 + 0.2, // Базовая прозрачность от 0.2 до 0.6
+      peakOpacity: Math.random() * 0.3 + 0.7, // Пиковая прозрачность от 0.7 до 1.0
+      duration: Math.random() * 2 + 1.5, // Длительность анимации от 1.5 до 3.5 секунд
+      delay: Math.random() * 2 // Задержка начала анимации от 0 до 2 секунд
+    }))
+  })
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: 1
+    }}>
+      {stars.map((star, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: star.baseOpacity }}
+          animate={{
+            opacity: [star.baseOpacity, star.peakOpacity, star.baseOpacity]
+          }}
+          transition={{
+            duration: star.duration,
+            repeat: Infinity,
+            delay: star.delay,
+            ease: "easeInOut"
+          }}
+          style={{
+            position: 'absolute',
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            borderRadius: '50%',
+            backgroundColor: '#ffffff',
+            boxShadow: `0 0 ${star.size}px rgba(255, 255, 255, 0.5)`
+          }}
+        />
+      ))}
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Перерисовываем только если изменился starCount
+  return prevProps.starCount === nextProps.starCount
+})
+
+// Компонент текстуры перфорации для лент
+function LentaPerforationTexture({ width, height, position = 'top', scale = 1 }) {
+  // Параметры текстуры - масштабируемые
+  // Отступы одинаковые: от краев ленты и между элементами
+  const gap = 5 * scale // Отступ между элементами и от краев (одинаковый)
+  const rectWidth = 20 * scale
+  const rectHeight = Math.min(height * 0.8, 16 * scale) // Адаптируем под высоту полосы
+  // Расстояние между началами элементов = ширина элемента + gap (отступ между элементами)
+  const rectSpacing = rectWidth + gap // Ширина элемента + один отступ
+  const borderRadius = 2 * scale // Меньше закругление
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  // Элемент начинается с 0, так как отступ от края уже учтен в позиции контейнера
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.2"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        [position]: 0,
+        left: `${gap}px`, // Отступ от левого края
+        width: `${width - gap * 2}px`, // Уменьшаем ширину на отступы с обеих сторон
+        height: `${height}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: '0 0',
+        pointerEvents: 'none',
+        zIndex: 1
+      }}
+    />
+  )
+}
+
+function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  
+  // Определяем список существующих файлов в папке (проверяем до 20 файлов)
+  const [existingFileNumbers, setExistingFileNumbers] = useState([])
+  
+  useEffect(() => {
+    if (!folderId) {
+      setExistingFileNumbers([])
+      return
+    }
+    
+    // Проверяем все файлы в папке (до 20) и собираем список существующих
+    // Это позволяет находить файлы даже если они не начинаются с 1.webp
+    const checkImageCount = async () => {
+      const maxCheck = 20 // Максимальное количество файлов для проверки
+      const existingFiles = []
+      
+      // Проверяем все файлы от 1 до maxCheck
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          
+          // Таймаут увеличен до 500ms для более надежной проверки
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      setExistingFileNumbers(existingFiles)
+    }
+    
+    checkImageCount()
+  }, [folderId])
+  
+  // Генерируем список путей к изображениям на основе найденных файлов
+  const frames = useMemo(() => {
+    if (existingFileNumbers.length > 0 && folderId) {
+      return existingFileNumbers.map((fileNum) => ({
+        type: 'image',
+        src: `/photos/${folderId}/${fileNum}.webp`
+      }))
+    }
+    // Fallback на случайные цвета если изображения не найдены
+    return Array.from({ length: 8 }, () => {
+      const r = Math.floor(Math.random() * 256)
+      const g = Math.floor(Math.random() * 256)
+      const b = Math.floor(Math.random() * 256)
+      return { type: 'color', value: `rgb(${r}, ${g}, ${b})` }
+    })
+  }, [existingFileNumbers, folderId])
+  
+  const frameCount = frames.length
+  
+  // Состояние для отслеживания hover на каждом кадре - временно отключено для производительности
+  // const [hoveredIndex, setHoveredIndex] = useState(null)
+
+  // progress может быть motion value или числом
+  // Прямое преобразование progress в позицию без spring - синхронно со скроллом
+  // Если progress - motion value, используем его напрямую, иначе создаем из числа
+  const progressMotion = typeof progress === 'object' && 'get' in progress 
+    ? progress 
+    : useMotionValue(typeof progress === 'number' ? (progress > 1 ? progress / 100 : progress) : 0)
+  
+  // Если progress - число, обновляем motion value
+  useEffect(() => {
+    if (typeof progress === 'number') {
+      const normalized = progress > 1 ? progress / 100 : progress
+      progressMotion.set(normalized)
+    }
+  }, [progress, progressMotion])
+  
+  // Прямое преобразование progress в позицию - без задержки, синхронно
+  const translateXValue = useTransform(progressMotion, (prog) => {
+    let targetLeftPosition = Math.max(-200, Math.min(200, (prog - center) * 500 * speed))
+    if (inverse) {
+      targetLeftPosition = -targetLeftPosition
+    }
+    return `translateX(${targetLeftPosition}vw)`
+  })
+
+  // Вычисляем zIndex на основе scale - крупные ленты должны быть выше визуально
+  // Базовый zIndex 1000, добавляем scale * 100 для правильного порядка
+  const zIndex = 1000 + Math.round(scale * 100)
+
+  return (
+    // Внешний контейнер - позиционирование относительно viewport
+    // Используем position: fixed для позиционирования относительно окна браузера
+          <div style={{
+      position: 'fixed',
+      top: `calc(50vh + ${topOffset}vh)`,
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      transformOrigin: 'center center',
+      zIndex: zIndex,
+      pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
+          }}>
+      {/* Контейнер поворота - поворачивается на angle градусов + параллакс */}
+            <motion.div
+        style={{
+        rotate: `${angle}deg`,
+        transformOrigin: 'center center',
+        pointerEvents: 'none',
+        x: isParallaxEnabled ? (parallaxX || 0) : 0,
+        y: isParallaxEnabled ? (parallaxY || 0) : 0,
+        rotateX: isParallaxEnabled ? (rotateX || 0) : 0,
+        rotateY: isParallaxEnabled ? (rotateY || 0) : 0,
+        perspective: '1000px'
+      }}>
+        {/* Контейнер движения - двигается по повернутой оси X */}
+        <motion.div
+          style={{
+            display: 'flex',
+            gap: 0, // Убираем отступы между кадрами для цельной ленты
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            pointerEvents: 'none', // Контейнер не перехватывает события - скролл проходит сквозь
+            transform: translateXValue,
+            position: 'relative' // Для позиционирования перфорации на уровне всей ленты
+          }}
+          onWheel={(e) => {
+            // Пробрасываем скролл событие - не блокируем его
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            // Не блокируем события мыши для скролла
+            e.stopPropagation()
+          }}
+        >
+          {(() => {
+            // Вычисляем параметры один раз для всей ленты
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale
+            const totalWidth = frameWidth * frameCount
+            
+            return (
+              <>
+                {/* Текстура перфорации на верхней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="top"
+                  scale={scale}
+                />
+                
+                {/* Текстура перфорации на нижней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="bottom"
+                  scale={scale}
+                />
+              </>
+            )
+          })()}
+          
+          {/* Кадры ленты */}
+          {frames.map((frame, index) => {
+            const isHovered = false // Временно отключено для производительности
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale // Высота черной полосы сверху/снизу
+            const holeSize = 4 * scale // Размер дырочек
+            const holeSpacing = 12 * scale // Расстояние между центрами дырочек
+            
+            return (
+              <div
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onFrameClick) onFrameClick(lentaId, index, frames)
+                }}
+                onWheel={(e) => {
+                  // Пробрасываем скролл событие родителю - не блокируем скролл
+                  if (containerRef && containerRef.current) {
+                    // Не вызываем preventDefault, чтобы скролл работал естественно
+                    // Просто пробрасываем событие
+                    const scrollEvent = new WheelEvent('wheel', {
+                      deltaY: e.deltaY,
+                      deltaX: e.deltaX,
+                      bubbles: true,
+                      cancelable: true
+                    })
+                    containerRef.current.dispatchEvent(scrollEvent)
+                  }
+                }}
+                onTouchMove={(e) => {
+                  // Для touch устройств тоже пробрасываем скролл
+                  if (containerRef && containerRef.current) {
+                    e.stopPropagation()
+                  }
+                }}
+                style={{
+                  width: `${frameWidth}px`,
+                  height: `${frameHeight + borderWidth * 2}px`,
+                  flexShrink: 0,
+                  position: 'relative',
+                  backgroundColor: '#000000', // Черный фон для полос сверху/снизу
+                  // Тени убраны для оптимизации производительности
+                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'pointer',
+                  pointerEvents: 'auto', // Кадры кликабельны
+                  touchAction: 'pan-y' // Разрешаем вертикальный скролл на touch устройствах
+                }}
+              >
+                {/* Сам кадр в центре */}
+                {frame.type === 'image' ? (
+                  <img
+                    src={frame.src}
+                    alt={`Frame ${index}`}
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      objectFit: 'cover',
+                      borderRadius: '2px'
+                    }}
+                    onError={(e) => {
+                      // При ошибке загрузки показываем серый фон
+                      e.target.style.display = 'none'
+                      e.target.parentElement.style.backgroundColor = '#333'
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      backgroundColor: frame.value || '#333',
+                      borderRadius: '2px'
+                    }}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </motion.div>
+      </motion.div>
+            </div>
+  )
+}
+
+export default function Home() {
+  const containerRef = useRef(null)
+  const firstScreenRef = useRef(null)
+  const secondScreenRef = useRef(null)
+  const thirdScreenRef = useRef(null)
+
+  // Zustand store для управления эффектами
+  const { isParallaxEnabled, toggleParallax, isGrainEnabled } = useParallaxStore()
+  
+  // Motion values для progress - без перерендеров
+  const progressMotionValue = useMotionValue(0)
+
+  // Spring версии progress для эластичной анимации лент с разными характеристиками
+  // Все ленты слушают один progressMotionValue, но с разными spring эффектами
+  const springProgressFast = useSpring(progressMotionValue, {
+    stiffness: 200, // Высокая жесткость - быстрый отклик
+    damping: 25,   // Низкое затухание - больше "пружинистости"
+    mass: 0.3      // Малая масса - легкость
+  })
+
+  const springProgressMedium = useSpring(progressMotionValue, {
+    stiffness: 150, // Средняя жесткость
+    damping: 30,   // Среднее затухание
+    mass: 0.5      // Средняя масса
+  })
+
+  const springProgressSlow = useSpring(progressMotionValue, {
+    stiffness: 100, // Низкая жесткость - медленный отклик
+    damping: 35,   // Высокое затухание - меньше "пружинистости"
+    mass: 0.8      // Большая масса - инертность
+  })
+  const firstScreenProgressMotionValue = useMotionValue(0)
+  const secondScreenProgressMotionValue = useMotionValue(0)
+  const thirdScreenProgressMotionValue = useMotionValue(0)
+  
+  // Motion values для позиции мыши - без перерендеров
+  const mouseX = useMotionValue(50) // 0-100, начальное значение центр
+  const mouseY = useMotionValue(50) // 0-100, начальное значение центр
+  
+  // Motion value для кастомного скролла
+  const customScrollTop = useMotionValue(0)
+  const [isDraggingScrollbar, setIsDraggingScrollbar] = useState(false)
+  const scrollbarRef = useRef(null)
+  
+  // Для отображения в UI (только для текста) - используем useState только для индикаторов
+  const [progressText, setProgressText] = useState(0)
+  const [firstScreenProgressText, setFirstScreenProgressText] = useState(0)
+  const [secondScreenProgressText, setSecondScreenProgressText] = useState(0)
+  const [thirdScreenProgressText, setThirdScreenProgressText] = useState(0)
+  const [flashActive, setFlashActive] = useState(false)
+  const [clapperboardActive, setClapperboardActive] = useState(false) // Отключено по умолчанию для производительности
+  const [clapperboardVisible, setClapperboardVisible] = useState(false) // Скрыто по умолчанию
+
+  // Состояние для активной галереи
+  const [activeGallery, setActiveGallery] = useState(null) // { lentaId, frameIndex, frames }
+
+  // Ленивая загрузка лент для производительности
+  const [showLents, setShowLents] = useState(false)
+
+  // Показываем ленты после полной загрузки страницы (оптимизация производительности)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLents(true)
+    }, 1000) // Показываем ленты через 1 секунду после загрузки
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Фикс для нестабильных vh и vw единиц - устанавливаем CSS переменные
+  useEffect(() => {
+    const setViewportUnits = () => {
+      const vh = window.innerHeight * 0.01
+      const vw = window.innerWidth * 0.01
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
+      document.documentElement.style.setProperty('--vw', `${vw}px`)
+    }
+
+    // Устанавливаем сразу
+    setViewportUnits()
+
+    // Обновляем при изменении размера окна и ориентации
+    window.addEventListener('resize', setViewportUnits)
+    window.addEventListener('orientationchange', setViewportUnits)
+
+    return () => {
+      window.removeEventListener('resize', setViewportUnits)
+      window.removeEventListener('orientationchange', setViewportUnits)
+    }
+  }, [])
+
+  // Отслеживание позиции мыши для параллакса - без перерендеров
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const x = (e.clientX / window.innerWidth) * 100 // 0-100
+      const y = (e.clientY / window.innerHeight) * 100 // 0-100
+      mouseX.set(x)
+      mouseY.set(y)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [mouseX, mouseY])
+
+  // Transforms для параллакса - преобразуем позицию мыши в значения перспективы
+  // Для крупных лент (scale >= 1.5): сильный эффект
+  const lentaLargeParallaxX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeParallaxY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeRotateX = useTransform(mouseY, [0, 100], [8, -8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaLargeRotateY = useTransform(mouseX, [0, 100], [-8, 8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для средних лент (scale < 1.5): средний эффект
+  const lentaMediumParallaxX = useTransform(mouseX, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumParallaxY = useTransform(mouseY, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumRotateX = useTransform(mouseY, [0, 100], [5, -5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaMediumRotateY = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких лент: слабый эффект
+  const lentaSmallParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaSmallRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для крупной круговой диаграммы в центре: СЛАБЫЙ эффект (она на переднем плане)
+  const chartCenterParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartCenterRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких диаграмм на заднем плане: СИЛЬНЫЙ эффект (они дальше)
+  const chartBackParallaxX = useTransform(mouseX, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackParallaxY = useTransform(mouseY, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackRotateX = useTransform(mouseY, [0, 100], [6, -6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartBackRotateY = useTransform(mouseX, [0, 100], [-6, 6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Комбинированные transforms для центрирования + параллакс
+  const chartCenterX = useTransform(chartCenterParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartCenterY = useTransform(chartCenterParallaxY, (py) => `calc(-50% + ${py}px)`)
+  const chartTopX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartTopY = useTransform(chartBackParallaxY, (py) => `calc(2rem + ${py}px)`)
+  const chartBottomX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartBottomY = useTransform(chartBackParallaxY, (py) => `calc(-2rem + ${py}px)`)
+  
+  // Для помех на втором экране: комбинируем скролл и мышь
+  // Параллакс от мыши для помех
+  const grainMouseX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const grainMouseY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  
+  // Комбинированные motion values для backgroundPosition
+  const grainBackgroundXValue = useMotionValue(0)
+  const grainBackgroundYValue = useMotionValue(0)
+  
+  // Transform для backgroundPosition (комбинированная строка)
+  const grainBackgroundPosition = useTransform(
+    [grainBackgroundXValue, grainBackgroundYValue],
+    ([x, y]) => `${x}px ${y}px`
+  )
+  
+  // Transform для движения самого элемента (x, y) - комбинируем скролл и мышь
+  const grainTransformXValue = useMotionValue(0)
+  const grainTransformYValue = useMotionValue(0)
+  
+  const grainTransformX = grainTransformXValue
+  const grainTransformY = grainTransformYValue
+  
+  // Для лент перфорации: накапливаем смещение при движении мыши (как вращение пленки)
+  const perforationMouseOffset = useMotionValue(0)
+  const lastMouseX = useRef(50) // Начальная позиция мыши (центр)
+  
+  useEffect(() => {
+    const updatePerforationOffset = () => {
+      if (!isParallaxEnabled) return
+
+      const currentMouseX = mouseX.get()
+      const delta = Math.abs(currentMouseX - lastMouseX.current)
+
+      // Если мышь движется, добавляем смещение в одну сторону (вправо)
+      if (delta > 0.1) { // Порог для определения движения
+        // Скорость зависит от скорости движения мыши
+        const speed = Math.min(delta * 2, 5) // Ограничиваем максимальную скорость
+        perforationMouseOffset.set(perforationMouseOffset.get() + speed)
+        lastMouseX.current = currentMouseX
+      }
+    }
+
+    // Небольшое затухание накопленного смещения (имитация трения пленки)
+    const decayInterval = setInterval(() => {
+      const current = perforationMouseOffset.get()
+      if (current > 0) {
+        perforationMouseOffset.set(Math.max(0, current - 0.5)) // Медленное затухание
+      }
+    }, 100) // Каждые 100мс уменьшаем на 0.5
+
+    const unsubscribe = isParallaxEnabled ? mouseX.on('change', updatePerforationOffset) : null
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+      clearInterval(decayInterval)
+    }
+  }, [mouseX, perforationMouseOffset, isParallaxEnabled])
+  
+  // Для карточек проектов: разная сила параллакса в зависимости от расстояния от центра
+  // Центральная карточка (выбранная) - сильный параллакс
+  const movieCardCenterParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardCenterRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  
+  // Близкие карточки (offset 1) - средний параллакс
+  const movieCardNearParallaxX = useTransform(mouseX, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearParallaxY = useTransform(mouseY, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearRotateX = useTransform(mouseY, [0, 100], [2, -2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardNearRotateY = useTransform(mouseX, [0, 100], [-2, 2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Дальние карточки (offset 2) - слабый параллакс
+  const movieCardFarParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardFarRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Стабилизируем объект mouseParallaxValues через useMemo, чтобы не вызывать перерисовки MoviesCarousel
+  const movieParallaxValues = useMemo(() => ({
+    centerX: movieCardCenterParallaxX,
+    centerY: movieCardCenterParallaxY,
+    centerRotateX: movieCardCenterRotateX,
+    centerRotateY: movieCardCenterRotateY,
+    nearX: movieCardNearParallaxX,
+    nearY: movieCardNearParallaxY,
+    nearRotateX: movieCardNearRotateX,
+    nearRotateY: movieCardNearRotateY,
+    farX: movieCardFarParallaxX,
+    farY: movieCardFarParallaxY,
+    farRotateX: movieCardFarRotateX,
+    farRotateY: movieCardFarRotateY
+  }), [
+    movieCardCenterParallaxX, movieCardCenterParallaxY, movieCardCenterRotateX, movieCardCenterRotateY,
+    movieCardNearParallaxX, movieCardNearParallaxY, movieCardNearRotateX, movieCardNearRotateY,
+    movieCardFarParallaxX, movieCardFarParallaxY, movieCardFarRotateX, movieCardFarRotateY
+  ])
+
+  // Партнеры из Excel файла (с fallback на старые данные)
+  const partners = useMemo(() => {
+    if (filmographyData.partners && filmographyData.partners.length > 0) {
+      return filmographyData.partners
+    }
+    // Fallback на старые данные, если JSON не загружен
+    return [
+      { name: 'Мосфильм' },
+      { name: 'Ленфильм' },
+      { name: 'СТВ' },
+      { name: 'Централ Партнершип' },
+      { name: 'ВГТРК' },
+      { name: 'Первый канал' }
+    ]
+  }, [filmographyData.partners])
+
+  // Проекты из Excel файла, преобразованные в формат для MoviesCarousel
+  const topMovies = useMemo(() => {
+    if (filmographyData.projects && filmographyData.projects.length > 0) {
+      return filmographyData.projects.map((project, index) => {
+        // Создаем простой SVG placeholder для постера
+        const svgContent = `<svg width="200" height="300" xmlns="http://www.w3.org/2000/svg">
+          <rect width="200" height="300" fill="#1a1a1a"/>
+          <text x="100" y="140" font-family="Arial, sans-serif" font-size="14" fill="#ffffff" text-anchor="middle">${project.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+          <text x="100" y="160" font-family="Arial, sans-serif" font-size="11" fill="#888" text-anchor="middle">${(project.studio || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+          <text x="100" y="180" font-family="Arial, sans-serif" font-size="10" fill="#666" text-anchor="middle">${(project.period || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+        </svg>`
+        const svgDataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent)
+        
+        return {
+          title: project.title,
+          poster: project.poster || svgDataUri,
+          kinopoiskId: project.kinopoiskId || null,
+          studio: project.studio,
+          period: project.period,
+          format: project.format
+        }
+      })
+    }
+    // Fallback на старые данные, если JSON не загружен
+    return [
+      { title: 'Т-34', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1900788/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Движение вверх', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Холоп', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Серебряные коньки', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Огонь', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Вторжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Лёд 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Союз спасения', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Стриптизёрши', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Время первых', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Экипаж', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Притяжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Лёд', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: '28 панфиловцев', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Душа', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Селфи', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Холоп 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Чебурашка', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Сердце Пармы', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Вызов', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 }
+    ]
+  }, [filmographyData.projects])
+  
+  // Генерация frames для ленты на основе lentaId (для стабильности)
+  const generateFramesForLenta = (lentaId, frameCount) => {
+    // Используем lentaId как seed для генерации стабильных цветов
+    const seed = lentaId.split('-')[1] // Извлекаем номер из "lenta-1" -> "1"
+    const seedNum = parseInt(seed) || 0
+    
+    return Array.from({ length: frameCount }, (_, i) => {
+      // Простая детерминированная генерация на основе seed и индекса
+      const r = (seedNum * 17 + i * 23) % 256
+      const g = (seedNum * 31 + i * 37) % 256
+      const b = (seedNum * 41 + i * 43) % 256
+      return `rgb(${r}, ${g}, ${b})`
+    })
+  }
+
+  // Массив всех лент с их данными - используем folderId для генерации путей к изображениям
+  // Количество файлов будет определено динамически при загрузке
+  const allLentas = useMemo(() => {
+    return [
+      { id: 'lenta-1', folderId: '1' },
+      { id: 'lenta-6', folderId: '2' },
+      { id: 'lenta-9', folderId: '3' },
+      { id: 'lenta-2', folderId: '4' },
+      { id: 'lenta-3', folderId: '5' },
+      { id: 'lenta-4', folderId: '6' },
+      { id: 'lenta-7', folderId: '7' },
+      { id: 'lenta-8', folderId: '8' },
+      { id: 'lenta-12', folderId: '9' },
+      { id: 'lenta-5', folderId: '10' },
+      { id: 'lenta-10', folderId: '11' },
+      { id: 'lenta-11', folderId: '12' }
+    ]
+  }, [])
+
+  const handleFrameClick = (lentaId, frameIndex, frames) => {
+    // Находим индекс ленты в массиве
+    const lentaIndex = allLentas.findIndex(l => l.id === lentaId)
+    
+    // Используем переданные frames (они уже содержат реальные изображения)
+    // allLentas будет обновлен в Gallery при загрузке
+    setActiveGallery({ 
+      lentaId, 
+      frameIndex, 
+      frames, // Передаем реальные frames с изображениями
+      lentaIndex: lentaIndex >= 0 ? lentaIndex : 0,
+      allLentas // Передаем allLentas для навигации между лентами
+    })
+  }
+  
+  const handleCloseGallery = () => {
+    setActiveGallery(null)
+  }
+  
+  const handleSign = () => {
+    setFlashActive(true)
+  }
+  
+  const handleFlashComplete = () => {
+    setFlashActive(false)
+  }
+  
+  // Показываем хлопушку на 1/3 времени всех вспышек раньше (~1 сек)
+  // Без автозакрытия - окно остается открытым до ручного закрытия
+  // Но верхняя створка закрывается после падения
+  useEffect(() => {
+    if (flashActive) {
+      // Показываем на 1 сек (на 1/3 времени всех вспышек раньше)
+      const showTimeout = setTimeout(() => {
+        setClapperboardActive(true) // Открыта
+        setClapperboardVisible(true) // Показываем и падает сверху
+      }, 1000) // 1 сек - на 1/3 времени всех вспышек раньше
+      
+      // Закрываем верхнюю створку после падения (через ~1.5 сек после начала падения)
+      // 1000ms (показ) + 1500ms (время падения) = 2500ms
+      const closeFlapTimeout = setTimeout(() => {
+        setClapperboardActive(false) // Закрываем верхнюю створку
+      }, 2500)
+      
+      return () => {
+        clearTimeout(showTimeout)
+        clearTimeout(closeFlapTimeout)
+      }
+    }
+    // Убираем else блок - окно остается видимым до ручного закрытия
+  }, [flashActive])
+  
+  const handleClapperboardClose = useCallback(() => {
+    setClapperboardActive(false)
+    setTimeout(() => {
+      setClapperboardVisible(false)
+    }, 600) // Время на анимацию закрытия
+  }, [])
+
+  // Отслеживаем скролл контейнера с помощью framer-motion
+  const { scrollYProgress, scrollY } = useScroll({
+    container: containerRef,
+    layoutEffect: false
+  })
+
+  // Отслеживаем прогресс каждого экрана от появления до исчезновения
+  // offset: ["start end"] - когда верхний край экрана касается нижней части viewport (0%)
+  // offset: ["end start"] - когда нижний край экрана касается верхней части viewport (100%)
+  const { scrollYProgress: firstScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: firstScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: secondScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: secondScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: thirdScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: thirdScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  // Вычисляем прогресс через useTransform - без перерендеров, прямое обновление DOM
+  // Используем useTransform для преобразования scrollY в progress (0-1)
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const container = containerRef.current
+    const updateProgress = () => {
+      const viewportHeight = container.clientHeight
+      const containerHeight = container.scrollHeight
+      const full = containerHeight - viewportHeight
+      
+      if (full <= 0) {
+        progressMotionValue.set(0)
+        return
+      }
+      
+      // Подписываемся на изменения scrollY и обновляем progressMotionValue
+      const unsubscribe = scrollY.on("change", (latest) => {
+        const progressValue = Math.min(Math.max((latest / full) * 100, 0), 100) / 100
+        progressMotionValue.set(progressValue)
+      })
+      
+      return unsubscribe
+    }
+    
+    const unsubscribe = updateProgress()
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [scrollY, progressMotionValue])
+  
+  // Преобразуем scrollYProgress в motion value напрямую
+  useEffect(() => {
+    const unsubscribe1 = firstScreenScrollProgress.on("change", (latest) => {
+      firstScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe2 = secondScreenScrollProgress.on("change", (latest) => {
+      secondScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe3 = thirdScreenScrollProgress.on("change", (latest) => {
+      thirdScreenProgressMotionValue.set(latest)
+    })
+    
+    return () => {
+      unsubscribe1()
+      unsubscribe2()
+      unsubscribe3()
+    }
+  }, [firstScreenScrollProgress, secondScreenScrollProgress, thirdScreenScrollProgress, firstScreenProgressMotionValue, secondScreenProgressMotionValue, thirdScreenProgressMotionValue])
+  
+  // Motion values для изменения параметров шума (не движения, а изменения свойств)
+  const grainNoiseIntensity = useMotionValue(0.5) // Интенсивность шума
+  const grainNoiseOpacity = useMotionValue(0.6) // Прозрачность шума
+  
+  // Обновляем параметры шума при изменении скролла или мыши (не движение, а изменение)
+  useEffect(() => {
+    const updateNoise = () => {
+      const scroll = secondScreenScrollProgress.get()
+      const mouseXVal = mouseX.get() / 100 // 0-1
+      const mouseYVal = mouseY.get() / 100 // 0-1
+
+      // Изменяем backgroundPosition на основе скролла и мыши (движение фона)
+      if (isParallaxEnabled) {
+        grainBackgroundXValue.set(scroll * 200 + (mouseXVal - 0.5) * 50)
+        grainBackgroundYValue.set(scroll * 200 + (mouseYVal - 0.5) * 50)
+      } else {
+        grainBackgroundXValue.set(scroll * 200) // Только скролл, без мыши
+        grainBackgroundYValue.set(scroll * 200)
+      }
+
+      // Изменяем интенсивность шума на основе мыши и скролла (не движение, а изменение)
+      const mouseInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.1 : 0
+      const noiseIntensity = 0.4 + scroll * 0.3 + mouseInfluence
+      grainNoiseIntensity.set(Math.min(1, Math.max(0.3, noiseIntensity)))
+
+      const mouseOpacityInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.15 : 0
+      const noiseOpacity = 0.5 + scroll * 0.2 + mouseOpacityInfluence
+      grainNoiseOpacity.set(Math.min(1, Math.max(0.3, noiseOpacity)))
+    }
+    
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateNoise)
+    const unsubscribeMouseX = mouseX.on('change', updateNoise)
+    const unsubscribeMouseY = mouseY.on('change', updateNoise)
+    
+    // Инициализация
+    updateNoise()
+    
+    return () => {
+      unsubscribeScroll()
+      unsubscribeMouseX()
+      unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, grainBackgroundXValue, grainBackgroundYValue, grainNoiseIntensity, grainNoiseOpacity])
+  
+  // Motion values для перерисовки царапин (изменение их позиций)
+  const scratchRedrawTrigger = useMotionValue(0) // Триггер для перерисовки
+  
+  useEffect(() => {
+    const updateScratches = () => {
+      // Просто обновляем триггер, чтобы вызвать перерисовку
+      scratchRedrawTrigger.set(Date.now())
+    }
+
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateScratches)
+    const unsubscribeMouseX = isParallaxEnabled ? mouseX.on('change', updateScratches) : null
+    const unsubscribeMouseY = isParallaxEnabled ? mouseY.on('change', updateScratches) : null
+
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouseX) unsubscribeMouseX()
+      if (unsubscribeMouseY) unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, scratchRedrawTrigger, isParallaxEnabled])
+  
+  // UI обновления - синхронные для плавной работы (дебаунсинг только для тяжелых диаграмм)
+  useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    setProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(firstScreenProgressMotionValue, "change", (latest) => {
+    setFirstScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(secondScreenProgressMotionValue, "change", (latest) => {
+    setSecondScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(thirdScreenProgressMotionValue, "change", (latest) => {
+    setThirdScreenProgressText(Math.round(latest * 100))
+  })
+
+  return (
+    <>
+      {/* Компонент Вспышка */}
+      <Flash isActive={flashActive} onComplete={handleFlashComplete} />
+      
+      {/* Галерея для активированной ленты */}
+      {activeGallery && (
+        <Gallery
+          frames={activeGallery.frames}
+          initialIndex={activeGallery.frameIndex}
+          onClose={handleCloseGallery}
+          lentaIndex={activeGallery.lentaIndex}
+          allLentas={activeGallery.allLentas}
+        />
+      )}
+      
+      {/* Логотип SI-PRODUCTION в правом нижнем углу */}
+      <div 
+        className="si-production-logo"
+        style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          color: '#ffffff',
+          fontSize: 'clamp(32px, 6vw, 72px)',
+          fontFamily: "'Science Gothic', monospace",
+          fontWeight: 'bold',
+          zIndex: 10000,
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}
+      >
+        <span 
+          className="si-text"
+          style={{
+            fontFamily: "'Slovic', sans-serif",
+            color: '#ff0000',
+            transform: 'translateY(-3px)'
+          }}
+        >SI</span>
+        <span className="dash-text">-</span>
+        <span 
+          className="production-text"
+          style={{
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+          }}
+        >PRODUCTION</span>
+      </div>
+      
+      {/* Контейнер для хлопушки - fixed с overflow hidden */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        zIndex: 99999, // Ниже вспышки (100000)
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
+            </div>
+
+
+    <div 
+      ref={containerRef} 
+      className="main-scroll-container"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        overflowY: 'auto', // Нативный скролл
+        overflowX: 'hidden',
+        touchAction: 'pan-y' // Разрешаем вертикальный touch-скролл на мобильных
+      }}
+    >
+      {/* Ленты размещены внутри скроллящейся зоны */}
+      {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
+      {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
+      {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
+      {/* Каждая лента соответствует одной папке из public/photos (1-12) */}
+      {/* Центральные крупные ленты - быстрый spring для максимального эффекта */}
+      {/* Эти ленты самые заметные и должны реагировать мгновенно */}
+      <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Промежуточные ленты - средний spring */}
+      {/* Баланс между скоростью и плавностью */}
+      <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Фоновые ленты - медленный spring для subtle эффекта */}
+      {/* Эти ленты создают глубину и не должны отвлекать внимание */}
+      <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      
+      {/* Индикатор прогресса в левом верхнем углу */}
+      <div style={{
+        position: 'fixed',
+        top: '16px',
+        left: '16px',
+        color: '#ffffff',
+        fontSize: 'clamp(14px, 2vw, 18px)',
+        fontFamily: "'Science Gothic', monospace",
+        zIndex: 10000,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: '8px 16px',
+        borderRadius: '4px',
+        backdropFilter: 'blur(4px)',
+        pointerEvents: 'none'
+      }}>
+        Прогресс кинопроизводства: {progressText}%
+            </div>
+
+      {/* Первый экран */}
+      <section 
+        ref={firstScreenRef}
+        style={{ 
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a', // Чуть светлее черного
+          position: 'relative'
+        }}
+      >
+        {/* Индикатор прогресса первого экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '70px',
+          width: 'fit-content',
+          left: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Составление плана: {firstScreenProgressText}%
+            </div>
+
+        {/* Надпись ПЕРВЫЙ ЭКРАН */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+            Первый экран
+            </div>
+      </section>
+
+      {/* Второй экран */}
+      <section 
+        ref={secondScreenRef}
+        style={{ 
+        width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          overflowX: 'hidden'
+        }}
+      >
+        {/* Индикатор прогресса второго экрана - обертка для правильной работы sticky */}
+        <ProgressIndicator progressText={secondScreenProgressText} />
+        
+        {/* Эффекты помех - только если включены */}
+        {isGrainEnabled && (
+          <>
+            {/* Статические помехи как на старой пленке - зернистость */}
+            <GrainLayerComponent
+          zIndex={100}
+          opacity={0.6}
+          backgroundImage={`
+            radial-gradient(circle at 0 0, rgba(255,255,255,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 2px 2px, rgba(0,0,0,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 0.5px, transparent 0.5px)
+          `}
+          backgroundSize="4px 4px, 4px 4px, 2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2) brightness(0.85)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Дополнительный слой зернистости - точки */}
+        <GrainLayerComponent
+          zIndex={101}
+          opacity={0.5}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(255,255,255,0.1) 1px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 3px),
+            repeating-linear-gradient(90deg, transparent 0px, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 3px)
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="screen"
+          filter="contrast(1.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Третий слой - более крупная зернистость */}
+        <GrainLayerComponent
+          zIndex={102}
+          opacity={0.4}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px)
+          `}
+          backgroundSize="3px 3px"
+          mixBlendMode="multiply"
+          filter="contrast(1.5)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Четвертый слой - очень заметная зернистость с точками */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.7}
+          backgroundImage={`
+            repeating-conic-gradient(from 0deg at 50% 50%, 
+              rgba(255,255,255,0.2) 0deg, 
+              transparent 1deg, 
+              transparent 2deg, 
+              rgba(0,0,0,0.2) 2deg, 
+              rgba(0,0,0,0.2) 3deg, 
+              transparent 3deg, 
+              transparent 4deg
+            )
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2.5) brightness(0.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Горизонтальные царапины - перерисовываются при движении мыши */}
+        <ScratchesComponent count={15} scratchRedrawTrigger={scratchRedrawTrigger} />
+        
+        {/* Вертикальные полосы повреждений */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.25}
+          backgroundImage={`
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.15) 2px,
+              rgba(255, 255, 255, 0.15) 3px,
+              transparent 3px,
+              transparent 8px
+            )
+          `}
+          backgroundSize="60px 100%"
+          mixBlendMode="overlay"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+          </>
+        )}
+
+        {/* Движущиеся ленты перфорации по границам экрана */}
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" mouseOffset={perforationMouseOffset} />
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" mouseOffset={perforationMouseOffset} />
+        
+        {/* Линейная диаграмма на весь экран */}
+        <LineChartComponent key="line-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        
+        {/* Радарная диаграмма - сверху с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            top: '2rem',
+            x: chartTopX,
+            y: chartTopY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadarChartComponent key="radar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+        
+        {/* Радиальная столбчатая диаграмма - снизу с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            bottom: '2rem',
+            top: 'auto',
+            x: chartBottomX,
+            y: chartBottomY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadialBarChartComponent key="radial-bar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+
+        {/* Круговая диаграмма прогресса - по центру, передний план, СЛАБЫЙ параллакс */}
+        <CenterChartContainer
+          style={{
+            x: chartCenterX,
+            y: chartCenterY,
+            rotateX: chartCenterRotateX,
+            rotateY: chartCenterRotateY,
+          }}
+        >
+          <ProgressChart key="progress-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </CenterChartContainer>
+        
+          {/* Контейнер для договора */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(210mm, 90vw)',
+            height: 'min(297mm, calc(90vw * 1.414))',
+            maxHeight: 'calc(var(--vh, 1vh) * 90)',
+            zIndex: 20
+          }}>
+            {/* Сетчатый лист A4 - фон с сеткой */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backgroundImage: `
+                linear-gradient(to right, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px)
+              `,
+              backgroundSize: '1.5em 1.5em',
+              backgroundPosition: 'center center',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.6)'
+            }} />
+
+            {/* Контейнер с текстом договора */}
+            <div 
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                padding: 'clamp(16px, 3vw, 2rem)',
+                display: 'flex',
+                flexDirection: 'column',
+                fontSize: 'clamp(24px, 3vw, 36px)',
+                pointerEvents: 'auto',
+                zIndex: 1
+              }}
+            >
+            {/* Надпись ДОГОВОР сверху по центру */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: 'auto',
+              paddingTop: '1em'
+            }}>
+              <h1 
+                style={{
+                  fontSize: '2em',
+                  fontFamily: "'Slovic', sans-serif",
+                  color: '#ffffff',
+                  margin: 0
+                }}
+              >
+                ДОГОВОР
+              </h1>
+            </div>
+
+            {/* Список услуг с галочками в центре */}
+            <ContractItemsList progressMotionValue={secondScreenProgressMotionValue} />
+
+            {/* Кнопка Подписать снизу */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: 'auto',
+              paddingBottom: '1em'
+            }}>
+              <button 
+                onClick={handleSign}
+                style={{
+                  padding: '0.6em 1.6em',
+                  backgroundColor: '#ff0000',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0.2em',
+                  fontSize: '1em',
+                  fontFamily: "'Slovic', sans-serif",
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ff0000'
+                  e.currentTarget.style.color = '#ffffff'
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+              >
+                Подписать
+              </button>
+            </div>
+          </div>
+          </div>
+        
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+          Второй экран
+        </div>
+      </section>
+
+      {/* Третий экран */}
+      <section 
+        ref={thirdScreenRef}
+        style={{
+        width: '100vw',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
+          background: 'linear-gradient(to bottom, #000000 0%, #0a0a2e 50%, #1a1a3e 100%)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Упрощенное звездное небо для производительности */}
+        <StarrySky starCount={50} />
+
+        {/* Индикатор прогресса третьего экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '16px',
+          width: 'fit-content',
+          marginLeft: 'auto',
+          marginRight: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Монтаж: {thirdScreenProgressText}%
+        </div>
+
+        {/* Секция ПРОЕКТЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПРОЕКТЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1 
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПРОЕКТЫ
+            </h1>
+          </div>
+
+          {/* Карусель с фильмами */}
+          <div style={{ minHeight: '500px' }}>
+            <MoviesCarousel 
+              movies={topMovies}
+              mouseParallaxValues={movieParallaxValues}
+            />
+          </div>
+        </div>
+
+        {/* Секция ПАРТНЕРЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПАРТНЕРЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПАРТНЕРЫ
+            </h1>
+          </div>
+
+          {/* Сетка с логотипами партнеров */}
+          <PartnersGrid partners={partners} />
+          
+          {/* Футер - Made in Zvenigorod на звездном фоне */}
+          <footer style={{
+            width: '100%',
+            textAlign: 'center',
+            marginTop: '4rem',
+            marginBottom: '150px',
+            pointerEvents: 'none'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
+              fontFamily: "'Slovic', sans-serif",
+              fontWeight: 'bold'
+            }}>
+              <span>Made in</span>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontFamily: "'Slovic', sans-serif",
+                fontWeight: 'bold'
+              }}>
+                {/* Иконка православного купола из SVG файла */}
+                <img 
+                  src="/tampls.svg" 
+                  alt="Zvenigorod dome" 
+                  style={{ 
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    width: '24px',
+                    height: '24px'
+                  }}
+                />
+                <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
+              </span>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+    </div>
+    </>
+  )
+}
+
+// Компонент кастомного скроллбара
+function CustomScrollbar({ containerRef, scrollTop, isDragging, setIsDragging, scrollbarRef }) {
+  const [scrollbarHeight, setScrollbarHeight] = useState(0)
+  const [scrollbarTop, setScrollbarTop] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(0)
+  const [contentHeight, setContentHeight] = useState(0)
+  const dragStartY = useRef(0)
+  const dragStartScroll = useRef(0)
+  
+  // Вычисляем размеры скроллбара
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const updateScrollbar = () => {
+      const container = containerRef.current
+      if (!container) return
+      
+      const ch = container.clientHeight
+      const sh = container.scrollHeight
+      const st = scrollTop.get()
+      
+      setContainerHeight(ch)
+      setContentHeight(sh)
+      
+      // Высота скроллбара пропорциональна видимой области
+      const thumbHeight = Math.max(20, (ch / sh) * ch)
+      setScrollbarHeight(thumbHeight)
+      
+      // Позиция скроллбара пропорциональна scrollTop
+      const maxTop = ch - thumbHeight
+      const scrollProgress = sh > ch ? st / (sh - ch) : 0
+      setScrollbarTop(scrollProgress * maxTop)
+    }
+    
+    const unsubscribe = scrollTop.on('change', updateScrollbar)
+    updateScrollbar()
+    
+    // Обновляем при изменении размера окна
+    window.addEventListener('resize', updateScrollbar)
+    
+    return () => {
+      unsubscribe()
+      window.removeEventListener('resize', updateScrollbar)
+    }
+  }, [containerRef, scrollTop])
+  
+  // Обработка drag скроллбара
+  useEffect(() => {
+    if (!isDragging) return
+    
+    const handleMouseMove = (e) => {
+      if (!containerRef.current || !scrollbarRef.current) return
+      
+      const container = containerRef.current
+      const scrollbar = scrollbarRef.current
+      const containerRect = container.getBoundingClientRect()
+      const scrollbarRect = scrollbar.getBoundingClientRect()
+      
+      const deltaY = e.clientY - dragStartY.current
+      const scrollbarTrackHeight = containerHeight - scrollbarHeight
+      const scrollRatio = (deltaY / scrollbarTrackHeight) * (contentHeight - containerHeight)
+      
+      const newScroll = Math.max(0, Math.min(contentHeight - containerHeight, dragStartScroll.current + scrollRatio))
+      scrollTop.set(newScroll)
+    }
+    
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, containerRef, scrollbarRef, containerHeight, scrollbarHeight, contentHeight, scrollTop, setIsDragging])
+  
+  const handleMouseDown = (e) => {
+    e.preventDefault()
+    dragStartY.current = e.clientY
+    dragStartScroll.current = scrollTop.get()
+    setIsDragging(true)
+  }
+  
+  const handleTrackClick = (e) => {
+    if (!containerRef.current || !scrollbarRef.current) return
+    
+    const container = containerRef.current
+    const scrollbar = scrollbarRef.current
+    const containerRect = container.getBoundingClientRect()
+    const clickY = e.clientY - containerRect.top
+    
+    const scrollbarTrackHeight = containerHeight - scrollbarHeight
+    const clickRatio = clickY / scrollbarTrackHeight
+    const newScroll = clickRatio * (contentHeight - containerHeight)
+    
+    scrollTop.set(Math.max(0, Math.min(contentHeight - containerHeight, newScroll)))
+  }
+  
+  if (contentHeight <= containerHeight) return null // Не показываем скроллбар если контент помещается
+  
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        right: '10px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '8px',
+        height: `${containerHeight}px`,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '4px',
+        zIndex: 10000,
+        cursor: 'pointer'
+      }}
+      onClick={handleTrackClick}
+    >
+      <div
+        ref={scrollbarRef}
+        style={{
+          position: 'absolute',
+          top: `${scrollbarTop}px`,
+          left: 0,
+          width: '100%',
+          height: `${scrollbarHeight}px`,
+          backgroundColor: 'rgba(255, 255, 255, 0.5)',
+          borderRadius: '4px',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: isDragging ? 'none' : 'background-color 0.2s ease',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'
+        }}
+        onMouseLeave={(e) => {
+          if (!isDragging) {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+```
+
+
+Ищу определение partners и заменяю данные:
+
+
+
+Заменяю код: сначала partners, затем topMovies. Для постеров используем динамическую генерацию SVG.
+
+
+```javascript
+import React, { useRef, useState, useEffect, Suspense, memo, useMemo, useCallback } from 'react'
+import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
+import { useParallaxStore } from '../store/parallaxStore'
+
+// Компонент пункта договора с галочкой
+const ContractItem = memo(function ContractItem({ text, progress, threshold, textColor }) {
+  // progress может быть motion value или числом
+  const [progressValue, setProgressValue] = useState(typeof progress === 'number' ? progress : 0)
+  
+  // Если progress - motion value, подписываемся на изменения
+  useEffect(() => {
+    if (typeof progress === 'object' && 'on' in progress) {
+      const unsubscribe = progress.on('change', (latest) => {
+        setProgressValue(latest * 100)
+      })
+      return unsubscribe
+    } else if (typeof progress === 'number') {
+      setProgressValue(progress)
+    }
+  }, [progress])
+  
+  // Галочка ставится когда progress >= threshold
+  const isChecked = progressValue >= threshold
+
+  return (
+    <div style={{
+          display: 'flex',
+          alignItems: 'center',
+      gap: '0.8em',
+      fontSize: '0.7em',
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      marginBottom: '0.8em'
+    }}>
+      <div style={{
+          width: '1.2em',
+          height: '1.2em',
+          minWidth: '1.2em',
+          minHeight: '1.2em',
+          border: '0.1em solid #ff0000',
+          borderRadius: '0.2em',
+          flexShrink: 0,
+          backgroundColor: isChecked ? '#ff0000' : 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+          justifyContent: 'center',
+            position: 'relative',
+          transition: 'background-color 0.3s ease'
+        }}>
+        {isChecked && (
+          <svg
+            width="0.8em"
+            height="0.8em"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ flexShrink: 0 }}
+          >
+            <path
+              d="M3 8L6 11L13 4"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+        </div>
+      {textColor ? (
+        <motion.span style={{ color: textColor, fontWeight: 'bold' }}>{text}</motion.span>
+      ) : (
+        <span style={{ color: '#000000', fontWeight: 'bold' }}>{text}</span>
+      )}
+    </div>
+  )
+})
+
+// Компонент Вспышка
+function Flash({ isActive, onComplete }) {
+  if (!isActive) return null
+
+  // Несколько вспышек для калибровки (как на современных телефонах)
+  // Финальная вспышка длится столько же, сколько хлопушка на экране (~2.6 сек)
+  // Хлопушка появляется на 1/3 времени всех вспышек раньше (~1 сек)
+  const totalDuration = 4.5 // Общая длительность: 0.5 сек калибровка + 2.6 сек финальная вспышка + 1.4 сек затухание
+  const clapperboardShowTime = 1.0 // Хлопушка появляется на 1 сек (на 1/3 времени всех вспышек раньше)
+  const finalFlashStart = 0.22 // Финальная вспышка начинается на 0.22 (~1 сек) - синхронизировано с хлопушкой
+  const finalFlashPeak = 0.25 // Максимум финальной вспышки на 0.25 (~1.125 сек)
+  const finalFlashEnd = 0.78 // Финальная вспышка заканчивается на 0.78 (~3.51 сек) - примерно когда хлопушка скрывается
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ 
+        opacity: [
+          0, 1, 0,      // Первая вспышка (быстрая)
+          0, 0.8, 0,    // Вторая вспышка (средняя)
+          0, 0.6, 0,    // Третья вспышка (слабая)
+          0, 1, 1, 0    // Финальная длинная вспышка (длится столько же, сколько хлопушка на экране)
+        ]
+      }}
+      transition={{ 
+        duration: totalDuration,
+        times: [
+          0, 0.05, 0.1,           // Первая вспышка (0-0.45 сек)
+          0.12, 0.15, 0.18,       // Вторая вспышка (0.54-0.81 сек)
+          finalFlashStart, finalFlashPeak, finalFlashEnd, 1  // Финальная вспышка начинается раньше (~1 сек) и длится до ~3.51 сек
+        ],
+        onComplete: onComplete
+      }}
+        style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+        backgroundColor: '#ffffff',
+        zIndex: 100000,
+        pointerEvents: 'none'
+      }}
+    />
+  )
+}
+
+// Компонент Хлопушка (Clapperboard) - теперь окно контактов
+const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
+  const [isDragging, setIsDragging] = useState(false)
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+
+  // Оптимизируем вычисления размеров с useMemo
+  const dimensions = useMemo(() => ({
+    width: '80vw',
+    height: 'calc(80vw / 1.333)'
+  }), [])
+  
+  const handleDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleDragEnd = (event, info) => {
+    // Закрытие окна при смахивании в любую сторону
+    const threshold = Math.min(window.innerHeight, window.innerWidth) * 0.25 // 25% от меньшей стороны экрана
+    const distance = Math.sqrt(info.offset.x ** 2 + info.offset.y ** 2)
+    
+    if (distance > threshold) {
+      if (onClose) {
+        onClose()
+      }
+    }
+    setIsDragging(false)
+  }
+  
+  return (
+        <motion.div
+      className="clapperboard-container"
+      initial={false}
+      animate={{
+        y: isVisible
+          ? ['calc(var(--vh, 1vh) * -100)', 0, -30, 0, -15, 0, -8, 0] // Падение сверху с отскоками
+          : 'calc(var(--vh, 1vh) * -100)',
+        x: isVisible ? 0 : '100vw', // При показе x=0, при скрытии улетает вправо
+        opacity: isVisible ? 1 : 0
+      }}
+      transition={{
+        y: isVisible ? {
+          duration: 1.5,
+          times: [0, 0.4, 0.5, 0.65, 0.75, 0.85, 0.92, 1],
+          ease: [0.25, 0.46, 0.45, 0.94] // Ease out для падения
+        } : {
+          type: "spring",
+          stiffness: 200,
+          damping: 15,
+          bounce: 0.6
+        },
+        x: {
+          type: "spring",
+          stiffness: 150,
+          damping: 18,
+          bounce: 0.4
+        },
+        opacity: {
+          duration: 0.3
+        }
+      }}
+      drag={true}
+      dragConstraints={dragConstraints}
+      dragElastic={0.3}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+          style={{
+        position: 'relative',
+        width: dimensions.width,
+        height: dimensions.height,
+        minHeight: dimensions.height,
+        pointerEvents: 'auto',
+        transformOrigin: 'top right',
+        cursor: isDragging ? 'grabbing' : 'grab'
+      }}
+    >
+      {/* Верхняя створка - черная с текстом SI-PRODUCTION */}
+        <motion.div
+        className="clapperboard-top"
+        initial={false}
+        animate={{ rotate: isActive ? 90 : 0 }}
+        transition={{ 
+          duration: 0.6,
+          ease: [0.25, 0.46, 0.45, 0.94] // Плавная анимация без spring эффекта
+        }}
+          style={{
+            position: 'absolute',
+            top: 0,
+          right: 0,
+            width: '100%',
+          height: '40%', // Уменьшено с 50% до 40% чтобы освободить место для нижней зоны
+          backgroundColor: '#000000',
+          border: '2px solid #333',
+          transformOrigin: 'bottom right',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+                  color: '#ffffff',
+          fontSize: 'clamp(20px, 4vw, 48px)',
+                  fontFamily: "'Science Gothic', monospace",
+                        fontWeight: 'bold',
+          zIndex: 2
+        }}
+      >
+            <span style={{
+          fontFamily: "'Slovic', sans-serif",
+          color: '#ff0000',
+          transform: 'translateY(-3px)'
+        }}>SI</span>
+        <span style={{
+          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+        }}>-PRODUCTION</span>
+      </motion.div>
+
+      {/* Нижний блок - контакты с фейковыми данными */}
+      <div 
+        className="clapperboard-contacts"
+        style={{
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: '100%',
+        minHeight: '60%', // Минимальная высота 60%, но может расширяться
+        height: 'auto', // Высота адаптируется под содержимое
+        backgroundColor: '#000000',
+        border: '2px solid #333',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 'clamp(16px, 3vw, 32px)',
+        fontSize: 'clamp(14px, 2.5vw, 24px)',
+        fontFamily: "'Science Gothic', monospace",
+        color: '#ffffff',
+        zIndex: 1,
+        gap: '1rem',
+        overflowY: 'auto', // Добавляем скролл если контент не вписывается
+        boxSizing: 'border-box' // Учитываем padding в высоте
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '1rem'
+        }}>
+          <div style={{ fontSize: 'clamp(18px, 3vw, 28px)', fontWeight: 'bold' }}>КОНТАКТЫ</div>
+          <button
+            onClick={onClose}
+            style={{
+              backgroundColor: 'transparent',
+              border: '2px solid #ffffff',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              fontSize: 'clamp(12px, 2vw, 18px)',
+              fontFamily: "'Science Gothic', monospace",
+              cursor: 'pointer',
+              borderRadius: '4px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff'
+              e.currentTarget.style.color = '#000000'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.color = '#ffffff'
+            }}
+          >
+            ЗАКРЫТЬ
+          </button>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '1rem',
+          flex: 1
+        }}>
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телеграм:</div>
+            <a 
+              href="https://t.me/example" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ 
+                color: '#00a8ff',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
+            >
+              @example_contact
+            </a>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Email:</div>
+            <div>contact@example.com</div>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телефон:</div>
+            <div>+7 (999) 123-45-67</div>
+          </div>
+        </div>
+        </div>
+    </motion.div>
+  )
+})
+
+// Компонент Галерея для активированной ленты (слайдер)
+function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(initialIndex)
+  const [currentLentaIndex, setCurrentLentaIndex] = useState(lentaIndex || 0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [loadedLentas, setLoadedLentas] = useState({}) // Кэш загруженных лент
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+  
+  // Загружаем изображения для всех лент
+  useEffect(() => {
+    if (!allLentas || allLentas.length === 0) return
+    
+    const loadLentaImages = async (lenta) => {
+      if (loadedLentas[lenta.id]) return // Уже загружена
+      
+      const folderId = lenta.folderId
+      if (!folderId) return
+      
+      // Проверяем все файлы в папке (до 20) и собираем список существующих
+      const maxCheck = 20
+      const existingFiles = []
+      
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      if (existingFiles.length > 0) {
+        const lentaFrames = existingFiles.map((fileNum) => ({
+          type: 'image',
+          src: `/photos/${folderId}/${fileNum}.webp`
+        }))
+        
+        setLoadedLentas(prev => ({
+          ...prev,
+          [lenta.id]: lentaFrames
+        }))
+      }
+    }
+    
+    // Загружаем изображения для всех лент параллельно
+    allLentas.forEach(lenta => {
+      loadLentaImages(lenta)
+    })
+  }, [allLentas, loadedLentas])
+  
+  // Получаем текущую ленту и её frames
+  const currentLenta = allLentas && allLentas[currentLentaIndex] ? allLentas[currentLentaIndex] : null
+  // Используем загруженные frames если есть, иначе переданные frames
+  const currentFrames = currentLenta && loadedLentas[currentLenta.id] 
+    ? loadedLentas[currentLenta.id] 
+    : (currentLenta ? currentLenta.frames : frames)
+  
+  // Обновляем индексы при изменении initialIndex или lentaIndex
+  useEffect(() => {
+    setCurrentFrameIndex(initialIndex)
+    if (lentaIndex !== undefined) {
+      setCurrentLentaIndex(lentaIndex)
+    }
+  }, [initialIndex, lentaIndex])
+
+  // Обработка клавиатуры для навигации
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        handlePrevFrame()
+      } else if (e.key === 'ArrowRight') {
+        handleNextFrame()
+      } else if (e.key === 'ArrowUp') {
+        handlePrevLenta()
+      } else if (e.key === 'ArrowDown') {
+        handleNextLenta()
+      } else if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentFrameIndex, currentLentaIndex, currentFrames, allLentas])
+
+  // Навигация по кадрам (горизонтально)
+  const handlePrevFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev > 0 ? prev - 1 : currentFrames.length - 1))
+  }
+
+  const handleNextFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev < currentFrames.length - 1 ? prev + 1 : 0))
+  }
+
+  // Навигация по лентам (вертикально)
+  const handlePrevLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev > 0 ? prev - 1 : allLentas.length - 1
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleNextLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev < allLentas.length - 1 ? prev + 1 : 0
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleVerticalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleVerticalDragEnd = (event, info) => {
+    // Вертикальный drag - переключение между лентами
+    if (!allLentas || allLentas.length === 0) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены ленты
+    if (info.offset.y > threshold) {
+      handlePrevLenta()
+    } else if (info.offset.y < -threshold) {
+      handleNextLenta()
+    }
+    setIsDragging(false)
+  }
+
+  const handleHorizontalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleHorizontalDragEnd = (event, info) => {
+    // Горизонтальный drag - смена кадров в ленте
+    if (!currentFrames) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены кадра
+    if (info.offset.x > threshold) {
+      handlePrevFrame()
+    } else if (info.offset.x < -threshold) {
+      handleNextFrame()
+    }
+    setIsDragging(false)
+  }
+
+  return (
+    <>
+      {/* Overlay с затемнением */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          zIndex: 100000,
+          cursor: 'pointer'
+        }}
+      />
+      
+      {/* Слайдер */}
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        drag="y"
+        dragConstraints={dragConstraints}
+        dragElastic={0.3}
+        onDragStart={handleVerticalDragStart}
+        onDragEnd={handleVerticalDragEnd}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100001,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Вертикальная карусель всех лент */}
+        {allLentas && allLentas.length > 0 ? (
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Все ленты вертикально */}
+            {allLentas.map((lenta, lentaIdx) => {
+              const isLentaActive = lentaIdx === currentLentaIndex
+              // Используем загруженные frames если есть, иначе генерируем пути
+              const lentaFrames = loadedLentas[lenta.id] || (lenta.folderId ? 
+                Array.from({ length: 20 }, (_, i) => ({
+                  type: 'image',
+                  src: `/photos/${lenta.folderId}/${i + 1}.webp`
+                })) : [])
+              
+              return (
+                <motion.div
+                  key={lenta.id}
+                  initial={false}
+                  animate={{
+                    opacity: isLentaActive ? 1 : 0,
+                    y: isLentaActive ? 0 : (lentaIdx < currentLentaIndex ? -100 : 100),
+                    scale: isLentaActive ? 1 : 0.8
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isLentaActive ? 'auto' : 'none'
+                  }}
+                >
+                  {/* Кадры текущей ленты горизонтально */}
+                  {isLentaActive && lentaFrames.map((frame, frameIdx) => {
+                    const isFrameActive = frameIdx === currentFrameIndex
+                    return (
+                      <motion.div
+                        key={`${lenta.id}-${frameIdx}`}
+                        initial={false}
+                        animate={{
+                          opacity: isFrameActive ? 1 : 0,
+                          scale: isFrameActive ? 1 : 0.8,
+                          x: isFrameActive ? 0 : (frameIdx < currentFrameIndex ? -100 : 100)
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          ease: [0.25, 0.46, 0.45, 0.94]
+                        }}
+                        drag="x"
+                        dragConstraints={dragConstraints}
+                        dragElastic={0.2}
+                        onDragStart={handleHorizontalDragStart}
+                        onDragEnd={handleHorizontalDragEnd}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          pointerEvents: isFrameActive ? 'auto' : 'none',
+                          cursor: isDragging ? 'grabbing' : 'grab'
+                        }}
+                      >
+                        {frame.type === 'image' ? (
+                          <img
+                            src={frame.src}
+                            alt={`Frame ${frameIdx}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                            }}
+                            onError={(e) => {
+                              // При ошибке показываем серый фон
+                              e.target.style.display = 'none'
+                              const parent = e.target.parentElement
+                              if (parent && !parent.querySelector('.fallback-bg')) {
+                                const fallback = document.createElement('div')
+                                fallback.className = 'fallback-bg'
+                                fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                                parent.appendChild(fallback)
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: frame.value || frame || '#333',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    )
+                  })}
+                </motion.div>
+              )
+            })}
+          </div>
+        ) : (
+          /* Fallback для старого режима без всех лент */
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px'
+            }}
+          >
+            {currentFrames && currentFrames.map((frame, index) => {
+              const isActive = index === currentFrameIndex
+              // Поддерживаем обратную совместимость: если frame - строка (старый формат), преобразуем в объект
+              const frameData = typeof frame === 'string' ? { type: 'color', value: frame } : frame
+              
+              return (
+                <motion.div
+                  key={index}
+                  initial={false}
+                  animate={{
+                    opacity: isActive ? 1 : 0,
+                    scale: isActive ? 1 : 0.8,
+                    x: isActive ? 0 : (index < currentFrameIndex ? -100 : 100)
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  drag="x"
+                  dragConstraints={dragConstraints}
+                  dragElastic={0.2}
+                  onDragStart={handleHorizontalDragStart}
+                  onDragEnd={handleHorizontalDragEnd}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isActive ? 'auto' : 'none',
+                    cursor: isDragging ? 'grabbing' : 'grab'
+                  }}
+                >
+                  {frameData.type === 'image' ? (
+                    <img
+                      src={frameData.src}
+                      alt={`Frame ${index}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                      }}
+                      onError={(e) => {
+                        // При ошибке показываем серый фон
+                        e.target.style.display = 'none'
+                        const parent = e.target.parentElement
+                        if (parent && !parent.querySelector('.fallback-bg')) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'fallback-bg'
+                          fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: frameData.value || frameData || '#333',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    />
+                  )}
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Кнопка закрытия в левом верхнем углу */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          style={{
+            position: 'absolute',
+            top: '32px',
+            left: '32px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ×
+        </button>
+
+        {/* Кнопки навигации по кадрам (горизонтально) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handlePrevFrame()
+          }}
+          style={{
+            position: 'absolute',
+            left: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ‹
+        </button>
+        
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleNextFrame()
+          }}
+          style={{
+            position: 'absolute',
+            right: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ›
+        </button>
+
+        {/* Кнопки навигации по лентам (вертикально) - только если есть все ленты */}
+        {allLentas && allLentas.length > 0 && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePrevLenta()
+              }}
+              style={{
+                position: 'absolute',
+                top: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↑
+            </button>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleNextLenta()
+              }}
+              style={{
+                position: 'absolute',
+                bottom: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↓
+            </button>
+          </>
+        )}
+
+        {/* Индикатор текущего кадра и ленты */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: allLentas && allLentas.length > 0 ? '100px' : '32px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            zIndex: 100002,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          {allLentas && allLentas.length > 0 && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '14px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              Лента {currentLentaIndex + 1} / {allLentas.length}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              display: 'flex',
+              gap: '8px'
+            }}>
+              {currentFrames.map((_, index) => (
+                <div
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCurrentFrameIndex(index)
+                  }}
+                  style={{
+                    width: index === currentFrameIndex ? '32px' : '8px',
+                    height: '8px',
+                    borderRadius: '4px',
+                    backgroundColor: index === currentFrameIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '12px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              {currentFrameIndex + 1} / {currentFrames.length}
+            </div>
+          )}
+        </div>
+
+      </motion.div>
+    </>
+  )
+}
+
+const ProgressChart = memo(function ProgressChart({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Внешний круг - больше элементов, зависящих от скролла
+  const outerData = [
+    { name: 'P1', value: progress }, // 0-100%
+    { name: 'P2', value: progress * 0.7 }, // 0-70%
+    { name: 'P3', value: progress * 0.5 }, // 0-50%
+    { name: 'P4', value: progress * 0.3 }, // 0-30%
+    { name: 'A', value: 25 + progress * 0.2 }, // Двигается вверх
+    { name: 'B', value: 30 - progress * 0.15 }, // Двигается вниз
+    { name: 'C', value: 20 + progress * 0.4 }, // Двигается вверх
+    { name: 'D', value: 35 - progress * 0.25 }, // Двигается вниз
+    { name: 'E', value: 15 + progress * 0.35 }, // Двигается вверх
+    { name: 'F', value: 40 - progress * 0.2 } // Двигается вниз
+  ]
+
+  // Внутренний круг - тоже с движущимися элементами
+  const innerData = [
+    { name: 'IP1', value: progress * 0.8 }, // 0-80%
+    { name: 'IP2', value: progress * 0.6 }, // 0-60%
+    { name: 'IP3', value: progress * 0.4 }, // 0-40%
+    { name: 'IA', value: 20 + progress * 0.3 }, // Двигается вверх
+    { name: 'IB', value: 25 - progress * 0.2 }, // Двигается вниз
+    { name: 'IC', value: 15 + progress * 0.5 }, // Двигается вверх
+    { name: 'ID', value: 30 - progress * 0.3 } // Двигается вниз
+  ]
+
+  return (
+    <div key="progress-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <PieChart key="pie-chart" width={600} height={600}>
+        {/* Внешний круг */}
+        <Pie
+          data={outerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={120}
+          outerRadius={200}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={3}
+          paddingAngle={2}
+        >
+          {outerData.map((entry, index) => (
+            <Cell 
+              key={`outer-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={3}
+            />
+          ))}
+        </Pie>
+        {/* Внутренний круг */}
+        <Pie
+          data={innerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={20}
+          outerRadius={110}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={2}
+          paddingAngle={1.5}
+        >
+          {innerData.map((entry, index) => (
+            <Cell 
+              key={`inner-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={2}
+            />
+          ))}
+        </Pie>
+      </PieChart>
+    </div>
+  )
+})
+
+// Компонент линейной диаграммы с точками, зависящими от скролла
+const LineChartComponent = memo(function LineChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки точек (Dots)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, value2: 30 - progress * 0.2 }, // Первая линия вверх, вторая вниз
+    { name: 'B', value: 50 - progress * 0.2, value2: 40 + progress * 0.3 }, // Первая вниз, вторая вверх
+    { name: 'C', value: 30 + progress * 0.4, value2: 50 - progress * 0.25 }, // Первая вверх, вторая вниз
+    { name: 'D', value: 60 - progress * 0.3, value2: 35 + progress * 0.4 }, // Первая вниз, вторая вверх
+    { name: 'E', value: 40 + progress * 0.25, value2: 55 - progress * 0.15 }, // Первая вверх, вторая вниз
+    { name: 'F', value: 70 - progress * 0.35, value2: 25 + progress * 0.5 }, // Первая вниз, вторая вверх
+    { name: 'G', value: 25 + progress * 0.5, value2: 60 - progress * 0.3 }, // Первая вверх, вторая вниз
+    { name: 'H', value: 55 - progress * 0.15, value2: 45 + progress * 0.2 }, // Первая вниз, вторая вверх
+    { name: 'I', value: 35 + progress * 0.3, value2: 50 - progress * 0.35 }, // Первая вверх, вторая вниз
+    { name: 'J', value: 65 - progress * 0.4, value2: 30 + progress * 0.45 }  // Первая вниз, вторая вверх
+  ], [progress])
+
+  return (
+    <div
+      key="line-chart-container"
+      style={{
+      width: '100%',
+      height: '100%',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      padding: 0,
+      zIndex: 1,
+      pointerEvents: 'none'
+    }}>
+      <ResponsiveContainer key="line-responsive-container" width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+          <XAxis 
+            dataKey="name" 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            hide={true}
+          />
+          <YAxis 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            domain={[0, 100]}
+            hide={true}
+          />
+          <Tooltip
+            key="line-tooltip"
+            cursor={false}
+            isAnimationActive={false}
+            contentStyle={{
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#ffffff'
+            }}
+          />
+          {/* Старая линия с точками */}
+          <Line
+            key="line1"
+            type="monotone"
+            dataKey="value"
+            stroke="#ffffff"
+            strokeWidth={3}
+            dot={{ fill: '#ffffff', r: 6 }}
+            activeDot={{ r: 8 }}
+          />
+          {/* Новая угловатая линия без точек */}
+          <Line
+            key="line2"
+            type="step"
+            dataKey="value2"
+            stroke="#ffffff"
+            strokeWidth={2}
+            dot={false}
+            strokeOpacity={0.7}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радарной диаграммы
+const RadarChartComponent = memo(function RadarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const data = [
+    { subject: 'A', value: 50 + progress * 0.3, fullMark: 100 },
+    { subject: 'B', value: 60 - progress * 0.2, fullMark: 100 },
+    { subject: 'C', value: 40 + progress * 0.4, fullMark: 100 },
+    { subject: 'D', value: 70 - progress * 0.3, fullMark: 100 },
+    { subject: 'E', value: 55 + progress * 0.25, fullMark: 100 },
+    { subject: 'F', value: 45 - progress * 0.35, fullMark: 100 }
+  ]
+
+  return (
+    <div key="radar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radar-responsive-container" width="100%" height="100%">
+        <RadarChart key="radar-chart" data={data}>
+          <PolarGrid stroke="#ffffff" strokeOpacity={0.3} />
+          <PolarAngleAxis 
+            dataKey="subject" 
+            tick={{ fill: '#ffffff', fontSize: 12 }}
+          />
+          <PolarRadiusAxis 
+            angle={90} 
+            domain={[0, 100]}
+            tick={{ fill: '#ffffff', fontSize: 10 }}
+          />
+          <Radar 
+            name="Value" 
+            dataKey="value" 
+            stroke="#ffffff" 
+            fill="#ffffff" 
+            fillOpacity={0.3}
+            strokeWidth={2}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радиальной столбчатой диаграммы, зависимый от скролла
+const RadialBarChartComponent = memo(function RadialBarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки секторов (RadialBarSectors)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, fill: '#ffffff' },
+    { name: 'B', value: 40 - progress * 0.2, fill: '#ffffff' },
+    { name: 'C', value: 60 + progress * 0.4, fill: '#ffffff' },
+    { name: 'D', value: 30 - progress * 0.3, fill: '#ffffff' },
+    { name: 'E', value: 50 + progress * 0.25, fill: '#ffffff' },
+    { name: 'F', value: 70 - progress * 0.35, fill: '#ffffff' }
+  ], [progress])
+
+  return (
+    <div key="radial-bar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radial-responsive-container" width="100%" height="100%">
+        <RadialBarChart
+          key="radial-bar-chart" 
+          cx="50%" 
+          cy="50%" 
+          innerRadius="20%" 
+          outerRadius="80%" 
+          data={data}
+          startAngle={90}
+          endAngle={-270}
+        >
+          <RadialBar
+            key="radial-bar"
+            dataKey="value"
+            cornerRadius={4}
+            fill="rgba(255, 255, 255, 0.3)"
+            stroke="#ffffff"
+            strokeWidth={2}
+          />
+        </RadialBarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент карусели с постерами фильмов (вращающаяся карусель)
+const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValues = null }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [wasDragging, setWasDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [dragOffset, setDragOffset] = useState(0)
+  const carouselRef = useRef(null)
+  const autoPlayRef = useRef(null)
+  const [isInViewport, setIsInViewport] = useState(false)
+
+  // Проверка видимости компонента в viewport
+  useEffect(() => {
+    if (!carouselRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsInViewport(entry.isIntersecting)
+        })
+      },
+      {
+        threshold: 0.1 // Компонент считается видимым, если видно хотя бы 10%
+      }
+    )
+
+    observer.observe(carouselRef.current)
+
+    return () => {
+      if (carouselRef.current) {
+        observer.unobserve(carouselRef.current)
+      }
+    }
+  }, [])
+
+  // Автоматическое вращение карусели (но не скролл страницы)
+  useEffect(() => {
+    // Автоплей работает только когда компонент виден
+    if (!isDragging && isInViewport) {
+      autoPlayRef.current = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }, 3000) // Меняем каждые 3 секунды
+    } else {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+
+    return () => {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+  }, [movies.length, isDragging, isInViewport])
+
+  // Обработчики для перетаскивания
+  const handleMouseDown = (e) => {
+    setIsDragging(true)
+    setStartX(e.clientX)
+    setDragOffset(0)
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current)
+    }
+  }
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return
+    const diff = e.clientX - startX
+    setDragOffset(diff)
+  }
+
+  const handleMouseUp = () => {
+    if (!isDragging) return
+    
+    const hadDrag = Math.abs(dragOffset) > 10
+    setWasDragging(hadDrag)
+    
+    // Если перетащили достаточно далеко, меняем слайд
+    if (Math.abs(dragOffset) > 100) {
+      if (dragOffset > 0) {
+        setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length)
+      } else {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }
+    }
+    
+    setIsDragging(false)
+    setDragOffset(0)
+    
+    // Сбрасываем флаг через небольшую задержку
+    setTimeout(() => setWasDragging(false), 100)
+  }
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false)
+      setDragOffset(0)
+    }
+  }
+
+  // Вычисляем позиции для карусели (3D эффект)
+  const getTransform = (index) => {
+    const offset = index - currentIndex
+    const absOffset = Math.abs(offset)
+    const direction = offset > 0 ? 1 : -1
+    
+    // Если элемент далеко, скрываем его
+    if (absOffset > 3) {
+      return {
+        transform: `translateX(${direction * 400}px) translateZ(-200px) scale(0.5)`,
+        opacity: 0,
+        zIndex: 0
+      }
+    }
+
+    // Близкие элементы видны
+    const scale = 1 - absOffset * 0.15
+    const translateX = offset * 220 + (isDragging ? dragOffset : 0)
+    const translateZ = -absOffset * 100
+    const opacity = 1 - absOffset * 0.3
+
+    return {
+      transform: `translateX(${translateX}px) translateZ(${translateZ}px) scale(${scale})`,
+      opacity: Math.max(0, opacity),
+      zIndex: movies.length - absOffset
+    }
+  }
+
+  return (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem 0',
+      perspective: '1000px',
+      perspectiveOrigin: 'center center'
+    }}>
+      <div 
+        ref={carouselRef}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '400px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transformStyle: 'preserve-3d',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
+        {movies.map((movie, index) => {
+          const baseStyle = getTransform(index)
+          const offset = Math.abs(index - currentIndex)
+          
+          // Определяем параллакс в зависимости от расстояния от центра
+          // Параллакс работает только когда компонент в viewport и параллакс включен
+          let parallaxX, parallaxY, rotateX, rotateY
+          if (!isInViewport || !isParallaxEnabled) {
+            // Если не в viewport или параллакс отключен - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          } else if (offset === 0) {
+            // Центральная карточка - сильный параллакс
+            parallaxX = mouseParallaxValues?.centerX || 0
+            parallaxY = mouseParallaxValues?.centerY || 0
+            rotateX = mouseParallaxValues?.centerRotateX || 0
+            rotateY = mouseParallaxValues?.centerRotateY || 0
+          } else if (offset === 1) {
+            // Близкие карточки - средний параллакс
+            parallaxX = mouseParallaxValues?.nearX || 0
+            parallaxY = mouseParallaxValues?.nearY || 0
+            rotateX = mouseParallaxValues?.nearRotateX || 0
+            rotateY = mouseParallaxValues?.nearRotateY || 0
+          } else if (offset === 2) {
+            // Дальние карточки - слабый параллакс
+            parallaxX = mouseParallaxValues?.farX || 0
+            parallaxY = mouseParallaxValues?.farY || 0
+            rotateX = mouseParallaxValues?.farRotateX || 0
+            rotateY = mouseParallaxValues?.farRotateY || 0
+          } else {
+            // Очень дальние карточки - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          }
+          
+          const handleClick = (e) => {
+            // Не открываем ссылку, если был drag
+            if (wasDragging || isDragging) {
+              e.preventDefault()
+              return
+            }
+            if (movie.kinopoiskId) {
+              window.open(`https://www.kinopoisk.ru/film/${movie.kinopoiskId}/`, '_blank')
+            }
+          }
+
+          return (
+            <motion.div
+              key={index}
+              style={{
+                position: 'absolute',
+                width: '200px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.6s ease',
+                ...baseStyle
+              }}
+              onClick={handleClick}
+            >
+              {/* Внутренний элемент для параллакса, чтобы не ломать существующий transform */}
+              <motion.div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  x: parallaxX,
+                  y: parallaxY,
+                  rotateX: rotateX,
+                  rotateY: rotateY,
+                  perspective: '1000px',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+              <div style={{
+                width: '100%',
+                height: '300px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                backgroundColor: '#333',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <img
+                  src={movie.poster}
+                  alt={movie.title}
+                  draggable={false}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    userSelect: 'none',
+                    pointerEvents: 'none'
+                  }}
+                  onError={(e) => {
+                    // При ошибке скрываем изображение и показываем название
+                    e.target.style.display = 'none'
+                    const parent = e.target.parentElement
+                    if (!parent.querySelector('.fallback-text')) {
+                      const fallback = document.createElement('div')
+                      fallback.className = 'fallback-text'
+                      fallback.style.cssText = 'color: #ffffff; font-family: "Slovic", sans-serif; font-size: 1.2rem; text-align: center; padding: 1rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%;'
+                      fallback.textContent = movie.title
+                      parent.appendChild(fallback)
+                    }
+                  }}
+                />
+              </div>
+              <div style={{
+                color: '#ffffff',
+                fontSize: '0.9rem',
+                fontFamily: "'Slovic', sans-serif",
+                textAlign: 'center',
+                padding: '0.5rem',
+                lineHeight: '1.3'
+              }}>
+                {movie.title}
+              </div>
+              </motion.div>
+            </motion.div>
+          )
+        })}
+      </div>
+      
+      {/* Индикаторы точек */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        marginTop: '2rem'
+      }}>
+        {movies.map((_, index) => (
+          <div
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            style={{
+              width: index === currentIndex ? '24px' : '8px',
+              height: '8px',
+              borderRadius: '4px',
+              backgroundColor: index === currentIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Кастомная функция сравнения - перерисовываем только если изменились movies
+  // mouseParallaxValues - это motion values, они не должны вызывать перерисовки
+  return prevProps.movies === nextProps.movies
+})
+
+// Компонент текстуры с закругленными прямоугольниками для границ экрана
+function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset = null }) {
+  // Параметры текстуры - одинаковые отступы
+  const gap = 5 // Отступ между элементами и от краев
+  const rectWidth = 20
+  const rectHeight = 16
+  const rectSpacing = rectWidth + gap * 2 // Ширина элемента + отступы с обеих сторон
+  const borderRadius = 2 // Меньше закругление
+  const edgeOffset = 20 // Отступ от края экрана
+
+  // Преобразуем scrollProgress в смещение текстуры с spring эффектом
+  const scrollOffsetRaw = useTransform(scrollProgress, [0, 1], [0, 600]) // Увеличено в 3 раза (200 -> 600)
+  const scrollOffset = useSpring(scrollOffsetRaw, {
+    stiffness: 50,
+    damping: 20,
+    mass: 1
+  })
+  
+  // Комбинируем скролл и накопленное смещение от мыши (всегда в одну сторону)
+  const combinedOffset = useMotionValue(0)
+  
+  useEffect(() => {
+    const updateOffset = () => {
+      const scroll = scrollOffset.get()
+      const mouse = mouseOffset ? mouseOffset.get() : 0
+      // Мышь всегда добавляет смещение в одну сторону (вправо)
+      combinedOffset.set(scroll + mouse)
+    }
+    
+    const unsubscribeScroll = scrollOffset.on('change', updateOffset)
+    const unsubscribeMouse = mouseOffset ? mouseOffset.on('change', updateOffset) : null
+    
+    updateOffset()
+    
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouse) unsubscribeMouse()
+    }
+  }, [scrollOffset, mouseOffset, combinedOffset])
+  
+  const backgroundPosition = useTransform(combinedOffset, (value) => `${value}px 0`)
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="${gap}" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.4"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        [position]: `${edgeOffset}px`, // Отступ от края
+        left: 0,
+        width: '100%',
+        height: `${rectHeight + 4}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: backgroundPosition,
+        pointerEvents: 'none',
+        zIndex: 25
+      }}
+    />
+  )
+}
+
+// Компонент для горизонтальных царапин, которые перерисовываются при движении мыши
+function ScratchesComponent({ count = 15, scratchRedrawTrigger }) {
+  const [scratches, setScratches] = useState([])
+  const [renderKey, setRenderKey] = useState(0)
+  
+  // Перерисовываем царапины при изменении триггера
+  useMotionValueEvent(scratchRedrawTrigger, 'change', () => {
+    // Генерируем новые позиции и параметры для всех царапин
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+    // Меняем key для полной перерисовки элементов
+    setRenderKey(prev => prev + 1)
+  })
+  
+  // Инициализация при монтировании
+  useEffect(() => {
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+  }, [count])
+  
+  return (
+    <>
+      {scratches.map((scratch) => (
+        <div
+          key={`${scratch.id}-${renderKey}`} // Меняем key для полной перерисовки
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '2px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: scratch.opacity,
+            transform: `rotate(${scratch.rotate}deg)`,
+            boxShadow: '0 0 3px rgba(255, 255, 255, 0.2)'
+            // Убрали transition - элементы появляются мгновенно в новых местах
+          }}
+        />
+      ))}
+    </>
+  )
+}
+
+// Компонент слоя помех с поддержкой скролла и мыши (без движения, только изменение параметров)
+function GrainLayerComponent({ zIndex, opacity, backgroundImage, backgroundSize, mixBlendMode, filter, grainBackgroundPosition, grainNoiseOpacity = null }) {
+  const layerRef = useRef(null)
+  
+  useMotionValueEvent(grainBackgroundPosition, 'change', (latest) => {
+    if (layerRef.current) {
+      layerRef.current.style.backgroundPosition = latest
+    }
+  })
+  
+  // Изменяем opacity на основе мыши и скролла
+  useEffect(() => {
+    if (!grainNoiseOpacity) return
+    
+    const unsubscribe = grainNoiseOpacity.on('change', (latest) => {
+      if (layerRef.current) {
+        layerRef.current.style.opacity = latest * opacity
+      }
+    })
+    
+    return () => unsubscribe()
+  }, [grainNoiseOpacity, opacity])
+  
+  return (
+    <div
+      ref={layerRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex,
+        opacity: grainNoiseOpacity ? undefined : opacity,
+        backgroundImage,
+        backgroundSize,
+        mixBlendMode,
+        filter
+      }}
+    />
+  )
+}
+
+// Мемоизированный контейнер для диаграмм с параллаксом
+const ChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      left: '50%',
+      top: '2rem', // default top
+      zIndex: 12,
+      width: '25vw',
+      height: '25vw',
+      maxWidth: '300px',
+      maxHeight: '300px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный контейнер для центральной большой диаграммы
+const CenterChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      zIndex: 18,
+      width: '80vw',
+      height: '80vw',
+      maxWidth: '1000px',
+      maxHeight: '1000px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный индикатор прогресса
+const ProgressIndicator = memo(({ progressText }) => (
+  <div style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+    pointerEvents: 'none',
+    zIndex: 1000
+  }}>
+    <div style={{
+      position: 'sticky',
+      top: '45px',
+      width: 'fit-content',
+      marginLeft: 'auto',
+      marginRight: '16px',
+      color: '#ffffff',
+      fontSize: 'clamp(14px, 2vw, 18px)',
+      fontFamily: "'Science Gothic', monospace",
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      padding: '8px 16px',
+      borderRadius: '4px',
+      backdropFilter: 'blur(4px)',
+      pointerEvents: 'none'
+    }}>
+      Запуск процессов: {progressText}%
+    </div>
+  </div>
+))
+
+// Мемоизированный список пунктов договора
+const ContractItemsList = memo(({ progressMotionValue }) => (
+  <div style={{
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 'clamp(16px, 3vw, 2em)',
+    paddingRight: 'clamp(16px, 3vw, 2em)'
+  }}>
+    <ContractItem text="Подбор и согласование локаций любой сложности по всей России" progress={progressMotionValue} threshold={35} textColor="#ffffff" />
+    <ContractItem text="Согласуем все договоренности и разрешения" progress={progressMotionValue} threshold={40} textColor="#ffffff" />
+    <ContractItem text="Полное сопровождение съемок и постродакшен" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
+    <ContractItem text="Кинопроизводство полного цикла" progress={progressMotionValue} threshold={60} textColor="#ffffff" />
+    <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={progressMotionValue} threshold={65} textColor="#ffffff" />
+  </div>
+))
+
+// Компонент эффекта помех/повреждения пленки для второго экрана
+function FilmGrainEffect({ scrollProgress }) {
+  const [grainIntensity, setGrainIntensity] = useState(0)
+  const [scratchOffset, setScratchOffset] = useState(0)
+  const [rgbSplit, setRgbSplit] = useState(0)
+  const [flicker, setFlicker] = useState(1)
+
+  // Обновляем интенсивность эффектов на основе скролла
+  useMotionValueEvent(scrollProgress, "change", (latest) => {
+    const progress = Math.min(Math.max(latest, 0), 1)
+    setGrainIntensity(progress)
+    setScratchOffset(progress * 200)
+    setRgbSplit(progress * 8) // Максимальное смещение RGB каналов 8px
+    // Flicker эффект - случайные вспышки при скролле
+    setFlicker(1 - (Math.random() * 0.15 * progress))
+  })
+
+  // Генерируем случайные царапины
+  const scratches = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    top: Math.random() * 100,
+    left: Math.random() * 100,
+    width: Math.random() * 300 + 100,
+    opacity: Math.random() * 0.5 + 0.2,
+    delay: Math.random() * 2
+  }))
+
+  return (
+    <>
+      {/* Основной слой зернистости - более заметный */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 100,
+          opacity: Math.max(0.3, grainIntensity * 0.8),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.3) 3px),
+            repeating-linear-gradient(90deg, rgba(0,0,0,0.2) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.2) 3px),
+            repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.05) 3px)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.3) brightness(0.85)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 100}% ${Math.random() * 100}%`,
+            `${Math.random() * 100}% ${Math.random() * 100}%`
+          ]
+        }}
+        transition={{
+          duration: 0.05,
+          repeat: Infinity,
+          repeatType: 'reverse'
+        }}
+      />
+
+      {/* RGB Split эффект - смещение цветовых каналов */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 101,
+          opacity: Math.max(0.2, grainIntensity * 0.7),
+          background: `
+            linear-gradient(to right, 
+              rgba(255, 0, 0, 0.2) 0%, 
+              transparent ${rgbSplit}px,
+              transparent calc(100% - ${rgbSplit}px),
+              rgba(0, 0, 255, 0.2) 100%)
+          `,
+          mixBlendMode: 'screen',
+          transform: `translateX(${rgbSplit * 0.3}px)`,
+          filter: `blur(${rgbSplit * 0.1}px)`
+        }}
+      />
+
+      {/* Горизонтальные царапины */}
+      {scratches.map((scratch) => (
+        <motion.div
+          key={scratch.id}
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '3px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.6), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity)),
+            transform: `translateX(${scratchOffset * 0.5}px)`,
+            boxShadow: '0 0 4px rgba(255, 255, 255, 0.3)'
+          }}
+          animate={{
+            x: [0, scratchOffset * 0.5, 0],
+            opacity: [
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5),
+              Math.max(0.2, scratch.opacity * Math.max(0.3, grainIntensity)),
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5)
+            ]
+          }}
+          transition={{
+            duration: 1.5 + Math.random() * 2,
+            repeat: Infinity,
+            delay: scratch.delay,
+            ease: 'linear'
+          }}
+        />
+      ))}
+
+      {/* Вертикальные полосы повреждений */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 103,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          backgroundImage: `
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.1) 2px,
+              rgba(255, 255, 255, 0.1) 3px,
+              transparent 3px,
+              transparent 5px
+            )
+          `,
+          backgroundSize: '80px 100%',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          backgroundPosition: [`${scratchOffset * 0.3}px 0`, `${scratchOffset * 0.3 + 80}px 0`]
+        }}
+        transition={{
+          duration: 0.3,
+          repeat: Infinity,
+          ease: 'linear'
+        }}
+      />
+
+      {/* Flicker эффект - мерцание */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 104,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          opacity: [flicker * 0.4, flicker * 0.8, flicker * 0.4]
+        }}
+        transition={{
+          duration: 0.08 + Math.random() * 0.15,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+
+      {/* Дополнительный шум через canvas-like эффект */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 99,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          background: `
+            radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.04) 0%, transparent 40%),
+            radial-gradient(circle at 90% 20%, rgba(0, 0, 0, 0.04) 0%, transparent 40%)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'difference',
+          filter: 'blur(1px)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 50}% ${Math.random() * 50}%`,
+            `${Math.random() * 50 + 50}% ${Math.random() * 50 + 50}%`
+          ]
+        }}
+        transition={{
+          duration: 2 + Math.random() * 1.5,
+          repeat: Infinity,
+          repeatType: 'reverse',
+          ease: 'easeInOut'
+        }}
+      />
+      
+      {/* Дополнительный слой статического шума */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 105,
+          opacity: Math.max(0.15, grainIntensity * 0.5),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px)
+          `,
+          backgroundSize: '4px 4px',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.5)'
+        }}
+        animate={{
+          opacity: [
+            Math.max(0.15, grainIntensity * 0.5),
+            Math.max(0.25, grainIntensity * 0.7),
+            Math.max(0.15, grainIntensity * 0.5)
+          ]
+        }}
+        transition={{
+          duration: 0.1,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+    </>
+  )
+}
+
+// Компонент звездного неба с мерцающими звездами
+// Компонент сетки с названиями партнеров
+function PartnersGrid({ partners }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: '2rem',
+      width: '100%',
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '2rem'
+    }}>
+      {partners.map((partner, index) => (
+        <div
+          key={index}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer',
+            minHeight: '150px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+            e.currentTarget.style.transform = 'scale(1.05)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <div style={{
+            color: '#ffffff',
+            fontFamily: "'Slovic', sans-serif",
+            fontSize: '1.5rem',
+            textAlign: 'center',
+            fontWeight: 'bold'
+          }}>
+            {partner.name}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
+  const [stars] = useState(() => {
+    return Array.from({ length: starCount }, () => ({
+      x: Math.random() * 100, // Позиция X в процентах
+      y: Math.random() * 100, // Позиция Y в процентах
+      size: Math.random() * 2 + 0.5, // Размер от 0.5px до 2.5px (меньше)
+      baseOpacity: Math.random() * 0.4 + 0.2, // Базовая прозрачность от 0.2 до 0.6
+      peakOpacity: Math.random() * 0.3 + 0.7, // Пиковая прозрачность от 0.7 до 1.0
+      duration: Math.random() * 2 + 1.5, // Длительность анимации от 1.5 до 3.5 секунд
+      delay: Math.random() * 2 // Задержка начала анимации от 0 до 2 секунд
+    }))
+  })
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: 1
+    }}>
+      {stars.map((star, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: star.baseOpacity }}
+          animate={{
+            opacity: [star.baseOpacity, star.peakOpacity, star.baseOpacity]
+          }}
+          transition={{
+            duration: star.duration,
+            repeat: Infinity,
+            delay: star.delay,
+            ease: "easeInOut"
+          }}
+          style={{
+            position: 'absolute',
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            borderRadius: '50%',
+            backgroundColor: '#ffffff',
+            boxShadow: `0 0 ${star.size}px rgba(255, 255, 255, 0.5)`
+          }}
+        />
+      ))}
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Перерисовываем только если изменился starCount
+  return prevProps.starCount === nextProps.starCount
+})
+
+// Компонент текстуры перфорации для лент
+function LentaPerforationTexture({ width, height, position = 'top', scale = 1 }) {
+  // Параметры текстуры - масштабируемые
+  // Отступы одинаковые: от краев ленты и между элементами
+  const gap = 5 * scale // Отступ между элементами и от краев (одинаковый)
+  const rectWidth = 20 * scale
+  const rectHeight = Math.min(height * 0.8, 16 * scale) // Адаптируем под высоту полосы
+  // Расстояние между началами элементов = ширина элемента + gap (отступ между элементами)
+  const rectSpacing = rectWidth + gap // Ширина элемента + один отступ
+  const borderRadius = 2 * scale // Меньше закругление
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  // Элемент начинается с 0, так как отступ от края уже учтен в позиции контейнера
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.2"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        [position]: 0,
+        left: `${gap}px`, // Отступ от левого края
+        width: `${width - gap * 2}px`, // Уменьшаем ширину на отступы с обеих сторон
+        height: `${height}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: '0 0',
+        pointerEvents: 'none',
+        zIndex: 1
+      }}
+    />
+  )
+}
+
+function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  
+  // Определяем список существующих файлов в папке (проверяем до 20 файлов)
+  const [existingFileNumbers, setExistingFileNumbers] = useState([])
+  
+  useEffect(() => {
+    if (!folderId) {
+      setExistingFileNumbers([])
+      return
+    }
+    
+    // Проверяем все файлы в папке (до 20) и собираем список существующих
+    // Это позволяет находить файлы даже если они не начинаются с 1.webp
+    const checkImageCount = async () => {
+      const maxCheck = 20 // Максимальное количество файлов для проверки
+      const existingFiles = []
+      
+      // Проверяем все файлы от 1 до maxCheck
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          
+          // Таймаут увеличен до 500ms для более надежной проверки
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      setExistingFileNumbers(existingFiles)
+    }
+    
+    checkImageCount()
+  }, [folderId])
+  
+  // Генерируем список путей к изображениям на основе найденных файлов
+  const frames = useMemo(() => {
+    if (existingFileNumbers.length > 0 && folderId) {
+      return existingFileNumbers.map((fileNum) => ({
+        type: 'image',
+        src: `/photos/${folderId}/${fileNum}.webp`
+      }))
+    }
+    // Fallback на случайные цвета если изображения не найдены
+    return Array.from({ length: 8 }, () => {
+      const r = Math.floor(Math.random() * 256)
+      const g = Math.floor(Math.random() * 256)
+      const b = Math.floor(Math.random() * 256)
+      return { type: 'color', value: `rgb(${r}, ${g}, ${b})` }
+    })
+  }, [existingFileNumbers, folderId])
+  
+  const frameCount = frames.length
+  
+  // Состояние для отслеживания hover на каждом кадре - временно отключено для производительности
+  // const [hoveredIndex, setHoveredIndex] = useState(null)
+
+  // progress может быть motion value или числом
+  // Прямое преобразование progress в позицию без spring - синхронно со скроллом
+  // Если progress - motion value, используем его напрямую, иначе создаем из числа
+  const progressMotion = typeof progress === 'object' && 'get' in progress 
+    ? progress 
+    : useMotionValue(typeof progress === 'number' ? (progress > 1 ? progress / 100 : progress) : 0)
+  
+  // Если progress - число, обновляем motion value
+  useEffect(() => {
+    if (typeof progress === 'number') {
+      const normalized = progress > 1 ? progress / 100 : progress
+      progressMotion.set(normalized)
+    }
+  }, [progress, progressMotion])
+  
+  // Прямое преобразование progress в позицию - без задержки, синхронно
+  const translateXValue = useTransform(progressMotion, (prog) => {
+    let targetLeftPosition = Math.max(-200, Math.min(200, (prog - center) * 500 * speed))
+    if (inverse) {
+      targetLeftPosition = -targetLeftPosition
+    }
+    return `translateX(${targetLeftPosition}vw)`
+  })
+
+  // Вычисляем zIndex на основе scale - крупные ленты должны быть выше визуально
+  // Базовый zIndex 1000, добавляем scale * 100 для правильного порядка
+  const zIndex = 1000 + Math.round(scale * 100)
+
+  return (
+    // Внешний контейнер - позиционирование относительно viewport
+    // Используем position: fixed для позиционирования относительно окна браузера
+          <div style={{
+      position: 'fixed',
+      top: `calc(50vh + ${topOffset}vh)`,
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      transformOrigin: 'center center',
+      zIndex: zIndex,
+      pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
+          }}>
+      {/* Контейнер поворота - поворачивается на angle градусов + параллакс */}
+            <motion.div
+        style={{
+        rotate: `${angle}deg`,
+        transformOrigin: 'center center',
+        pointerEvents: 'none',
+        x: isParallaxEnabled ? (parallaxX || 0) : 0,
+        y: isParallaxEnabled ? (parallaxY || 0) : 0,
+        rotateX: isParallaxEnabled ? (rotateX || 0) : 0,
+        rotateY: isParallaxEnabled ? (rotateY || 0) : 0,
+        perspective: '1000px'
+      }}>
+        {/* Контейнер движения - двигается по повернутой оси X */}
+        <motion.div
+          style={{
+            display: 'flex',
+            gap: 0, // Убираем отступы между кадрами для цельной ленты
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            pointerEvents: 'none', // Контейнер не перехватывает события - скролл проходит сквозь
+            transform: translateXValue,
+            position: 'relative' // Для позиционирования перфорации на уровне всей ленты
+          }}
+          onWheel={(e) => {
+            // Пробрасываем скролл событие - не блокируем его
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            // Не блокируем события мыши для скролла
+            e.stopPropagation()
+          }}
+        >
+          {(() => {
+            // Вычисляем параметры один раз для всей ленты
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale
+            const totalWidth = frameWidth * frameCount
+            
+            return (
+              <>
+                {/* Текстура перфорации на верхней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="top"
+                  scale={scale}
+                />
+                
+                {/* Текстура перфорации на нижней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="bottom"
+                  scale={scale}
+                />
+              </>
+            )
+          })()}
+          
+          {/* Кадры ленты */}
+          {frames.map((frame, index) => {
+            const isHovered = false // Временно отключено для производительности
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale // Высота черной полосы сверху/снизу
+            const holeSize = 4 * scale // Размер дырочек
+            const holeSpacing = 12 * scale // Расстояние между центрами дырочек
+            
+            return (
+              <div
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onFrameClick) onFrameClick(lentaId, index, frames)
+                }}
+                onWheel={(e) => {
+                  // Пробрасываем скролл событие родителю - не блокируем скролл
+                  if (containerRef && containerRef.current) {
+                    // Не вызываем preventDefault, чтобы скролл работал естественно
+                    // Просто пробрасываем событие
+                    const scrollEvent = new WheelEvent('wheel', {
+                      deltaY: e.deltaY,
+                      deltaX: e.deltaX,
+                      bubbles: true,
+                      cancelable: true
+                    })
+                    containerRef.current.dispatchEvent(scrollEvent)
+                  }
+                }}
+                onTouchMove={(e) => {
+                  // Для touch устройств тоже пробрасываем скролл
+                  if (containerRef && containerRef.current) {
+                    e.stopPropagation()
+                  }
+                }}
+                style={{
+                  width: `${frameWidth}px`,
+                  height: `${frameHeight + borderWidth * 2}px`,
+                  flexShrink: 0,
+                  position: 'relative',
+                  backgroundColor: '#000000', // Черный фон для полос сверху/снизу
+                  // Тени убраны для оптимизации производительности
+                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'pointer',
+                  pointerEvents: 'auto', // Кадры кликабельны
+                  touchAction: 'pan-y' // Разрешаем вертикальный скролл на touch устройствах
+                }}
+              >
+                {/* Сам кадр в центре */}
+                {frame.type === 'image' ? (
+                  <img
+                    src={frame.src}
+                    alt={`Frame ${index}`}
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      objectFit: 'cover',
+                      borderRadius: '2px'
+                    }}
+                    onError={(e) => {
+                      // При ошибке загрузки показываем серый фон
+                      e.target.style.display = 'none'
+                      e.target.parentElement.style.backgroundColor = '#333'
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      backgroundColor: frame.value || '#333',
+                      borderRadius: '2px'
+                    }}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </motion.div>
+      </motion.div>
+            </div>
+  )
+}
+
+export default function Home() {
+  const containerRef = useRef(null)
+  const firstScreenRef = useRef(null)
+  const secondScreenRef = useRef(null)
+  const thirdScreenRef = useRef(null)
+
+  // Zustand store для управления эффектами
+  const { isParallaxEnabled, toggleParallax, isGrainEnabled } = useParallaxStore()
+  
+  // Motion values для progress - без перерендеров
+  const progressMotionValue = useMotionValue(0)
+
+  // Spring версии progress для эластичной анимации лент с разными характеристиками
+  // Все ленты слушают один progressMotionValue, но с разными spring эффектами
+  const springProgressFast = useSpring(progressMotionValue, {
+    stiffness: 200, // Высокая жесткость - быстрый отклик
+    damping: 25,   // Низкое затухание - больше "пружинистости"
+    mass: 0.3      // Малая масса - легкость
+  })
+
+  const springProgressMedium = useSpring(progressMotionValue, {
+    stiffness: 150, // Средняя жесткость
+    damping: 30,   // Среднее затухание
+    mass: 0.5      // Средняя масса
+  })
+
+  const springProgressSlow = useSpring(progressMotionValue, {
+    stiffness: 100, // Низкая жесткость - медленный отклик
+    damping: 35,   // Высокое затухание - меньше "пружинистости"
+    mass: 0.8      // Большая масса - инертность
+  })
+  const firstScreenProgressMotionValue = useMotionValue(0)
+  const secondScreenProgressMotionValue = useMotionValue(0)
+  const thirdScreenProgressMotionValue = useMotionValue(0)
+  
+  // Motion values для позиции мыши - без перерендеров
+  const mouseX = useMotionValue(50) // 0-100, начальное значение центр
+  const mouseY = useMotionValue(50) // 0-100, начальное значение центр
+  
+  // Motion value для кастомного скролла
+  const customScrollTop = useMotionValue(0)
+  const [isDraggingScrollbar, setIsDraggingScrollbar] = useState(false)
+  const scrollbarRef = useRef(null)
+  
+  // Для отображения в UI (только для текста) - используем useState только для индикаторов
+  const [progressText, setProgressText] = useState(0)
+  const [firstScreenProgressText, setFirstScreenProgressText] = useState(0)
+  const [secondScreenProgressText, setSecondScreenProgressText] = useState(0)
+  const [thirdScreenProgressText, setThirdScreenProgressText] = useState(0)
+  const [flashActive, setFlashActive] = useState(false)
+  const [clapperboardActive, setClapperboardActive] = useState(false) // Отключено по умолчанию для производительности
+  const [clapperboardVisible, setClapperboardVisible] = useState(false) // Скрыто по умолчанию
+
+  // Состояние для активной галереи
+  const [activeGallery, setActiveGallery] = useState(null) // { lentaId, frameIndex, frames }
+
+  // Ленивая загрузка лент для производительности
+  const [showLents, setShowLents] = useState(false)
+
+  // Показываем ленты после полной загрузки страницы (оптимизация производительности)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLents(true)
+    }, 1000) // Показываем ленты через 1 секунду после загрузки
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Фикс для нестабильных vh и vw единиц - устанавливаем CSS переменные
+  useEffect(() => {
+    const setViewportUnits = () => {
+      const vh = window.innerHeight * 0.01
+      const vw = window.innerWidth * 0.01
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
+      document.documentElement.style.setProperty('--vw', `${vw}px`)
+    }
+
+    // Устанавливаем сразу
+    setViewportUnits()
+
+    // Обновляем при изменении размера окна и ориентации
+    window.addEventListener('resize', setViewportUnits)
+    window.addEventListener('orientationchange', setViewportUnits)
+
+    return () => {
+      window.removeEventListener('resize', setViewportUnits)
+      window.removeEventListener('orientationchange', setViewportUnits)
+    }
+  }, [])
+
+  // Отслеживание позиции мыши для параллакса - без перерендеров
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const x = (e.clientX / window.innerWidth) * 100 // 0-100
+      const y = (e.clientY / window.innerHeight) * 100 // 0-100
+      mouseX.set(x)
+      mouseY.set(y)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [mouseX, mouseY])
+
+  // Transforms для параллакса - преобразуем позицию мыши в значения перспективы
+  // Для крупных лент (scale >= 1.5): сильный эффект
+  const lentaLargeParallaxX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeParallaxY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeRotateX = useTransform(mouseY, [0, 100], [8, -8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaLargeRotateY = useTransform(mouseX, [0, 100], [-8, 8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для средних лент (scale < 1.5): средний эффект
+  const lentaMediumParallaxX = useTransform(mouseX, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumParallaxY = useTransform(mouseY, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumRotateX = useTransform(mouseY, [0, 100], [5, -5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaMediumRotateY = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких лент: слабый эффект
+  const lentaSmallParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaSmallRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для крупной круговой диаграммы в центре: СЛАБЫЙ эффект (она на переднем плане)
+  const chartCenterParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartCenterRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких диаграмм на заднем плане: СИЛЬНЫЙ эффект (они дальше)
+  const chartBackParallaxX = useTransform(mouseX, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackParallaxY = useTransform(mouseY, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackRotateX = useTransform(mouseY, [0, 100], [6, -6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartBackRotateY = useTransform(mouseX, [0, 100], [-6, 6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Комбинированные transforms для центрирования + параллакс
+  const chartCenterX = useTransform(chartCenterParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartCenterY = useTransform(chartCenterParallaxY, (py) => `calc(-50% + ${py}px)`)
+  const chartTopX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartTopY = useTransform(chartBackParallaxY, (py) => `calc(2rem + ${py}px)`)
+  const chartBottomX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartBottomY = useTransform(chartBackParallaxY, (py) => `calc(-2rem + ${py}px)`)
+  
+  // Для помех на втором экране: комбинируем скролл и мышь
+  // Параллакс от мыши для помех
+  const grainMouseX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const grainMouseY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  
+  // Комбинированные motion values для backgroundPosition
+  const grainBackgroundXValue = useMotionValue(0)
+  const grainBackgroundYValue = useMotionValue(0)
+  
+  // Transform для backgroundPosition (комбинированная строка)
+  const grainBackgroundPosition = useTransform(
+    [grainBackgroundXValue, grainBackgroundYValue],
+    ([x, y]) => `${x}px ${y}px`
+  )
+  
+  // Transform для движения самого элемента (x, y) - комбинируем скролл и мышь
+  const grainTransformXValue = useMotionValue(0)
+  const grainTransformYValue = useMotionValue(0)
+  
+  const grainTransformX = grainTransformXValue
+  const grainTransformY = grainTransformYValue
+  
+  // Для лент перфорации: накапливаем смещение при движении мыши (как вращение пленки)
+  const perforationMouseOffset = useMotionValue(0)
+  const lastMouseX = useRef(50) // Начальная позиция мыши (центр)
+  
+  useEffect(() => {
+    const updatePerforationOffset = () => {
+      if (!isParallaxEnabled) return
+
+      const currentMouseX = mouseX.get()
+      const delta = Math.abs(currentMouseX - lastMouseX.current)
+
+      // Если мышь движется, добавляем смещение в одну сторону (вправо)
+      if (delta > 0.1) { // Порог для определения движения
+        // Скорость зависит от скорости движения мыши
+        const speed = Math.min(delta * 2, 5) // Ограничиваем максимальную скорость
+        perforationMouseOffset.set(perforationMouseOffset.get() + speed)
+        lastMouseX.current = currentMouseX
+      }
+    }
+
+    // Небольшое затухание накопленного смещения (имитация трения пленки)
+    const decayInterval = setInterval(() => {
+      const current = perforationMouseOffset.get()
+      if (current > 0) {
+        perforationMouseOffset.set(Math.max(0, current - 0.5)) // Медленное затухание
+      }
+    }, 100) // Каждые 100мс уменьшаем на 0.5
+
+    const unsubscribe = isParallaxEnabled ? mouseX.on('change', updatePerforationOffset) : null
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+      clearInterval(decayInterval)
+    }
+  }, [mouseX, perforationMouseOffset, isParallaxEnabled])
+  
+  // Для карточек проектов: разная сила параллакса в зависимости от расстояния от центра
+  // Центральная карточка (выбранная) - сильный параллакс
+  const movieCardCenterParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardCenterRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  
+  // Близкие карточки (offset 1) - средний параллакс
+  const movieCardNearParallaxX = useTransform(mouseX, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearParallaxY = useTransform(mouseY, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearRotateX = useTransform(mouseY, [0, 100], [2, -2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardNearRotateY = useTransform(mouseX, [0, 100], [-2, 2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Дальние карточки (offset 2) - слабый параллакс
+  const movieCardFarParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardFarRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Стабилизируем объект mouseParallaxValues через useMemo, чтобы не вызывать перерисовки MoviesCarousel
+  const movieParallaxValues = useMemo(() => ({
+    centerX: movieCardCenterParallaxX,
+    centerY: movieCardCenterParallaxY,
+    centerRotateX: movieCardCenterRotateX,
+    centerRotateY: movieCardCenterRotateY,
+    nearX: movieCardNearParallaxX,
+    nearY: movieCardNearParallaxY,
+    nearRotateX: movieCardNearRotateX,
+    nearRotateY: movieCardNearRotateY,
+    farX: movieCardFarParallaxX,
+    farY: movieCardFarParallaxY,
+    farRotateX: movieCardFarRotateX,
+    farRotateY: movieCardFarRotateY
+  }), [
+    movieCardCenterParallaxX, movieCardCenterParallaxY, movieCardCenterRotateX, movieCardCenterRotateY,
+    movieCardNearParallaxX, movieCardNearParallaxY, movieCardNearRotateX, movieCardNearRotateY,
+    movieCardFarParallaxX, movieCardFarParallaxY, movieCardFarRotateX, movieCardFarRotateY
+  ])
+
+  // Партнеры из Excel файла
+  const partners = [
+    { name: 'Direct' },
+    { name: 'YBW' },
+    { name: 'Авивтор-продакшн' },
+    { name: 'Аврора-фильм' },
+    { name: 'Алекс Медиа' },
+    { name: 'Арт-Пикчерз' },
+    { name: 'ВВВ' },
+    { name: 'Вайт Медиа' },
+    { name: 'Глобал Фильм Дистрибьюшн' },
+    { name: 'Дирекция кино / Look film' },
+    { name: 'КИНО-ТВ' },
+    { name: 'КИТ' },
+    { name: 'Камеди клаб продакшн' },
+    { name: 'Космос Студио' },
+    { name: 'Монументал Вижн' },
+    { name: 'Небо' },
+    { name: 'РБ Продакшн' },
+    { name: 'Русское' },
+    { name: 'Сильвер Продакшн' },
+    { name: 'Социальный ролик' },
+    { name: 'СтарМедиа' },
+    { name: 'Студия 812' },
+    { name: 'Студия Федора Добронравова' },
+    { name: 'Телеформат' },
+    { name: 'Точка' },
+    { name: 'Форвард-фильм' },
+    { name: 'Форза Фильм' }
+  ]
+
+  // Проекты из Excel файла, преобразованные в формат для MoviesCarousel
+  const topMovies = useMemo(() => {
+    if (filmographyData.projects && filmographyData.projects.length > 0) {
+      return filmographyData.projects.map((project, index) => {
+        // Создаем простой SVG placeholder для постера
+        const svgContent = `<svg width="200" height="300" xmlns="http://www.w3.org/2000/svg">
+          <rect width="200" height="300" fill="#1a1a1a"/>
+          <text x="100" y="140" font-family="Arial, sans-serif" font-size="14" fill="#ffffff" text-anchor="middle">${project.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+          <text x="100" y="160" font-family="Arial, sans-serif" font-size="11" fill="#888" text-anchor="middle">${(project.studio || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+          <text x="100" y="180" font-family="Arial, sans-serif" font-size="10" fill="#666" text-anchor="middle">${(project.period || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>
+        </svg>`
+        const svgDataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent)
+        
+        return {
+          title: project.title,
+          poster: project.poster || svgDataUri,
+          kinopoiskId: project.kinopoiskId || null,
+          studio: project.studio,
+          period: project.period,
+          format: project.format
+        }
+      })
+    }
+    // Fallback на старые данные, если JSON не загружен
+    return [
+      { title: 'Т-34', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1900788/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Движение вверх', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Холоп', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Серебряные коньки', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Огонь', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Вторжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Лёд 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Союз спасения', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Стриптизёрши', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Время первых', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Экипаж', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Притяжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Лёд', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: '28 панфиловцев', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Душа', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Селфи', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Холоп 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Чебурашка', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Сердце Пармы', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
+      { title: 'Вызов', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 }
+    ]
+  }, [filmographyData.projects])
+  
+  // Генерация frames для ленты на основе lentaId (для стабильности)
+  const generateFramesForLenta = (lentaId, frameCount) => {
+    // Используем lentaId как seed для генерации стабильных цветов
+    const seed = lentaId.split('-')[1] // Извлекаем номер из "lenta-1" -> "1"
+    const seedNum = parseInt(seed) || 0
+    
+    return Array.from({ length: frameCount }, (_, i) => {
+      // Простая детерминированная генерация на основе seed и индекса
+      const r = (seedNum * 17 + i * 23) % 256
+      const g = (seedNum * 31 + i * 37) % 256
+      const b = (seedNum * 41 + i * 43) % 256
+      return `rgb(${r}, ${g}, ${b})`
+    })
+  }
+
+  // Массив всех лент с их данными - используем folderId для генерации путей к изображениям
+  // Количество файлов будет определено динамически при загрузке
+  const allLentas = useMemo(() => {
+    return [
+      { id: 'lenta-1', folderId: '1' },
+      { id: 'lenta-6', folderId: '2' },
+      { id: 'lenta-9', folderId: '3' },
+      { id: 'lenta-2', folderId: '4' },
+      { id: 'lenta-3', folderId: '5' },
+      { id: 'lenta-4', folderId: '6' },
+      { id: 'lenta-7', folderId: '7' },
+      { id: 'lenta-8', folderId: '8' },
+      { id: 'lenta-12', folderId: '9' },
+      { id: 'lenta-5', folderId: '10' },
+      { id: 'lenta-10', folderId: '11' },
+      { id: 'lenta-11', folderId: '12' }
+    ]
+  }, [])
+
+  const handleFrameClick = (lentaId, frameIndex, frames) => {
+    // Находим индекс ленты в массиве
+    const lentaIndex = allLentas.findIndex(l => l.id === lentaId)
+    
+    // Используем переданные frames (они уже содержат реальные изображения)
+    // allLentas будет обновлен в Gallery при загрузке
+    setActiveGallery({ 
+      lentaId, 
+      frameIndex, 
+      frames, // Передаем реальные frames с изображениями
+      lentaIndex: lentaIndex >= 0 ? lentaIndex : 0,
+      allLentas // Передаем allLentas для навигации между лентами
+    })
+  }
+  
+  const handleCloseGallery = () => {
+    setActiveGallery(null)
+  }
+  
+  const handleSign = () => {
+    setFlashActive(true)
+  }
+  
+  const handleFlashComplete = () => {
+    setFlashActive(false)
+  }
+  
+  // Показываем хлопушку на 1/3 времени всех вспышек раньше (~1 сек)
+  // Без автозакрытия - окно остается открытым до ручного закрытия
+  // Но верхняя створка закрывается после падения
+  useEffect(() => {
+    if (flashActive) {
+      // Показываем на 1 сек (на 1/3 времени всех вспышек раньше)
+      const showTimeout = setTimeout(() => {
+        setClapperboardActive(true) // Открыта
+        setClapperboardVisible(true) // Показываем и падает сверху
+      }, 1000) // 1 сек - на 1/3 времени всех вспышек раньше
+      
+      // Закрываем верхнюю створку после падения (через ~1.5 сек после начала падения)
+      // 1000ms (показ) + 1500ms (время падения) = 2500ms
+      const closeFlapTimeout = setTimeout(() => {
+        setClapperboardActive(false) // Закрываем верхнюю створку
+      }, 2500)
+      
+      return () => {
+        clearTimeout(showTimeout)
+        clearTimeout(closeFlapTimeout)
+      }
+    }
+    // Убираем else блок - окно остается видимым до ручного закрытия
+  }, [flashActive])
+  
+  const handleClapperboardClose = useCallback(() => {
+    setClapperboardActive(false)
+    setTimeout(() => {
+      setClapperboardVisible(false)
+    }, 600) // Время на анимацию закрытия
+  }, [])
+
+  // Отслеживаем скролл контейнера с помощью framer-motion
+  const { scrollYProgress, scrollY } = useScroll({
+    container: containerRef,
+    layoutEffect: false
+  })
+
+  // Отслеживаем прогресс каждого экрана от появления до исчезновения
+  // offset: ["start end"] - когда верхний край экрана касается нижней части viewport (0%)
+  // offset: ["end start"] - когда нижний край экрана касается верхней части viewport (100%)
+  const { scrollYProgress: firstScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: firstScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: secondScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: secondScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: thirdScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: thirdScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  // Вычисляем прогресс через useTransform - без перерендеров, прямое обновление DOM
+  // Используем useTransform для преобразования scrollY в progress (0-1)
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const container = containerRef.current
+    const updateProgress = () => {
+      const viewportHeight = container.clientHeight
+      const containerHeight = container.scrollHeight
+      const full = containerHeight - viewportHeight
+      
+      if (full <= 0) {
+        progressMotionValue.set(0)
+        return
+      }
+      
+      // Подписываемся на изменения scrollY и обновляем progressMotionValue
+      const unsubscribe = scrollY.on("change", (latest) => {
+        const progressValue = Math.min(Math.max((latest / full) * 100, 0), 100) / 100
+        progressMotionValue.set(progressValue)
+      })
+      
+      return unsubscribe
+    }
+    
+    const unsubscribe = updateProgress()
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [scrollY, progressMotionValue])
+  
+  // Преобразуем scrollYProgress в motion value напрямую
+  useEffect(() => {
+    const unsubscribe1 = firstScreenScrollProgress.on("change", (latest) => {
+      firstScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe2 = secondScreenScrollProgress.on("change", (latest) => {
+      secondScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe3 = thirdScreenScrollProgress.on("change", (latest) => {
+      thirdScreenProgressMotionValue.set(latest)
+    })
+    
+    return () => {
+      unsubscribe1()
+      unsubscribe2()
+      unsubscribe3()
+    }
+  }, [firstScreenScrollProgress, secondScreenScrollProgress, thirdScreenScrollProgress, firstScreenProgressMotionValue, secondScreenProgressMotionValue, thirdScreenProgressMotionValue])
+  
+  // Motion values для изменения параметров шума (не движения, а изменения свойств)
+  const grainNoiseIntensity = useMotionValue(0.5) // Интенсивность шума
+  const grainNoiseOpacity = useMotionValue(0.6) // Прозрачность шума
+  
+  // Обновляем параметры шума при изменении скролла или мыши (не движение, а изменение)
+  useEffect(() => {
+    const updateNoise = () => {
+      const scroll = secondScreenScrollProgress.get()
+      const mouseXVal = mouseX.get() / 100 // 0-1
+      const mouseYVal = mouseY.get() / 100 // 0-1
+
+      // Изменяем backgroundPosition на основе скролла и мыши (движение фона)
+      if (isParallaxEnabled) {
+        grainBackgroundXValue.set(scroll * 200 + (mouseXVal - 0.5) * 50)
+        grainBackgroundYValue.set(scroll * 200 + (mouseYVal - 0.5) * 50)
+      } else {
+        grainBackgroundXValue.set(scroll * 200) // Только скролл, без мыши
+        grainBackgroundYValue.set(scroll * 200)
+      }
+
+      // Изменяем интенсивность шума на основе мыши и скролла (не движение, а изменение)
+      const mouseInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.1 : 0
+      const noiseIntensity = 0.4 + scroll * 0.3 + mouseInfluence
+      grainNoiseIntensity.set(Math.min(1, Math.max(0.3, noiseIntensity)))
+
+      const mouseOpacityInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.15 : 0
+      const noiseOpacity = 0.5 + scroll * 0.2 + mouseOpacityInfluence
+      grainNoiseOpacity.set(Math.min(1, Math.max(0.3, noiseOpacity)))
+    }
+    
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateNoise)
+    const unsubscribeMouseX = mouseX.on('change', updateNoise)
+    const unsubscribeMouseY = mouseY.on('change', updateNoise)
+    
+    // Инициализация
+    updateNoise()
+    
+    return () => {
+      unsubscribeScroll()
+      unsubscribeMouseX()
+      unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, grainBackgroundXValue, grainBackgroundYValue, grainNoiseIntensity, grainNoiseOpacity])
+  
+  // Motion values для перерисовки царапин (изменение их позиций)
+  const scratchRedrawTrigger = useMotionValue(0) // Триггер для перерисовки
+  
+  useEffect(() => {
+    const updateScratches = () => {
+      // Просто обновляем триггер, чтобы вызвать перерисовку
+      scratchRedrawTrigger.set(Date.now())
+    }
+
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateScratches)
+    const unsubscribeMouseX = isParallaxEnabled ? mouseX.on('change', updateScratches) : null
+    const unsubscribeMouseY = isParallaxEnabled ? mouseY.on('change', updateScratches) : null
+
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouseX) unsubscribeMouseX()
+      if (unsubscribeMouseY) unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, scratchRedrawTrigger, isParallaxEnabled])
+  
+  // UI обновления - синхронные для плавной работы (дебаунсинг только для тяжелых диаграмм)
+  useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    setProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(firstScreenProgressMotionValue, "change", (latest) => {
+    setFirstScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(secondScreenProgressMotionValue, "change", (latest) => {
+    setSecondScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(thirdScreenProgressMotionValue, "change", (latest) => {
+    setThirdScreenProgressText(Math.round(latest * 100))
+  })
+
+  return (
+    <>
+      {/* Компонент Вспышка */}
+      <Flash isActive={flashActive} onComplete={handleFlashComplete} />
+      
+      {/* Галерея для активированной ленты */}
+      {activeGallery && (
+        <Gallery
+          frames={activeGallery.frames}
+          initialIndex={activeGallery.frameIndex}
+          onClose={handleCloseGallery}
+          lentaIndex={activeGallery.lentaIndex}
+          allLentas={activeGallery.allLentas}
+        />
+      )}
+      
+      {/* Логотип SI-PRODUCTION в правом нижнем углу */}
+      <div 
+        className="si-production-logo"
+        style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          color: '#ffffff',
+          fontSize: 'clamp(32px, 6vw, 72px)',
+          fontFamily: "'Science Gothic', monospace",
+          fontWeight: 'bold',
+          zIndex: 10000,
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}
+      >
+        <span 
+          className="si-text"
+          style={{
+            fontFamily: "'Slovic', sans-serif",
+            color: '#ff0000',
+            transform: 'translateY(-3px)'
+          }}
+        >SI</span>
+        <span className="dash-text">-</span>
+        <span 
+          className="production-text"
+          style={{
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+          }}
+        >PRODUCTION</span>
+      </div>
+      
+      {/* Контейнер для хлопушки - fixed с overflow hidden */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        zIndex: 99999, // Ниже вспышки (100000)
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
+            </div>
+
+
+    <div 
+      ref={containerRef} 
+      className="main-scroll-container"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        overflowY: 'auto', // Нативный скролл
+        overflowX: 'hidden',
+        touchAction: 'pan-y' // Разрешаем вертикальный touch-скролл на мобильных
+      }}
+    >
+      {/* Ленты размещены внутри скроллящейся зоны */}
+      {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
+      {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
+      {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
+      {/* Каждая лента соответствует одной папке из public/photos (1-12) */}
+      {/* Центральные крупные ленты - быстрый spring для максимального эффекта */}
+      {/* Эти ленты самые заметные и должны реагировать мгновенно */}
+      <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Промежуточные ленты - средний spring */}
+      {/* Баланс между скоростью и плавностью */}
+      <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Фоновые ленты - медленный spring для subtle эффекта */}
+      {/* Эти ленты создают глубину и не должны отвлекать внимание */}
+      <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      
+      {/* Индикатор прогресса в левом верхнем углу */}
+      <div style={{
+        position: 'fixed',
+        top: '16px',
+        left: '16px',
+        color: '#ffffff',
+        fontSize: 'clamp(14px, 2vw, 18px)',
+        fontFamily: "'Science Gothic', monospace",
+        zIndex: 10000,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: '8px 16px',
+        borderRadius: '4px',
+        backdropFilter: 'blur(4px)',
+        pointerEvents: 'none'
+      }}>
+        Прогресс кинопроизводства: {progressText}%
+            </div>
+
+      {/* Первый экран */}
+      <section 
+        ref={firstScreenRef}
+        style={{ 
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a', // Чуть светлее черного
+          position: 'relative'
+        }}
+      >
+        {/* Индикатор прогресса первого экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '70px',
+          width: 'fit-content',
+          left: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Составление плана: {firstScreenProgressText}%
+            </div>
+
+        {/* Надпись ПЕРВЫЙ ЭКРАН */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+            Первый экран
+            </div>
+      </section>
+
+      {/* Второй экран */}
+      <section 
+        ref={secondScreenRef}
+        style={{ 
+        width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          overflowX: 'hidden'
+        }}
+      >
+        {/* Индикатор прогресса второго экрана - обертка для правильной работы sticky */}
+        <ProgressIndicator progressText={secondScreenProgressText} />
+        
+        {/* Эффекты помех - только если включены */}
+        {isGrainEnabled && (
+          <>
+            {/* Статические помехи как на старой пленке - зернистость */}
+            <GrainLayerComponent
+          zIndex={100}
+          opacity={0.6}
+          backgroundImage={`
+            radial-gradient(circle at 0 0, rgba(255,255,255,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 2px 2px, rgba(0,0,0,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 0.5px, transparent 0.5px)
+          `}
+          backgroundSize="4px 4px, 4px 4px, 2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2) brightness(0.85)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Дополнительный слой зернистости - точки */}
+        <GrainLayerComponent
+          zIndex={101}
+          opacity={0.5}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(255,255,255,0.1) 1px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 3px),
+            repeating-linear-gradient(90deg, transparent 0px, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 3px)
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="screen"
+          filter="contrast(1.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Третий слой - более крупная зернистость */}
+        <GrainLayerComponent
+          zIndex={102}
+          opacity={0.4}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px)
+          `}
+          backgroundSize="3px 3px"
+          mixBlendMode="multiply"
+          filter="contrast(1.5)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Четвертый слой - очень заметная зернистость с точками */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.7}
+          backgroundImage={`
+            repeating-conic-gradient(from 0deg at 50% 50%, 
+              rgba(255,255,255,0.2) 0deg, 
+              transparent 1deg, 
+              transparent 2deg, 
+              rgba(0,0,0,0.2) 2deg, 
+              rgba(0,0,0,0.2) 3deg, 
+              transparent 3deg, 
+              transparent 4deg
+            )
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2.5) brightness(0.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Горизонтальные царапины - перерисовываются при движении мыши */}
+        <ScratchesComponent count={15} scratchRedrawTrigger={scratchRedrawTrigger} />
+        
+        {/* Вертикальные полосы повреждений */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.25}
+          backgroundImage={`
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.15) 2px,
+              rgba(255, 255, 255, 0.15) 3px,
+              transparent 3px,
+              transparent 8px
+            )
+          `}
+          backgroundSize="60px 100%"
+          mixBlendMode="overlay"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+          </>
+        )}
+
+        {/* Движущиеся ленты перфорации по границам экрана */}
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" mouseOffset={perforationMouseOffset} />
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" mouseOffset={perforationMouseOffset} />
+        
+        {/* Линейная диаграмма на весь экран */}
+        <LineChartComponent key="line-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        
+        {/* Радарная диаграмма - сверху с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            top: '2rem',
+            x: chartTopX,
+            y: chartTopY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadarChartComponent key="radar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+        
+        {/* Радиальная столбчатая диаграмма - снизу с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            bottom: '2rem',
+            top: 'auto',
+            x: chartBottomX,
+            y: chartBottomY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadialBarChartComponent key="radial-bar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+
+        {/* Круговая диаграмма прогресса - по центру, передний план, СЛАБЫЙ параллакс */}
+        <CenterChartContainer
+          style={{
+            x: chartCenterX,
+            y: chartCenterY,
+            rotateX: chartCenterRotateX,
+            rotateY: chartCenterRotateY,
+          }}
+        >
+          <ProgressChart key="progress-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </CenterChartContainer>
+        
+          {/* Контейнер для договора */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(210mm, 90vw)',
+            height: 'min(297mm, calc(90vw * 1.414))',
+            maxHeight: 'calc(var(--vh, 1vh) * 90)',
+            zIndex: 20
+          }}>
+            {/* Сетчатый лист A4 - фон с сеткой */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backgroundImage: `
+                linear-gradient(to right, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px)
+              `,
+              backgroundSize: '1.5em 1.5em',
+              backgroundPosition: 'center center',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.6)'
+            }} />
+
+            {/* Контейнер с текстом договора */}
+            <div 
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                padding: 'clamp(16px, 3vw, 2rem)',
+                display: 'flex',
+                flexDirection: 'column',
+                fontSize: 'clamp(24px, 3vw, 36px)',
+                pointerEvents: 'auto',
+                zIndex: 1
+              }}
+            >
+            {/* Надпись ДОГОВОР сверху по центру */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: 'auto',
+              paddingTop: '1em'
+            }}>
+              <h1 
+                style={{
+                  fontSize: '2em',
+                  fontFamily: "'Slovic', sans-serif",
+                  color: '#ffffff',
+                  margin: 0
+                }}
+              >
+                ДОГОВОР
+              </h1>
+            </div>
+
+            {/* Список услуг с галочками в центре */}
+            <ContractItemsList progressMotionValue={secondScreenProgressMotionValue} />
+
+            {/* Кнопка Подписать снизу */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: 'auto',
+              paddingBottom: '1em'
+            }}>
+              <button 
+                onClick={handleSign}
+                style={{
+                  padding: '0.6em 1.6em',
+                  backgroundColor: '#ff0000',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0.2em',
+                  fontSize: '1em',
+                  fontFamily: "'Slovic', sans-serif",
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ff0000'
+                  e.currentTarget.style.color = '#ffffff'
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+              >
+                Подписать
+              </button>
+            </div>
+          </div>
+          </div>
+        
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+          Второй экран
+        </div>
+      </section>
+
+      {/* Третий экран */}
+      <section 
+        ref={thirdScreenRef}
+        style={{
+        width: '100vw',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
+          background: 'linear-gradient(to bottom, #000000 0%, #0a0a2e 50%, #1a1a3e 100%)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Упрощенное звездное небо для производительности */}
+        <StarrySky starCount={50} />
+
+        {/* Индикатор прогресса третьего экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '16px',
+          width: 'fit-content',
+          marginLeft: 'auto',
+          marginRight: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Монтаж: {thirdScreenProgressText}%
+        </div>
+
+        {/* Секция ПРОЕКТЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПРОЕКТЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1 
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПРОЕКТЫ
+            </h1>
+          </div>
+
+          {/* Карусель с фильмами */}
+          <div style={{ minHeight: '500px' }}>
+            <MoviesCarousel 
+              movies={topMovies}
+              mouseParallaxValues={movieParallaxValues}
+            />
+          </div>
+        </div>
+
+        {/* Секция ПАРТНЕРЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПАРТНЕРЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПАРТНЕРЫ
+            </h1>
+          </div>
+
+          {/* Сетка с логотипами партнеров */}
+          <PartnersGrid partners={partners} />
+          
+          {/* Футер - Made in Zvenigorod на звездном фоне */}
+          <footer style={{
+            width: '100%',
+            textAlign: 'center',
+            marginTop: '4rem',
+            marginBottom: '150px',
+            pointerEvents: 'none'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
+              fontFamily: "'Slovic', sans-serif",
+              fontWeight: 'bold'
+            }}>
+              <span>Made in</span>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontFamily: "'Slovic', sans-serif",
+                fontWeight: 'bold'
+              }}>
+                {/* Иконка православного купола из SVG файла */}
+                <img 
+                  src="/tampls.svg" 
+                  alt="Zvenigorod dome" 
+                  style={{ 
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    width: '24px',
+                    height: '24px'
+                  }}
+                />
+                <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
+              </span>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+    </div>
+    </>
+  )
+}
+
+// Компонент кастомного скроллбара
+function CustomScrollbar({ containerRef, scrollTop, isDragging, setIsDragging, scrollbarRef }) {
+  const [scrollbarHeight, setScrollbarHeight] = useState(0)
+  const [scrollbarTop, setScrollbarTop] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(0)
+  const [contentHeight, setContentHeight] = useState(0)
+  const dragStartY = useRef(0)
+  const dragStartScroll = useRef(0)
+  
+  // Вычисляем размеры скроллбара
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const updateScrollbar = () => {
+      const container = containerRef.current
+      if (!container) return
+      
+      const ch = container.clientHeight
+      const sh = container.scrollHeight
+      const st = scrollTop.get()
+      
+      setContainerHeight(ch)
+      setContentHeight(sh)
+      
+      // Высота скроллбара пропорциональна видимой области
+      const thumbHeight = Math.max(20, (ch / sh) * ch)
+      setScrollbarHeight(thumbHeight)
+      
+      // Позиция скроллбара пропорциональна scrollTop
+      const maxTop = ch - thumbHeight
+      const scrollProgress = sh > ch ? st / (sh - ch) : 0
+      setScrollbarTop(scrollProgress * maxTop)
+    }
+    
+    const unsubscribe = scrollTop.on('change', updateScrollbar)
+    updateScrollbar()
+    
+    // Обновляем при изменении размера окна
+    window.addEventListener('resize', updateScrollbar)
+    
+    return () => {
+      unsubscribe()
+      window.removeEventListener('resize', updateScrollbar)
+    }
+  }, [containerRef, scrollTop])
+  
+  // Обработка drag скроллбара
+  useEffect(() => {
+    if (!isDragging) return
+    
+    const handleMouseMove = (e) => {
+      if (!containerRef.current || !scrollbarRef.current) return
+      
+      const container = containerRef.current
+      const scrollbar = scrollbarRef.current
+      const containerRect = container.getBoundingClientRect()
+      const scrollbarRect = scrollbar.getBoundingClientRect()
+      
+      const deltaY = e.clientY - dragStartY.current
+      const scrollbarTrackHeight = containerHeight - scrollbarHeight
+      const scrollRatio = (deltaY / scrollbarTrackHeight) * (contentHeight - containerHeight)
+      
+      const newScroll = Math.max(0, Math.min(contentHeight - containerHeight, dragStartScroll.current + scrollRatio))
+      scrollTop.set(newScroll)
+    }
+    
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, containerRef, scrollbarRef, containerHeight, scrollbarHeight, contentHeight, scrollTop, setIsDragging])
+  
+  const handleMouseDown = (e) => {
+    e.preventDefault()
+    dragStartY.current = e.clientY
+    dragStartScroll.current = scrollTop.get()
+    setIsDragging(true)
+  }
+  
+  const handleTrackClick = (e) => {
+    if (!containerRef.current || !scrollbarRef.current) return
+    
+    const container = containerRef.current
+    const scrollbar = scrollbarRef.current
+    const containerRect = container.getBoundingClientRect()
+    const clickY = e.clientY - containerRect.top
+    
+    const scrollbarTrackHeight = containerHeight - scrollbarHeight
+    const clickRatio = clickY / scrollbarTrackHeight
+    const newScroll = clickRatio * (contentHeight - containerHeight)
+    
+    scrollTop.set(Math.max(0, Math.min(contentHeight - containerHeight, newScroll)))
+  }
+  
+  if (contentHeight <= containerHeight) return null // Не показываем скроллбар если контент помещается
+  
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        right: '10px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '8px',
+        height: `${containerHeight}px`,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '4px',
+        zIndex: 10000,
+        cursor: 'pointer'
+      }}
+      onClick={handleTrackClick}
+    >
+      <div
+        ref={scrollbarRef}
+        style={{
+          position: 'absolute',
+          top: `${scrollbarTop}px`,
+          left: 0,
+          width: '100%',
+          height: `${scrollbarHeight}px`,
+          backgroundColor: 'rgba(255, 255, 255, 0.5)',
+          borderRadius: '4px',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: isDragging ? 'none' : 'background-color 0.2s ease',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'
+        }}
+        onMouseLeave={(e) => {
+          if (!isDragging) {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+```
+
+
+Создаю функцию для генерации SVG-постеров и заменяю topMovies на данные из Excel:
+
+
+
+Заменяю topMovies на данные из Excel с функцией генерации постеров:
+
+
+```javascript
+import React, { useRef, useState, useEffect, Suspense, memo, useMemo, useCallback } from 'react'
+import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
+import { useParallaxStore } from '../store/parallaxStore'
+
+// Компонент пункта договора с галочкой
+const ContractItem = memo(function ContractItem({ text, progress, threshold, textColor }) {
+  // progress может быть motion value или числом
+  const [progressValue, setProgressValue] = useState(typeof progress === 'number' ? progress : 0)
+  
+  // Если progress - motion value, подписываемся на изменения
+  useEffect(() => {
+    if (typeof progress === 'object' && 'on' in progress) {
+      const unsubscribe = progress.on('change', (latest) => {
+        setProgressValue(latest * 100)
+      })
+      return unsubscribe
+    } else if (typeof progress === 'number') {
+      setProgressValue(progress)
+    }
+  }, [progress])
+  
+  // Галочка ставится когда progress >= threshold
+  const isChecked = progressValue >= threshold
+
+  return (
+    <div style={{
+          display: 'flex',
+          alignItems: 'center',
+      gap: '0.8em',
+      fontSize: '0.7em',
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      marginBottom: '0.8em'
+    }}>
+      <div style={{
+          width: '1.2em',
+          height: '1.2em',
+          minWidth: '1.2em',
+          minHeight: '1.2em',
+          border: '0.1em solid #ff0000',
+          borderRadius: '0.2em',
+          flexShrink: 0,
+          backgroundColor: isChecked ? '#ff0000' : 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+          justifyContent: 'center',
+            position: 'relative',
+          transition: 'background-color 0.3s ease'
+        }}>
+        {isChecked && (
+          <svg
+            width="0.8em"
+            height="0.8em"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ flexShrink: 0 }}
+          >
+            <path
+              d="M3 8L6 11L13 4"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+        </div>
+      {textColor ? (
+        <motion.span style={{ color: textColor, fontWeight: 'bold' }}>{text}</motion.span>
+      ) : (
+        <span style={{ color: '#000000', fontWeight: 'bold' }}>{text}</span>
+      )}
+    </div>
+  )
+})
+
+// Компонент Вспышка
+function Flash({ isActive, onComplete }) {
+  if (!isActive) return null
+
+  // Несколько вспышек для калибровки (как на современных телефонах)
+  // Финальная вспышка длится столько же, сколько хлопушка на экране (~2.6 сек)
+  // Хлопушка появляется на 1/3 времени всех вспышек раньше (~1 сек)
+  const totalDuration = 4.5 // Общая длительность: 0.5 сек калибровка + 2.6 сек финальная вспышка + 1.4 сек затухание
+  const clapperboardShowTime = 1.0 // Хлопушка появляется на 1 сек (на 1/3 времени всех вспышек раньше)
+  const finalFlashStart = 0.22 // Финальная вспышка начинается на 0.22 (~1 сек) - синхронизировано с хлопушкой
+  const finalFlashPeak = 0.25 // Максимум финальной вспышки на 0.25 (~1.125 сек)
+  const finalFlashEnd = 0.78 // Финальная вспышка заканчивается на 0.78 (~3.51 сек) - примерно когда хлопушка скрывается
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ 
+        opacity: [
+          0, 1, 0,      // Первая вспышка (быстрая)
+          0, 0.8, 0,    // Вторая вспышка (средняя)
+          0, 0.6, 0,    // Третья вспышка (слабая)
+          0, 1, 1, 0    // Финальная длинная вспышка (длится столько же, сколько хлопушка на экране)
+        ]
+      }}
+      transition={{ 
+        duration: totalDuration,
+        times: [
+          0, 0.05, 0.1,           // Первая вспышка (0-0.45 сек)
+          0.12, 0.15, 0.18,       // Вторая вспышка (0.54-0.81 сек)
+          finalFlashStart, finalFlashPeak, finalFlashEnd, 1  // Финальная вспышка начинается раньше (~1 сек) и длится до ~3.51 сек
+        ],
+        onComplete: onComplete
+      }}
+        style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+        backgroundColor: '#ffffff',
+        zIndex: 100000,
+        pointerEvents: 'none'
+      }}
+    />
+  )
+}
+
+// Компонент Хлопушка (Clapperboard) - теперь окно контактов
+const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
+  const [isDragging, setIsDragging] = useState(false)
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+
+  // Оптимизируем вычисления размеров с useMemo
+  const dimensions = useMemo(() => ({
+    width: '80vw',
+    height: 'calc(80vw / 1.333)'
+  }), [])
+  
+  const handleDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleDragEnd = (event, info) => {
+    // Закрытие окна при смахивании в любую сторону
+    const threshold = Math.min(window.innerHeight, window.innerWidth) * 0.25 // 25% от меньшей стороны экрана
+    const distance = Math.sqrt(info.offset.x ** 2 + info.offset.y ** 2)
+    
+    if (distance > threshold) {
+      if (onClose) {
+        onClose()
+      }
+    }
+    setIsDragging(false)
+  }
+  
+  return (
+        <motion.div
+      className="clapperboard-container"
+      initial={false}
+      animate={{
+        y: isVisible
+          ? ['calc(var(--vh, 1vh) * -100)', 0, -30, 0, -15, 0, -8, 0] // Падение сверху с отскоками
+          : 'calc(var(--vh, 1vh) * -100)',
+        x: isVisible ? 0 : '100vw', // При показе x=0, при скрытии улетает вправо
+        opacity: isVisible ? 1 : 0
+      }}
+      transition={{
+        y: isVisible ? {
+          duration: 1.5,
+          times: [0, 0.4, 0.5, 0.65, 0.75, 0.85, 0.92, 1],
+          ease: [0.25, 0.46, 0.45, 0.94] // Ease out для падения
+        } : {
+          type: "spring",
+          stiffness: 200,
+          damping: 15,
+          bounce: 0.6
+        },
+        x: {
+          type: "spring",
+          stiffness: 150,
+          damping: 18,
+          bounce: 0.4
+        },
+        opacity: {
+          duration: 0.3
+        }
+      }}
+      drag={true}
+      dragConstraints={dragConstraints}
+      dragElastic={0.3}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+          style={{
+        position: 'relative',
+        width: dimensions.width,
+        height: dimensions.height,
+        minHeight: dimensions.height,
+        pointerEvents: 'auto',
+        transformOrigin: 'top right',
+        cursor: isDragging ? 'grabbing' : 'grab'
+      }}
+    >
+      {/* Верхняя створка - черная с текстом SI-PRODUCTION */}
+        <motion.div
+        className="clapperboard-top"
+        initial={false}
+        animate={{ rotate: isActive ? 90 : 0 }}
+        transition={{ 
+          duration: 0.6,
+          ease: [0.25, 0.46, 0.45, 0.94] // Плавная анимация без spring эффекта
+        }}
+          style={{
+            position: 'absolute',
+            top: 0,
+          right: 0,
+            width: '100%',
+          height: '40%', // Уменьшено с 50% до 40% чтобы освободить место для нижней зоны
+          backgroundColor: '#000000',
+          border: '2px solid #333',
+          transformOrigin: 'bottom right',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+                  color: '#ffffff',
+          fontSize: 'clamp(20px, 4vw, 48px)',
+                  fontFamily: "'Science Gothic', monospace",
+                        fontWeight: 'bold',
+          zIndex: 2
+        }}
+      >
+            <span style={{
+          fontFamily: "'Slovic', sans-serif",
+          color: '#ff0000',
+          transform: 'translateY(-3px)'
+        }}>SI</span>
+        <span style={{
+          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+        }}>-PRODUCTION</span>
+      </motion.div>
+
+      {/* Нижний блок - контакты с фейковыми данными */}
+      <div 
+        className="clapperboard-contacts"
+        style={{
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: '100%',
+        minHeight: '60%', // Минимальная высота 60%, но может расширяться
+        height: 'auto', // Высота адаптируется под содержимое
+        backgroundColor: '#000000',
+        border: '2px solid #333',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 'clamp(16px, 3vw, 32px)',
+        fontSize: 'clamp(14px, 2.5vw, 24px)',
+        fontFamily: "'Science Gothic', monospace",
+        color: '#ffffff',
+        zIndex: 1,
+        gap: '1rem',
+        overflowY: 'auto', // Добавляем скролл если контент не вписывается
+        boxSizing: 'border-box' // Учитываем padding в высоте
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          marginBottom: '1rem'
+        }}>
+          <div style={{ fontSize: 'clamp(18px, 3vw, 28px)', fontWeight: 'bold' }}>КОНТАКТЫ</div>
+          <button
+            onClick={onClose}
+            style={{
+              backgroundColor: 'transparent',
+              border: '2px solid #ffffff',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              fontSize: 'clamp(12px, 2vw, 18px)',
+              fontFamily: "'Science Gothic', monospace",
+              cursor: 'pointer',
+              borderRadius: '4px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#ffffff'
+              e.currentTarget.style.color = '#000000'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.color = '#ffffff'
+            }}
+          >
+            ЗАКРЫТЬ
+          </button>
+        </div>
+        
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '1rem',
+          flex: 1
+        }}>
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телеграм:</div>
+            <a 
+              href="https://t.me/example" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ 
+                color: '#00a8ff',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
+            >
+              @example_contact
+            </a>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Email:</div>
+            <div>contact@example.com</div>
+          </div>
+          
+          <div style={{ 
+            border: '1px solid #333', 
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телефон:</div>
+            <div>+7 (999) 123-45-67</div>
+          </div>
+        </div>
+        </div>
+    </motion.div>
+  )
+})
+
+// Компонент Галерея для активированной ленты (слайдер)
+function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(initialIndex)
+  const [currentLentaIndex, setCurrentLentaIndex] = useState(lentaIndex || 0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [loadedLentas, setLoadedLentas] = useState({}) // Кэш загруженных лент
+  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+  
+  // Загружаем изображения для всех лент
+  useEffect(() => {
+    if (!allLentas || allLentas.length === 0) return
+    
+    const loadLentaImages = async (lenta) => {
+      if (loadedLentas[lenta.id]) return // Уже загружена
+      
+      const folderId = lenta.folderId
+      if (!folderId) return
+      
+      // Проверяем все файлы в папке (до 20) и собираем список существующих
+      const maxCheck = 20
+      const existingFiles = []
+      
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      if (existingFiles.length > 0) {
+        const lentaFrames = existingFiles.map((fileNum) => ({
+          type: 'image',
+          src: `/photos/${folderId}/${fileNum}.webp`
+        }))
+        
+        setLoadedLentas(prev => ({
+          ...prev,
+          [lenta.id]: lentaFrames
+        }))
+      }
+    }
+    
+    // Загружаем изображения для всех лент параллельно
+    allLentas.forEach(lenta => {
+      loadLentaImages(lenta)
+    })
+  }, [allLentas, loadedLentas])
+  
+  // Получаем текущую ленту и её frames
+  const currentLenta = allLentas && allLentas[currentLentaIndex] ? allLentas[currentLentaIndex] : null
+  // Используем загруженные frames если есть, иначе переданные frames
+  const currentFrames = currentLenta && loadedLentas[currentLenta.id] 
+    ? loadedLentas[currentLenta.id] 
+    : (currentLenta ? currentLenta.frames : frames)
+  
+  // Обновляем индексы при изменении initialIndex или lentaIndex
+  useEffect(() => {
+    setCurrentFrameIndex(initialIndex)
+    if (lentaIndex !== undefined) {
+      setCurrentLentaIndex(lentaIndex)
+    }
+  }, [initialIndex, lentaIndex])
+
+  // Обработка клавиатуры для навигации
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        handlePrevFrame()
+      } else if (e.key === 'ArrowRight') {
+        handleNextFrame()
+      } else if (e.key === 'ArrowUp') {
+        handlePrevLenta()
+      } else if (e.key === 'ArrowDown') {
+        handleNextLenta()
+      } else if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [currentFrameIndex, currentLentaIndex, currentFrames, allLentas])
+
+  // Навигация по кадрам (горизонтально)
+  const handlePrevFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev > 0 ? prev - 1 : currentFrames.length - 1))
+  }
+
+  const handleNextFrame = () => {
+    if (!currentFrames) return
+    setCurrentFrameIndex((prev) => (prev < currentFrames.length - 1 ? prev + 1 : 0))
+  }
+
+  // Навигация по лентам (вертикально)
+  const handlePrevLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev > 0 ? prev - 1 : allLentas.length - 1
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleNextLenta = () => {
+    if (!allLentas || allLentas.length === 0) return
+    setCurrentLentaIndex((prev) => {
+      const newIndex = prev < allLentas.length - 1 ? prev + 1 : 0
+      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
+      return newIndex
+    })
+  }
+
+  const handleVerticalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleVerticalDragEnd = (event, info) => {
+    // Вертикальный drag - переключение между лентами
+    if (!allLentas || allLentas.length === 0) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены ленты
+    if (info.offset.y > threshold) {
+      handlePrevLenta()
+    } else if (info.offset.y < -threshold) {
+      handleNextLenta()
+    }
+    setIsDragging(false)
+  }
+
+  const handleHorizontalDragStart = () => {
+    setIsDragging(true)
+  }
+
+  const handleHorizontalDragEnd = (event, info) => {
+    // Горизонтальный drag - смена кадров в ленте
+    if (!currentFrames) {
+      setIsDragging(false)
+      return
+    }
+    const threshold = 50 // Минимальное расстояние для смены кадра
+    if (info.offset.x > threshold) {
+      handlePrevFrame()
+    } else if (info.offset.x < -threshold) {
+      handleNextFrame()
+    }
+    setIsDragging(false)
+  }
+
+  return (
+    <>
+      {/* Overlay с затемнением */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          zIndex: 100000,
+          cursor: 'pointer'
+        }}
+      />
+      
+      {/* Слайдер */}
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        drag="y"
+        dragConstraints={dragConstraints}
+        dragElastic={0.3}
+        onDragStart={handleVerticalDragStart}
+        onDragEnd={handleVerticalDragEnd}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100001,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Вертикальная карусель всех лент */}
+        {allLentas && allLentas.length > 0 ? (
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Все ленты вертикально */}
+            {allLentas.map((lenta, lentaIdx) => {
+              const isLentaActive = lentaIdx === currentLentaIndex
+              // Используем загруженные frames если есть, иначе генерируем пути
+              const lentaFrames = loadedLentas[lenta.id] || (lenta.folderId ? 
+                Array.from({ length: 20 }, (_, i) => ({
+                  type: 'image',
+                  src: `/photos/${lenta.folderId}/${i + 1}.webp`
+                })) : [])
+              
+              return (
+                <motion.div
+                  key={lenta.id}
+                  initial={false}
+                  animate={{
+                    opacity: isLentaActive ? 1 : 0,
+                    y: isLentaActive ? 0 : (lentaIdx < currentLentaIndex ? -100 : 100),
+                    scale: isLentaActive ? 1 : 0.8
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isLentaActive ? 'auto' : 'none'
+                  }}
+                >
+                  {/* Кадры текущей ленты горизонтально */}
+                  {isLentaActive && lentaFrames.map((frame, frameIdx) => {
+                    const isFrameActive = frameIdx === currentFrameIndex
+                    return (
+                      <motion.div
+                        key={`${lenta.id}-${frameIdx}`}
+                        initial={false}
+                        animate={{
+                          opacity: isFrameActive ? 1 : 0,
+                          scale: isFrameActive ? 1 : 0.8,
+                          x: isFrameActive ? 0 : (frameIdx < currentFrameIndex ? -100 : 100)
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          ease: [0.25, 0.46, 0.45, 0.94]
+                        }}
+                        drag="x"
+                        dragConstraints={dragConstraints}
+                        dragElastic={0.2}
+                        onDragStart={handleHorizontalDragStart}
+                        onDragEnd={handleHorizontalDragEnd}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          pointerEvents: isFrameActive ? 'auto' : 'none',
+                          cursor: isDragging ? 'grabbing' : 'grab'
+                        }}
+                      >
+                        {frame.type === 'image' ? (
+                          <img
+                            src={frame.src}
+                            alt={`Frame ${frameIdx}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                            }}
+                            onError={(e) => {
+                              // При ошибке показываем серый фон
+                              e.target.style.display = 'none'
+                              const parent = e.target.parentElement
+                              if (parent && !parent.querySelector('.fallback-bg')) {
+                                const fallback = document.createElement('div')
+                                fallback.className = 'fallback-bg'
+                                fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                                parent.appendChild(fallback)
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: frame.value || frame || '#333',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    )
+                  })}
+                </motion.div>
+              )
+            })}
+          </div>
+        ) : (
+          /* Fallback для старого режима без всех лент */
+          <div
+            style={{
+              position: 'relative',
+              width: '90vw',
+              height: 'calc(var(--vh, 1vh) * 90)',
+              maxWidth: '1400px',
+              maxHeight: '900px'
+            }}
+          >
+            {currentFrames && currentFrames.map((frame, index) => {
+              const isActive = index === currentFrameIndex
+              // Поддерживаем обратную совместимость: если frame - строка (старый формат), преобразуем в объект
+              const frameData = typeof frame === 'string' ? { type: 'color', value: frame } : frame
+              
+              return (
+                <motion.div
+                  key={index}
+                  initial={false}
+                  animate={{
+                    opacity: isActive ? 1 : 0,
+                    scale: isActive ? 1 : 0.8,
+                    x: isActive ? 0 : (index < currentFrameIndex ? -100 : 100)
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    ease: [0.25, 0.46, 0.45, 0.94]
+                  }}
+                  drag="x"
+                  dragConstraints={dragConstraints}
+                  dragElastic={0.2}
+                  onDragStart={handleHorizontalDragStart}
+                  onDragEnd={handleHorizontalDragEnd}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: isActive ? 'auto' : 'none',
+                    cursor: isDragging ? 'grabbing' : 'grab'
+                  }}
+                >
+                  {frameData.type === 'image' ? (
+                    <img
+                      src={frameData.src}
+                      alt={`Frame ${index}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                      }}
+                      onError={(e) => {
+                        // При ошибке показываем серый фон
+                        e.target.style.display = 'none'
+                        const parent = e.target.parentElement
+                        if (parent && !parent.querySelector('.fallback-bg')) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'fallback-bg'
+                          fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: frameData.value || frameData || '#333',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    />
+                  )}
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Кнопка закрытия в левом верхнем углу */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onClose()
+          }}
+          style={{
+            position: 'absolute',
+            top: '32px',
+            left: '32px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ×
+        </button>
+
+        {/* Кнопки навигации по кадрам (горизонтально) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handlePrevFrame()
+          }}
+          style={{
+            position: 'absolute',
+            left: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ‹
+        </button>
+        
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            handleNextFrame()
+          }}
+          style={{
+            position: 'absolute',
+            right: '32px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            color: '#ffffff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100002,
+            transition: 'all 0.2s ease',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+        >
+          ›
+        </button>
+
+        {/* Кнопки навигации по лентам (вертикально) - только если есть все ленты */}
+        {allLentas && allLentas.length > 0 && (
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handlePrevLenta()
+              }}
+              style={{
+                position: 'absolute',
+                top: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↑
+            </button>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleNextLenta()
+              }}
+              style={{
+                position: 'absolute',
+                bottom: '32px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100002,
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              ↓
+            </button>
+          </>
+        )}
+
+        {/* Индикатор текущего кадра и ленты */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: allLentas && allLentas.length > 0 ? '100px' : '32px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            zIndex: 100002,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          {allLentas && allLentas.length > 0 && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '14px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              Лента {currentLentaIndex + 1} / {allLentas.length}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              display: 'flex',
+              gap: '8px'
+            }}>
+              {currentFrames.map((_, index) => (
+                <div
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCurrentFrameIndex(index)
+                  }}
+                  style={{
+                    width: index === currentFrameIndex ? '32px' : '8px',
+                    height: '8px',
+                    borderRadius: '4px',
+                    backgroundColor: index === currentFrameIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {currentFrames && (
+            <div style={{
+              color: '#ffffff',
+              fontSize: '12px',
+              fontFamily: "'Science Gothic', monospace"
+            }}>
+              {currentFrameIndex + 1} / {currentFrames.length}
+            </div>
+          )}
+        </div>
+
+      </motion.div>
+    </>
+  )
+}
+
+const ProgressChart = memo(function ProgressChart({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Внешний круг - больше элементов, зависящих от скролла
+  const outerData = [
+    { name: 'P1', value: progress }, // 0-100%
+    { name: 'P2', value: progress * 0.7 }, // 0-70%
+    { name: 'P3', value: progress * 0.5 }, // 0-50%
+    { name: 'P4', value: progress * 0.3 }, // 0-30%
+    { name: 'A', value: 25 + progress * 0.2 }, // Двигается вверх
+    { name: 'B', value: 30 - progress * 0.15 }, // Двигается вниз
+    { name: 'C', value: 20 + progress * 0.4 }, // Двигается вверх
+    { name: 'D', value: 35 - progress * 0.25 }, // Двигается вниз
+    { name: 'E', value: 15 + progress * 0.35 }, // Двигается вверх
+    { name: 'F', value: 40 - progress * 0.2 } // Двигается вниз
+  ]
+
+  // Внутренний круг - тоже с движущимися элементами
+  const innerData = [
+    { name: 'IP1', value: progress * 0.8 }, // 0-80%
+    { name: 'IP2', value: progress * 0.6 }, // 0-60%
+    { name: 'IP3', value: progress * 0.4 }, // 0-40%
+    { name: 'IA', value: 20 + progress * 0.3 }, // Двигается вверх
+    { name: 'IB', value: 25 - progress * 0.2 }, // Двигается вниз
+    { name: 'IC', value: 15 + progress * 0.5 }, // Двигается вверх
+    { name: 'ID', value: 30 - progress * 0.3 } // Двигается вниз
+  ]
+
+  return (
+    <div key="progress-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <PieChart key="pie-chart" width={600} height={600}>
+        {/* Внешний круг */}
+        <Pie
+          data={outerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={120}
+          outerRadius={200}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={3}
+          paddingAngle={2}
+        >
+          {outerData.map((entry, index) => (
+            <Cell 
+              key={`outer-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={3}
+            />
+          ))}
+        </Pie>
+        {/* Внутренний круг */}
+        <Pie
+          data={innerData}
+          cx="50%"
+          cy="50%"
+          innerRadius={20}
+          outerRadius={110}
+          startAngle={90}
+          endAngle={-270}
+          dataKey="value"
+          isAnimationActive={false}
+          stroke="#ffffff"
+          strokeWidth={2}
+          paddingAngle={1.5}
+        >
+          {innerData.map((entry, index) => (
+            <Cell 
+              key={`inner-cell-${index}`} 
+              fill="rgba(255, 255, 255, 0.3)"
+              stroke="#ffffff"
+              strokeWidth={2}
+            />
+          ))}
+        </Pie>
+      </PieChart>
+    </div>
+  )
+})
+
+// Компонент линейной диаграммы с точками, зависящими от скролла
+const LineChartComponent = memo(function LineChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки точек (Dots)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, value2: 30 - progress * 0.2 }, // Первая линия вверх, вторая вниз
+    { name: 'B', value: 50 - progress * 0.2, value2: 40 + progress * 0.3 }, // Первая вниз, вторая вверх
+    { name: 'C', value: 30 + progress * 0.4, value2: 50 - progress * 0.25 }, // Первая вверх, вторая вниз
+    { name: 'D', value: 60 - progress * 0.3, value2: 35 + progress * 0.4 }, // Первая вниз, вторая вверх
+    { name: 'E', value: 40 + progress * 0.25, value2: 55 - progress * 0.15 }, // Первая вверх, вторая вниз
+    { name: 'F', value: 70 - progress * 0.35, value2: 25 + progress * 0.5 }, // Первая вниз, вторая вверх
+    { name: 'G', value: 25 + progress * 0.5, value2: 60 - progress * 0.3 }, // Первая вверх, вторая вниз
+    { name: 'H', value: 55 - progress * 0.15, value2: 45 + progress * 0.2 }, // Первая вниз, вторая вверх
+    { name: 'I', value: 35 + progress * 0.3, value2: 50 - progress * 0.35 }, // Первая вверх, вторая вниз
+    { name: 'J', value: 65 - progress * 0.4, value2: 30 + progress * 0.45 }  // Первая вниз, вторая вверх
+  ], [progress])
+
+  return (
+    <div
+      key="line-chart-container"
+      style={{
+      width: '100%',
+      height: '100%',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      padding: 0,
+      zIndex: 1,
+      pointerEvents: 'none'
+    }}>
+      <ResponsiveContainer key="line-responsive-container" width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+          <XAxis 
+            dataKey="name" 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            hide={true}
+          />
+          <YAxis 
+            stroke="#ffffff"
+            tick={{ fill: '#ffffff' }}
+            domain={[0, 100]}
+            hide={true}
+          />
+          <Tooltip
+            key="line-tooltip"
+            cursor={false}
+            isAnimationActive={false}
+            contentStyle={{
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#ffffff'
+            }}
+          />
+          {/* Старая линия с точками */}
+          <Line
+            key="line1"
+            type="monotone"
+            dataKey="value"
+            stroke="#ffffff"
+            strokeWidth={3}
+            dot={{ fill: '#ffffff', r: 6 }}
+            activeDot={{ r: 8 }}
+          />
+          {/* Новая угловатая линия без точек */}
+          <Line
+            key="line2"
+            type="step"
+            dataKey="value2"
+            stroke="#ffffff"
+            strokeWidth={2}
+            dot={false}
+            strokeOpacity={0.7}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радарной диаграммы
+const RadarChartComponent = memo(function RadarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const data = [
+    { subject: 'A', value: 50 + progress * 0.3, fullMark: 100 },
+    { subject: 'B', value: 60 - progress * 0.2, fullMark: 100 },
+    { subject: 'C', value: 40 + progress * 0.4, fullMark: 100 },
+    { subject: 'D', value: 70 - progress * 0.3, fullMark: 100 },
+    { subject: 'E', value: 55 + progress * 0.25, fullMark: 100 },
+    { subject: 'F', value: 45 - progress * 0.35, fullMark: 100 }
+  ]
+
+  return (
+    <div key="radar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radar-responsive-container" width="100%" height="100%">
+        <RadarChart key="radar-chart" data={data}>
+          <PolarGrid stroke="#ffffff" strokeOpacity={0.3} />
+          <PolarAngleAxis 
+            dataKey="subject" 
+            tick={{ fill: '#ffffff', fontSize: 12 }}
+          />
+          <PolarRadiusAxis 
+            angle={90} 
+            domain={[0, 100]}
+            tick={{ fill: '#ffffff', fontSize: 10 }}
+          />
+          <Radar 
+            name="Value" 
+            dataKey="value" 
+            stroke="#ffffff" 
+            fill="#ffffff" 
+            fillOpacity={0.3}
+            strokeWidth={2}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент радиальной столбчатой диаграммы, зависимый от скролла
+const RadialBarChartComponent = memo(function RadialBarChartComponent({ progressMotionValue }) {
+  const [progress, setProgress] = useState(0)
+
+  // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        // Циклическое изменение от 0 до 100 и обратно, шаг 5 для заметных изменений
+        const newProgress = prev + 5
+        return newProgress > 100 ? 0 : newProgress
+      })
+    }, 3000) // Обновление каждые 3 секунды
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Мемоизация данных для предотвращения перерисовки секторов (RadialBarSectors)
+  const data = useMemo(() => [
+    { name: 'A', value: 20 + progress * 0.3, fill: '#ffffff' },
+    { name: 'B', value: 40 - progress * 0.2, fill: '#ffffff' },
+    { name: 'C', value: 60 + progress * 0.4, fill: '#ffffff' },
+    { name: 'D', value: 30 - progress * 0.3, fill: '#ffffff' },
+    { name: 'E', value: 50 + progress * 0.25, fill: '#ffffff' },
+    { name: 'F', value: 70 - progress * 0.35, fill: '#ffffff' }
+  ], [progress])
+
+  return (
+    <div key="radial-bar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radial-responsive-container" width="100%" height="100%">
+        <RadialBarChart
+          key="radial-bar-chart" 
+          cx="50%" 
+          cy="50%" 
+          innerRadius="20%" 
+          outerRadius="80%" 
+          data={data}
+          startAngle={90}
+          endAngle={-270}
+        >
+          <RadialBar
+            key="radial-bar"
+            dataKey="value"
+            cornerRadius={4}
+            fill="rgba(255, 255, 255, 0.3)"
+            stroke="#ffffff"
+            strokeWidth={2}
+          />
+        </RadialBarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+// Компонент карусели с постерами фильмов (вращающаяся карусель)
+const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValues = null }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [wasDragging, setWasDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [dragOffset, setDragOffset] = useState(0)
+  const carouselRef = useRef(null)
+  const autoPlayRef = useRef(null)
+  const [isInViewport, setIsInViewport] = useState(false)
+
+  // Проверка видимости компонента в viewport
+  useEffect(() => {
+    if (!carouselRef.current) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsInViewport(entry.isIntersecting)
+        })
+      },
+      {
+        threshold: 0.1 // Компонент считается видимым, если видно хотя бы 10%
+      }
+    )
+
+    observer.observe(carouselRef.current)
+
+    return () => {
+      if (carouselRef.current) {
+        observer.unobserve(carouselRef.current)
+      }
+    }
+  }, [])
+
+  // Автоматическое вращение карусели (но не скролл страницы)
+  useEffect(() => {
+    // Автоплей работает только когда компонент виден
+    if (!isDragging && isInViewport) {
+      autoPlayRef.current = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }, 3000) // Меняем каждые 3 секунды
+    } else {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+
+    return () => {
+      if (autoPlayRef.current) {
+        clearInterval(autoPlayRef.current)
+      }
+    }
+  }, [movies.length, isDragging, isInViewport])
+
+  // Обработчики для перетаскивания
+  const handleMouseDown = (e) => {
+    setIsDragging(true)
+    setStartX(e.clientX)
+    setDragOffset(0)
+    if (autoPlayRef.current) {
+      clearInterval(autoPlayRef.current)
+    }
+  }
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return
+    const diff = e.clientX - startX
+    setDragOffset(diff)
+  }
+
+  const handleMouseUp = () => {
+    if (!isDragging) return
+    
+    const hadDrag = Math.abs(dragOffset) > 10
+    setWasDragging(hadDrag)
+    
+    // Если перетащили достаточно далеко, меняем слайд
+    if (Math.abs(dragOffset) > 100) {
+      if (dragOffset > 0) {
+        setCurrentIndex((prev) => (prev - 1 + movies.length) % movies.length)
+      } else {
+        setCurrentIndex((prev) => (prev + 1) % movies.length)
+      }
+    }
+    
+    setIsDragging(false)
+    setDragOffset(0)
+    
+    // Сбрасываем флаг через небольшую задержку
+    setTimeout(() => setWasDragging(false), 100)
+  }
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false)
+      setDragOffset(0)
+    }
+  }
+
+  // Вычисляем позиции для карусели (3D эффект)
+  const getTransform = (index) => {
+    const offset = index - currentIndex
+    const absOffset = Math.abs(offset)
+    const direction = offset > 0 ? 1 : -1
+    
+    // Если элемент далеко, скрываем его
+    if (absOffset > 3) {
+      return {
+        transform: `translateX(${direction * 400}px) translateZ(-200px) scale(0.5)`,
+        opacity: 0,
+        zIndex: 0
+      }
+    }
+
+    // Близкие элементы видны
+    const scale = 1 - absOffset * 0.15
+    const translateX = offset * 220 + (isDragging ? dragOffset : 0)
+    const translateZ = -absOffset * 100
+    const opacity = 1 - absOffset * 0.3
+
+    return {
+      transform: `translateX(${translateX}px) translateZ(${translateZ}px) scale(${scale})`,
+      opacity: Math.max(0, opacity),
+      zIndex: movies.length - absOffset
+    }
+  }
+
+  return (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem 0',
+      perspective: '1000px',
+      perspectiveOrigin: 'center center'
+    }}>
+      <div 
+        ref={carouselRef}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '400px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transformStyle: 'preserve-3d',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
+        {movies.map((movie, index) => {
+          const baseStyle = getTransform(index)
+          const offset = Math.abs(index - currentIndex)
+          
+          // Определяем параллакс в зависимости от расстояния от центра
+          // Параллакс работает только когда компонент в viewport и параллакс включен
+          let parallaxX, parallaxY, rotateX, rotateY
+          if (!isInViewport || !isParallaxEnabled) {
+            // Если не в viewport или параллакс отключен - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          } else if (offset === 0) {
+            // Центральная карточка - сильный параллакс
+            parallaxX = mouseParallaxValues?.centerX || 0
+            parallaxY = mouseParallaxValues?.centerY || 0
+            rotateX = mouseParallaxValues?.centerRotateX || 0
+            rotateY = mouseParallaxValues?.centerRotateY || 0
+          } else if (offset === 1) {
+            // Близкие карточки - средний параллакс
+            parallaxX = mouseParallaxValues?.nearX || 0
+            parallaxY = mouseParallaxValues?.nearY || 0
+            rotateX = mouseParallaxValues?.nearRotateX || 0
+            rotateY = mouseParallaxValues?.nearRotateY || 0
+          } else if (offset === 2) {
+            // Дальние карточки - слабый параллакс
+            parallaxX = mouseParallaxValues?.farX || 0
+            parallaxY = mouseParallaxValues?.farY || 0
+            rotateX = mouseParallaxValues?.farRotateX || 0
+            rotateY = mouseParallaxValues?.farRotateY || 0
+          } else {
+            // Очень дальние карточки - без параллакса
+            parallaxX = 0
+            parallaxY = 0
+            rotateX = 0
+            rotateY = 0
+          }
+          
+          const handleClick = (e) => {
+            // Не открываем ссылку, если был drag
+            if (wasDragging || isDragging) {
+              e.preventDefault()
+              return
+            }
+            if (movie.kinopoiskId) {
+              window.open(`https://www.kinopoisk.ru/film/${movie.kinopoiskId}/`, '_blank')
+            }
+          }
+
+          return (
+            <motion.div
+              key={index}
+              style={{
+                position: 'absolute',
+                width: '200px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.6s ease',
+                ...baseStyle
+              }}
+              onClick={handleClick}
+            >
+              {/* Внутренний элемент для параллакса, чтобы не ломать существующий transform */}
+              <motion.div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  x: parallaxX,
+                  y: parallaxY,
+                  rotateX: rotateX,
+                  rotateY: rotateY,
+                  perspective: '1000px',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+              <div style={{
+                width: '100%',
+                height: '300px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                backgroundColor: '#333',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <img
+                  src={movie.poster}
+                  alt={movie.title}
+                  draggable={false}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    userSelect: 'none',
+                    pointerEvents: 'none'
+                  }}
+                  onError={(e) => {
+                    // При ошибке скрываем изображение и показываем название
+                    e.target.style.display = 'none'
+                    const parent = e.target.parentElement
+                    if (!parent.querySelector('.fallback-text')) {
+                      const fallback = document.createElement('div')
+                      fallback.className = 'fallback-text'
+                      fallback.style.cssText = 'color: #ffffff; font-family: "Slovic", sans-serif; font-size: 1.2rem; text-align: center; padding: 1rem; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%;'
+                      fallback.textContent = movie.title
+                      parent.appendChild(fallback)
+                    }
+                  }}
+                />
+              </div>
+              <div style={{
+                color: '#ffffff',
+                fontSize: '0.9rem',
+                fontFamily: "'Slovic', sans-serif",
+                textAlign: 'center',
+                padding: '0.5rem',
+                lineHeight: '1.3'
+              }}>
+                {movie.title}
+              </div>
+              </motion.div>
+            </motion.div>
+          )
+        })}
+      </div>
+      
+      {/* Индикаторы точек */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        marginTop: '2rem'
+      }}>
+        {movies.map((_, index) => (
+          <div
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            style={{
+              width: index === currentIndex ? '24px' : '8px',
+              height: '8px',
+              borderRadius: '4px',
+              backgroundColor: index === currentIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Кастомная функция сравнения - перерисовываем только если изменились movies
+  // mouseParallaxValues - это motion values, они не должны вызывать перерисовки
+  return prevProps.movies === nextProps.movies
+})
+
+// Компонент текстуры с закругленными прямоугольниками для границ экрана
+function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset = null }) {
+  // Параметры текстуры - одинаковые отступы
+  const gap = 5 // Отступ между элементами и от краев
+  const rectWidth = 20
+  const rectHeight = 16
+  const rectSpacing = rectWidth + gap * 2 // Ширина элемента + отступы с обеих сторон
+  const borderRadius = 2 // Меньше закругление
+  const edgeOffset = 20 // Отступ от края экрана
+
+  // Преобразуем scrollProgress в смещение текстуры с spring эффектом
+  const scrollOffsetRaw = useTransform(scrollProgress, [0, 1], [0, 600]) // Увеличено в 3 раза (200 -> 600)
+  const scrollOffset = useSpring(scrollOffsetRaw, {
+    stiffness: 50,
+    damping: 20,
+    mass: 1
+  })
+  
+  // Комбинируем скролл и накопленное смещение от мыши (всегда в одну сторону)
+  const combinedOffset = useMotionValue(0)
+  
+  useEffect(() => {
+    const updateOffset = () => {
+      const scroll = scrollOffset.get()
+      const mouse = mouseOffset ? mouseOffset.get() : 0
+      // Мышь всегда добавляет смещение в одну сторону (вправо)
+      combinedOffset.set(scroll + mouse)
+    }
+    
+    const unsubscribeScroll = scrollOffset.on('change', updateOffset)
+    const unsubscribeMouse = mouseOffset ? mouseOffset.on('change', updateOffset) : null
+    
+    updateOffset()
+    
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouse) unsubscribeMouse()
+    }
+  }, [scrollOffset, mouseOffset, combinedOffset])
+  
+  const backgroundPosition = useTransform(combinedOffset, (value) => `${value}px 0`)
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="${gap}" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.4"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        [position]: `${edgeOffset}px`, // Отступ от края
+        left: 0,
+        width: '100%',
+        height: `${rectHeight + 4}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: backgroundPosition,
+        pointerEvents: 'none',
+        zIndex: 25
+      }}
+    />
+  )
+}
+
+// Компонент для горизонтальных царапин, которые перерисовываются при движении мыши
+function ScratchesComponent({ count = 15, scratchRedrawTrigger }) {
+  const [scratches, setScratches] = useState([])
+  const [renderKey, setRenderKey] = useState(0)
+  
+  // Перерисовываем царапины при изменении триггера
+  useMotionValueEvent(scratchRedrawTrigger, 'change', () => {
+    // Генерируем новые позиции и параметры для всех царапин
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+    // Меняем key для полной перерисовки элементов
+    setRenderKey(prev => prev + 1)
+  })
+  
+  // Инициализация при монтировании
+  useEffect(() => {
+    setScratches(Array.from({ length: count }, (_, i) => ({
+      id: i,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      width: Math.random() * 400 + 200,
+      rotate: Math.random() * 2 - 1,
+      opacity: 0.3 + Math.random() * 0.3
+    })))
+  }, [count])
+  
+  return (
+    <>
+      {scratches.map((scratch) => (
+        <div
+          key={`${scratch.id}-${renderKey}`} // Меняем key для полной перерисовки
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '2px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: scratch.opacity,
+            transform: `rotate(${scratch.rotate}deg)`,
+            boxShadow: '0 0 3px rgba(255, 255, 255, 0.2)'
+            // Убрали transition - элементы появляются мгновенно в новых местах
+          }}
+        />
+      ))}
+    </>
+  )
+}
+
+// Компонент слоя помех с поддержкой скролла и мыши (без движения, только изменение параметров)
+function GrainLayerComponent({ zIndex, opacity, backgroundImage, backgroundSize, mixBlendMode, filter, grainBackgroundPosition, grainNoiseOpacity = null }) {
+  const layerRef = useRef(null)
+  
+  useMotionValueEvent(grainBackgroundPosition, 'change', (latest) => {
+    if (layerRef.current) {
+      layerRef.current.style.backgroundPosition = latest
+    }
+  })
+  
+  // Изменяем opacity на основе мыши и скролла
+  useEffect(() => {
+    if (!grainNoiseOpacity) return
+    
+    const unsubscribe = grainNoiseOpacity.on('change', (latest) => {
+      if (layerRef.current) {
+        layerRef.current.style.opacity = latest * opacity
+      }
+    })
+    
+    return () => unsubscribe()
+  }, [grainNoiseOpacity, opacity])
+  
+  return (
+    <div
+      ref={layerRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex,
+        opacity: grainNoiseOpacity ? undefined : opacity,
+        backgroundImage,
+        backgroundSize,
+        mixBlendMode,
+        filter
+      }}
+    />
+  )
+}
+
+// Мемоизированный контейнер для диаграмм с параллаксом
+const ChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      left: '50%',
+      top: '2rem', // default top
+      zIndex: 12,
+      width: '25vw',
+      height: '25vw',
+      maxWidth: '300px',
+      maxHeight: '300px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный контейнер для центральной большой диаграммы
+const CenterChartContainer = memo(({ children, style }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      zIndex: 18,
+      width: '80vw',
+      height: '80vw',
+      maxWidth: '1000px',
+      maxHeight: '1000px',
+      pointerEvents: 'none',
+      perspective: '1000px',
+      transformStyle: 'preserve-3d',
+      ...style
+    }}
+  >
+    {children}
+  </motion.div>
+))
+
+// Мемоизированный индикатор прогресса
+const ProgressIndicator = memo(({ progressText }) => (
+  <div style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+    pointerEvents: 'none',
+    zIndex: 1000
+  }}>
+    <div style={{
+      position: 'sticky',
+      top: '45px',
+      width: 'fit-content',
+      marginLeft: 'auto',
+      marginRight: '16px',
+      color: '#ffffff',
+      fontSize: 'clamp(14px, 2vw, 18px)',
+      fontFamily: "'Science Gothic', monospace",
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      padding: '8px 16px',
+      borderRadius: '4px',
+      backdropFilter: 'blur(4px)',
+      pointerEvents: 'none'
+    }}>
+      Запуск процессов: {progressText}%
+    </div>
+  </div>
+))
+
+// Мемоизированный список пунктов договора
+const ContractItemsList = memo(({ progressMotionValue }) => (
+  <div style={{
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 'clamp(16px, 3vw, 2em)',
+    paddingRight: 'clamp(16px, 3vw, 2em)'
+  }}>
+    <ContractItem text="Подбор и согласование локаций любой сложности по всей России" progress={progressMotionValue} threshold={35} textColor="#ffffff" />
+    <ContractItem text="Согласуем все договоренности и разрешения" progress={progressMotionValue} threshold={40} textColor="#ffffff" />
+    <ContractItem text="Полное сопровождение съемок и постродакшен" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
+    <ContractItem text="Кинопроизводство полного цикла" progress={progressMotionValue} threshold={60} textColor="#ffffff" />
+    <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={progressMotionValue} threshold={65} textColor="#ffffff" />
+  </div>
+))
+
+// Компонент эффекта помех/повреждения пленки для второго экрана
+function FilmGrainEffect({ scrollProgress }) {
+  const [grainIntensity, setGrainIntensity] = useState(0)
+  const [scratchOffset, setScratchOffset] = useState(0)
+  const [rgbSplit, setRgbSplit] = useState(0)
+  const [flicker, setFlicker] = useState(1)
+
+  // Обновляем интенсивность эффектов на основе скролла
+  useMotionValueEvent(scrollProgress, "change", (latest) => {
+    const progress = Math.min(Math.max(latest, 0), 1)
+    setGrainIntensity(progress)
+    setScratchOffset(progress * 200)
+    setRgbSplit(progress * 8) // Максимальное смещение RGB каналов 8px
+    // Flicker эффект - случайные вспышки при скролле
+    setFlicker(1 - (Math.random() * 0.15 * progress))
+  })
+
+  // Генерируем случайные царапины
+  const scratches = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    top: Math.random() * 100,
+    left: Math.random() * 100,
+    width: Math.random() * 300 + 100,
+    opacity: Math.random() * 0.5 + 0.2,
+    delay: Math.random() * 2
+  }))
+
+  return (
+    <>
+      {/* Основной слой зернистости - более заметный */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 100,
+          opacity: Math.max(0.3, grainIntensity * 0.8),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(0,0,0,0.3) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.3) 3px),
+            repeating-linear-gradient(90deg, rgba(0,0,0,0.2) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.2) 3px),
+            repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, transparent 1px, transparent 2px, rgba(255,255,255,0.05) 3px)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.3) brightness(0.85)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 100}% ${Math.random() * 100}%`,
+            `${Math.random() * 100}% ${Math.random() * 100}%`
+          ]
+        }}
+        transition={{
+          duration: 0.05,
+          repeat: Infinity,
+          repeatType: 'reverse'
+        }}
+      />
+
+      {/* RGB Split эффект - смещение цветовых каналов */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 101,
+          opacity: Math.max(0.2, grainIntensity * 0.7),
+          background: `
+            linear-gradient(to right, 
+              rgba(255, 0, 0, 0.2) 0%, 
+              transparent ${rgbSplit}px,
+              transparent calc(100% - ${rgbSplit}px),
+              rgba(0, 0, 255, 0.2) 100%)
+          `,
+          mixBlendMode: 'screen',
+          transform: `translateX(${rgbSplit * 0.3}px)`,
+          filter: `blur(${rgbSplit * 0.1}px)`
+        }}
+      />
+
+      {/* Горизонтальные царапины */}
+      {scratches.map((scratch) => (
+        <motion.div
+          key={scratch.id}
+          style={{
+            position: 'absolute',
+            top: `${scratch.top}%`,
+            left: `${scratch.left}%`,
+            width: `${scratch.width}px`,
+            height: '3px',
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.6), transparent)',
+            pointerEvents: 'none',
+            zIndex: 102,
+            opacity: Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity)),
+            transform: `translateX(${scratchOffset * 0.5}px)`,
+            boxShadow: '0 0 4px rgba(255, 255, 255, 0.3)'
+          }}
+          animate={{
+            x: [0, scratchOffset * 0.5, 0],
+            opacity: [
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5),
+              Math.max(0.2, scratch.opacity * Math.max(0.3, grainIntensity)),
+              Math.max(0.1, scratch.opacity * Math.max(0.3, grainIntensity) * 0.5)
+            ]
+          }}
+          transition={{
+            duration: 1.5 + Math.random() * 2,
+            repeat: Infinity,
+            delay: scratch.delay,
+            ease: 'linear'
+          }}
+        />
+      ))}
+
+      {/* Вертикальные полосы повреждений */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 103,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          backgroundImage: `
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.1) 2px,
+              rgba(255, 255, 255, 0.1) 3px,
+              transparent 3px,
+              transparent 5px
+            )
+          `,
+          backgroundSize: '80px 100%',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          backgroundPosition: [`${scratchOffset * 0.3}px 0`, `${scratchOffset * 0.3 + 80}px 0`]
+        }}
+        transition={{
+          duration: 0.3,
+          repeat: Infinity,
+          ease: 'linear'
+        }}
+      />
+
+      {/* Flicker эффект - мерцание */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 104,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          mixBlendMode: 'overlay'
+        }}
+        animate={{
+          opacity: [flicker * 0.4, flicker * 0.8, flicker * 0.4]
+        }}
+        transition={{
+          duration: 0.08 + Math.random() * 0.15,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+
+      {/* Дополнительный шум через canvas-like эффект */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 99,
+          opacity: Math.max(0.2, grainIntensity * 0.6),
+          background: `
+            radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 10% 80%, rgba(255, 255, 255, 0.04) 0%, transparent 40%),
+            radial-gradient(circle at 90% 20%, rgba(0, 0, 0, 0.04) 0%, transparent 40%)
+          `,
+          backgroundSize: '150% 150%',
+          mixBlendMode: 'difference',
+          filter: 'blur(1px)'
+        }}
+        animate={{
+          backgroundPosition: [
+            `${Math.random() * 50}% ${Math.random() * 50}%`,
+            `${Math.random() * 50 + 50}% ${Math.random() * 50 + 50}%`
+          ]
+        }}
+        transition={{
+          duration: 2 + Math.random() * 1.5,
+          repeat: Infinity,
+          repeatType: 'reverse',
+          ease: 'easeInOut'
+        }}
+      />
+      
+      {/* Дополнительный слой статического шума */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 105,
+          opacity: Math.max(0.15, grainIntensity * 0.5),
+          backgroundImage: `
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 1px, rgba(0,0,0,0.03) 2px)
+          `,
+          backgroundSize: '4px 4px',
+          mixBlendMode: 'overlay',
+          filter: 'contrast(1.5)'
+        }}
+        animate={{
+          opacity: [
+            Math.max(0.15, grainIntensity * 0.5),
+            Math.max(0.25, grainIntensity * 0.7),
+            Math.max(0.15, grainIntensity * 0.5)
+          ]
+        }}
+        transition={{
+          duration: 0.1,
+          repeat: Infinity,
+          ease: 'easeInOut'
+        }}
+      />
+    </>
+  )
+}
+
+// Компонент звездного неба с мерцающими звездами
+// Компонент сетки с названиями партнеров
+function PartnersGrid({ partners }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: '2rem',
+      width: '100%',
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '2rem'
+    }}>
+      {partners.map((partner, index) => (
+        <div
+          key={index}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            transition: 'all 0.3s ease',
+            cursor: 'pointer',
+            minHeight: '150px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+            e.currentTarget.style.transform = 'scale(1.05)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          <div style={{
+            color: '#ffffff',
+            fontFamily: "'Slovic', sans-serif",
+            fontSize: '1.5rem',
+            textAlign: 'center',
+            fontWeight: 'bold'
+          }}>
+            {partner.name}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
+  const [stars] = useState(() => {
+    return Array.from({ length: starCount }, () => ({
+      x: Math.random() * 100, // Позиция X в процентах
+      y: Math.random() * 100, // Позиция Y в процентах
+      size: Math.random() * 2 + 0.5, // Размер от 0.5px до 2.5px (меньше)
+      baseOpacity: Math.random() * 0.4 + 0.2, // Базовая прозрачность от 0.2 до 0.6
+      peakOpacity: Math.random() * 0.3 + 0.7, // Пиковая прозрачность от 0.7 до 1.0
+      duration: Math.random() * 2 + 1.5, // Длительность анимации от 1.5 до 3.5 секунд
+      delay: Math.random() * 2 // Задержка начала анимации от 0 до 2 секунд
+    }))
+  })
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: 1
+    }}>
+      {stars.map((star, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: star.baseOpacity }}
+          animate={{
+            opacity: [star.baseOpacity, star.peakOpacity, star.baseOpacity]
+          }}
+          transition={{
+            duration: star.duration,
+            repeat: Infinity,
+            delay: star.delay,
+            ease: "easeInOut"
+          }}
+          style={{
+            position: 'absolute',
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            borderRadius: '50%',
+            backgroundColor: '#ffffff',
+            boxShadow: `0 0 ${star.size}px rgba(255, 255, 255, 0.5)`
+          }}
+        />
+      ))}
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  // Перерисовываем только если изменился starCount
+  return prevProps.starCount === nextProps.starCount
+})
+
+// Компонент текстуры перфорации для лент
+function LentaPerforationTexture({ width, height, position = 'top', scale = 1 }) {
+  // Параметры текстуры - масштабируемые
+  // Отступы одинаковые: от краев ленты и между элементами
+  const gap = 5 * scale // Отступ между элементами и от краев (одинаковый)
+  const rectWidth = 20 * scale
+  const rectHeight = Math.min(height * 0.8, 16 * scale) // Адаптируем под высоту полосы
+  // Расстояние между началами элементов = ширина элемента + gap (отступ между элементами)
+  const rectSpacing = rectWidth + gap // Ширина элемента + один отступ
+  const borderRadius = 2 * scale // Меньше закругление
+
+  // Создаем SVG паттерн с закругленными прямоугольниками
+  // Элемент начинается с 0, так как отступ от края уже учтен в позиции контейнера
+  const createPattern = () => {
+    const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.2"/>
+</svg>`
+    const encoded = encodeURIComponent(svg)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  const patternUrl = createPattern()
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        [position]: 0,
+        left: `${gap}px`, // Отступ от левого края
+        width: `${width - gap * 2}px`, // Уменьшаем ширину на отступы с обеих сторон
+        height: `${height}px`,
+        backgroundImage: `url("${patternUrl}")`,
+        backgroundRepeat: 'repeat-x',
+        backgroundSize: `${rectSpacing}px ${rectHeight}px`,
+        backgroundPosition: '0 0',
+        pointerEvents: 'none',
+        zIndex: 1
+      }}
+    />
+  )
+}
+
+function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
+  const { isParallaxEnabled } = useParallaxStore()
+  
+  // Определяем список существующих файлов в папке (проверяем до 20 файлов)
+  const [existingFileNumbers, setExistingFileNumbers] = useState([])
+  
+  useEffect(() => {
+    if (!folderId) {
+      setExistingFileNumbers([])
+      return
+    }
+    
+    // Проверяем все файлы в папке (до 20) и собираем список существующих
+    // Это позволяет находить файлы даже если они не начинаются с 1.webp
+    const checkImageCount = async () => {
+      const maxCheck = 20 // Максимальное количество файлов для проверки
+      const existingFiles = []
+      
+      // Проверяем все файлы от 1 до maxCheck
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          
+          // Таймаут увеличен до 500ms для более надежной проверки
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      setExistingFileNumbers(existingFiles)
+    }
+    
+    checkImageCount()
+  }, [folderId])
+  
+  // Генерируем список путей к изображениям на основе найденных файлов
+  const frames = useMemo(() => {
+    if (existingFileNumbers.length > 0 && folderId) {
+      return existingFileNumbers.map((fileNum) => ({
+        type: 'image',
+        src: `/photos/${folderId}/${fileNum}.webp`
+      }))
+    }
+    // Fallback на случайные цвета если изображения не найдены
+    return Array.from({ length: 8 }, () => {
+      const r = Math.floor(Math.random() * 256)
+      const g = Math.floor(Math.random() * 256)
+      const b = Math.floor(Math.random() * 256)
+      return { type: 'color', value: `rgb(${r}, ${g}, ${b})` }
+    })
+  }, [existingFileNumbers, folderId])
+  
+  const frameCount = frames.length
+  
+  // Состояние для отслеживания hover на каждом кадре - временно отключено для производительности
+  // const [hoveredIndex, setHoveredIndex] = useState(null)
+
+  // progress может быть motion value или числом
+  // Прямое преобразование progress в позицию без spring - синхронно со скроллом
+  // Если progress - motion value, используем его напрямую, иначе создаем из числа
+  const progressMotion = typeof progress === 'object' && 'get' in progress 
+    ? progress 
+    : useMotionValue(typeof progress === 'number' ? (progress > 1 ? progress / 100 : progress) : 0)
+  
+  // Если progress - число, обновляем motion value
+  useEffect(() => {
+    if (typeof progress === 'number') {
+      const normalized = progress > 1 ? progress / 100 : progress
+      progressMotion.set(normalized)
+    }
+  }, [progress, progressMotion])
+  
+  // Прямое преобразование progress в позицию - без задержки, синхронно
+  const translateXValue = useTransform(progressMotion, (prog) => {
+    let targetLeftPosition = Math.max(-200, Math.min(200, (prog - center) * 500 * speed))
+    if (inverse) {
+      targetLeftPosition = -targetLeftPosition
+    }
+    return `translateX(${targetLeftPosition}vw)`
+  })
+
+  // Вычисляем zIndex на основе scale - крупные ленты должны быть выше визуально
+  // Базовый zIndex 1000, добавляем scale * 100 для правильного порядка
+  const zIndex = 1000 + Math.round(scale * 100)
+
+  return (
+    // Внешний контейнер - позиционирование относительно viewport
+    // Используем position: fixed для позиционирования относительно окна браузера
+          <div style={{
+      position: 'fixed',
+      top: `calc(50vh + ${topOffset}vh)`,
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      transformOrigin: 'center center',
+      zIndex: zIndex,
+      pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
+          }}>
+      {/* Контейнер поворота - поворачивается на angle градусов + параллакс */}
+            <motion.div
+        style={{
+        rotate: `${angle}deg`,
+        transformOrigin: 'center center',
+        pointerEvents: 'none',
+        x: isParallaxEnabled ? (parallaxX || 0) : 0,
+        y: isParallaxEnabled ? (parallaxY || 0) : 0,
+        rotateX: isParallaxEnabled ? (rotateX || 0) : 0,
+        rotateY: isParallaxEnabled ? (rotateY || 0) : 0,
+        perspective: '1000px'
+      }}>
+        {/* Контейнер движения - двигается по повернутой оси X */}
+        <motion.div
+          style={{
+            display: 'flex',
+            gap: 0, // Убираем отступы между кадрами для цельной ленты
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            pointerEvents: 'none', // Контейнер не перехватывает события - скролл проходит сквозь
+            transform: translateXValue,
+            position: 'relative' // Для позиционирования перфорации на уровне всей ленты
+          }}
+          onWheel={(e) => {
+            // Пробрасываем скролл событие - не блокируем его
+            e.stopPropagation()
+          }}
+          onMouseDown={(e) => {
+            // Не блокируем события мыши для скролла
+            e.stopPropagation()
+          }}
+        >
+          {(() => {
+            // Вычисляем параметры один раз для всей ленты
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale
+            const totalWidth = frameWidth * frameCount
+            
+            return (
+              <>
+                {/* Текстура перфорации на верхней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="top"
+                  scale={scale}
+                />
+                
+                {/* Текстура перфорации на нижней черной полосе - на уровне всей ленты */}
+                <LentaPerforationTexture 
+                  width={totalWidth}
+                  height={borderWidth}
+                  position="bottom"
+                  scale={scale}
+                />
+              </>
+            )
+          })()}
+          
+          {/* Кадры ленты */}
+          {frames.map((frame, index) => {
+            const isHovered = false // Временно отключено для производительности
+            const frameWidth = 120 * scale
+            const frameHeight = 80 * scale
+            const borderWidth = 12 * scale // Высота черной полосы сверху/снизу
+            const holeSize = 4 * scale // Размер дырочек
+            const holeSpacing = 12 * scale // Расстояние между центрами дырочек
+            
+            return (
+              <div
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onFrameClick) onFrameClick(lentaId, index, frames)
+                }}
+                onWheel={(e) => {
+                  // Пробрасываем скролл событие родителю - не блокируем скролл
+                  if (containerRef && containerRef.current) {
+                    // Не вызываем preventDefault, чтобы скролл работал естественно
+                    // Просто пробрасываем событие
+                    const scrollEvent = new WheelEvent('wheel', {
+                      deltaY: e.deltaY,
+                      deltaX: e.deltaX,
+                      bubbles: true,
+                      cancelable: true
+                    })
+                    containerRef.current.dispatchEvent(scrollEvent)
+                  }
+                }}
+                onTouchMove={(e) => {
+                  // Для touch устройств тоже пробрасываем скролл
+                  if (containerRef && containerRef.current) {
+                    e.stopPropagation()
+                  }
+                }}
+                style={{
+                  width: `${frameWidth}px`,
+                  height: `${frameHeight + borderWidth * 2}px`,
+                  flexShrink: 0,
+                  position: 'relative',
+                  backgroundColor: '#000000', // Черный фон для полос сверху/снизу
+                  // Тени убраны для оптимизации производительности
+                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'pointer',
+                  pointerEvents: 'auto', // Кадры кликабельны
+                  touchAction: 'pan-y' // Разрешаем вертикальный скролл на touch устройствах
+                }}
+              >
+                {/* Сам кадр в центре */}
+                {frame.type === 'image' ? (
+                  <img
+                    src={frame.src}
+                    alt={`Frame ${index}`}
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      objectFit: 'cover',
+                      borderRadius: '2px'
+                    }}
+                    onError={(e) => {
+                      // При ошибке загрузки показываем серый фон
+                      e.target.style.display = 'none'
+                      e.target.parentElement.style.backgroundColor = '#333'
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      backgroundColor: frame.value || '#333',
+                      borderRadius: '2px'
+                    }}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </motion.div>
+      </motion.div>
+            </div>
+  )
+}
+
+export default function Home() {
+  const containerRef = useRef(null)
+  const firstScreenRef = useRef(null)
+  const secondScreenRef = useRef(null)
+  const thirdScreenRef = useRef(null)
+
+  // Zustand store для управления эффектами
+  const { isParallaxEnabled, toggleParallax, isGrainEnabled } = useParallaxStore()
+  
+  // Motion values для progress - без перерендеров
+  const progressMotionValue = useMotionValue(0)
+
+  // Spring версии progress для эластичной анимации лент с разными характеристиками
+  // Все ленты слушают один progressMotionValue, но с разными spring эффектами
+  const springProgressFast = useSpring(progressMotionValue, {
+    stiffness: 200, // Высокая жесткость - быстрый отклик
+    damping: 25,   // Низкое затухание - больше "пружинистости"
+    mass: 0.3      // Малая масса - легкость
+  })
+
+  const springProgressMedium = useSpring(progressMotionValue, {
+    stiffness: 150, // Средняя жесткость
+    damping: 30,   // Среднее затухание
+    mass: 0.5      // Средняя масса
+  })
+
+  const springProgressSlow = useSpring(progressMotionValue, {
+    stiffness: 100, // Низкая жесткость - медленный отклик
+    damping: 35,   // Высокое затухание - меньше "пружинистости"
+    mass: 0.8      // Большая масса - инертность
+  })
+  const firstScreenProgressMotionValue = useMotionValue(0)
+  const secondScreenProgressMotionValue = useMotionValue(0)
+  const thirdScreenProgressMotionValue = useMotionValue(0)
+  
+  // Motion values для позиции мыши - без перерендеров
+  const mouseX = useMotionValue(50) // 0-100, начальное значение центр
+  const mouseY = useMotionValue(50) // 0-100, начальное значение центр
+  
+  // Motion value для кастомного скролла
+  const customScrollTop = useMotionValue(0)
+  const [isDraggingScrollbar, setIsDraggingScrollbar] = useState(false)
+  const scrollbarRef = useRef(null)
+  
+  // Для отображения в UI (только для текста) - используем useState только для индикаторов
+  const [progressText, setProgressText] = useState(0)
+  const [firstScreenProgressText, setFirstScreenProgressText] = useState(0)
+  const [secondScreenProgressText, setSecondScreenProgressText] = useState(0)
+  const [thirdScreenProgressText, setThirdScreenProgressText] = useState(0)
+  const [flashActive, setFlashActive] = useState(false)
+  const [clapperboardActive, setClapperboardActive] = useState(false) // Отключено по умолчанию для производительности
+  const [clapperboardVisible, setClapperboardVisible] = useState(false) // Скрыто по умолчанию
+
+  // Состояние для активной галереи
+  const [activeGallery, setActiveGallery] = useState(null) // { lentaId, frameIndex, frames }
+
+  // Ленивая загрузка лент для производительности
+  const [showLents, setShowLents] = useState(false)
+
+  // Показываем ленты после полной загрузки страницы (оптимизация производительности)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLents(true)
+    }, 1000) // Показываем ленты через 1 секунду после загрузки
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Фикс для нестабильных vh и vw единиц - устанавливаем CSS переменные
+  useEffect(() => {
+    const setViewportUnits = () => {
+      const vh = window.innerHeight * 0.01
+      const vw = window.innerWidth * 0.01
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
+      document.documentElement.style.setProperty('--vw', `${vw}px`)
+    }
+
+    // Устанавливаем сразу
+    setViewportUnits()
+
+    // Обновляем при изменении размера окна и ориентации
+    window.addEventListener('resize', setViewportUnits)
+    window.addEventListener('orientationchange', setViewportUnits)
+
+    return () => {
+      window.removeEventListener('resize', setViewportUnits)
+      window.removeEventListener('orientationchange', setViewportUnits)
+    }
+  }, [])
+
+  // Отслеживание позиции мыши для параллакса - без перерендеров
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const x = (e.clientX / window.innerWidth) * 100 // 0-100
+      const y = (e.clientY / window.innerHeight) * 100 // 0-100
+      mouseX.set(x)
+      mouseY.set(y)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [mouseX, mouseY])
+
+  // Transforms для параллакса - преобразуем позицию мыши в значения перспективы
+  // Для крупных лент (scale >= 1.5): сильный эффект
+  const lentaLargeParallaxX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeParallaxY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const lentaLargeRotateX = useTransform(mouseY, [0, 100], [8, -8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaLargeRotateY = useTransform(mouseX, [0, 100], [-8, 8], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для средних лент (scale < 1.5): средний эффект
+  const lentaMediumParallaxX = useTransform(mouseX, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumParallaxY = useTransform(mouseY, [0, 100], [-20, 20], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -20px до +20px
+  const lentaMediumRotateX = useTransform(mouseY, [0, 100], [5, -5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaMediumRotateY = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких лент: слабый эффект
+  const lentaSmallParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const lentaSmallRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const lentaSmallRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для крупной круговой диаграммы в центре: СЛАБЫЙ эффект (она на переднем плане)
+  const chartCenterParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const chartCenterRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartCenterRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Для маленьких диаграмм на заднем плане: СИЛЬНЫЙ эффект (они дальше)
+  const chartBackParallaxX = useTransform(mouseX, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackParallaxY = useTransform(mouseY, [0, 100], [-25, 25], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -25px до +25px
+  const chartBackRotateX = useTransform(mouseY, [0, 100], [6, -6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const chartBackRotateY = useTransform(mouseX, [0, 100], [-6, 6], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Комбинированные transforms для центрирования + параллакс
+  const chartCenterX = useTransform(chartCenterParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartCenterY = useTransform(chartCenterParallaxY, (py) => `calc(-50% + ${py}px)`)
+  const chartTopX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartTopY = useTransform(chartBackParallaxY, (py) => `calc(2rem + ${py}px)`)
+  const chartBottomX = useTransform(chartBackParallaxX, (px) => `calc(-50% + ${px}px)`)
+  const chartBottomY = useTransform(chartBackParallaxY, (py) => `calc(-2rem + ${py}px)`)
+  
+  // Для помех на втором экране: комбинируем скролл и мышь
+  // Параллакс от мыши для помех
+  const grainMouseX = useTransform(mouseX, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  const grainMouseY = useTransform(mouseY, [0, 100], [-30, 30], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -30px до +30px
+  
+  // Комбинированные motion values для backgroundPosition
+  const grainBackgroundXValue = useMotionValue(0)
+  const grainBackgroundYValue = useMotionValue(0)
+  
+  // Transform для backgroundPosition (комбинированная строка)
+  const grainBackgroundPosition = useTransform(
+    [grainBackgroundXValue, grainBackgroundYValue],
+    ([x, y]) => `${x}px ${y}px`
+  )
+  
+  // Transform для движения самого элемента (x, y) - комбинируем скролл и мышь
+  const grainTransformXValue = useMotionValue(0)
+  const grainTransformYValue = useMotionValue(0)
+  
+  const grainTransformX = grainTransformXValue
+  const grainTransformY = grainTransformYValue
+  
+  // Для лент перфорации: накапливаем смещение при движении мыши (как вращение пленки)
+  const perforationMouseOffset = useMotionValue(0)
+  const lastMouseX = useRef(50) // Начальная позиция мыши (центр)
+  
+  useEffect(() => {
+    const updatePerforationOffset = () => {
+      if (!isParallaxEnabled) return
+
+      const currentMouseX = mouseX.get()
+      const delta = Math.abs(currentMouseX - lastMouseX.current)
+
+      // Если мышь движется, добавляем смещение в одну сторону (вправо)
+      if (delta > 0.1) { // Порог для определения движения
+        // Скорость зависит от скорости движения мыши
+        const speed = Math.min(delta * 2, 5) // Ограничиваем максимальную скорость
+        perforationMouseOffset.set(perforationMouseOffset.get() + speed)
+        lastMouseX.current = currentMouseX
+      }
+    }
+
+    // Небольшое затухание накопленного смещения (имитация трения пленки)
+    const decayInterval = setInterval(() => {
+      const current = perforationMouseOffset.get()
+      if (current > 0) {
+        perforationMouseOffset.set(Math.max(0, current - 0.5)) // Медленное затухание
+      }
+    }, 100) // Каждые 100мс уменьшаем на 0.5
+
+    const unsubscribe = isParallaxEnabled ? mouseX.on('change', updatePerforationOffset) : null
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+      clearInterval(decayInterval)
+    }
+  }, [mouseX, perforationMouseOffset, isParallaxEnabled])
+  
+  // Для карточек проектов: разная сила параллакса в зависимости от расстояния от центра
+  // Центральная карточка (выбранная) - сильный параллакс
+  const movieCardCenterParallaxX = useTransform(mouseX, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterParallaxY = useTransform(mouseY, [0, 100], [-15, 15], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -15px до +15px
+  const movieCardCenterRotateX = useTransform(mouseY, [0, 100], [3, -3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardCenterRotateY = useTransform(mouseX, [0, 100], [-3, 3], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  
+  // Близкие карточки (offset 1) - средний параллакс
+  const movieCardNearParallaxX = useTransform(mouseX, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearParallaxY = useTransform(mouseY, [0, 100], [-10, 10], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -10px до +10px
+  const movieCardNearRotateX = useTransform(mouseY, [0, 100], [2, -2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardNearRotateY = useTransform(mouseX, [0, 100], [-2, 2], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Дальние карточки (offset 2) - слабый параллакс
+  const movieCardFarParallaxX = useTransform(mouseX, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarParallaxY = useTransform(mouseY, [0, 100], [-5, 5], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // -5px до +5px
+  const movieCardFarRotateX = useTransform(mouseY, [0, 100], [1, -1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+  const movieCardFarRotateY = useTransform(mouseX, [0, 100], [-1, 1], {
+    output: (value) => isParallaxEnabled ? value : 0
+  }) // градусы
+
+  // Стабилизируем объект mouseParallaxValues через useMemo, чтобы не вызывать перерисовки MoviesCarousel
+  const movieParallaxValues = useMemo(() => ({
+    centerX: movieCardCenterParallaxX,
+    centerY: movieCardCenterParallaxY,
+    centerRotateX: movieCardCenterRotateX,
+    centerRotateY: movieCardCenterRotateY,
+    nearX: movieCardNearParallaxX,
+    nearY: movieCardNearParallaxY,
+    nearRotateX: movieCardNearRotateX,
+    nearRotateY: movieCardNearRotateY,
+    farX: movieCardFarParallaxX,
+    farY: movieCardFarParallaxY,
+    farRotateX: movieCardFarRotateX,
+    farRotateY: movieCardFarRotateY
+  }), [
+    movieCardCenterParallaxX, movieCardCenterParallaxY, movieCardCenterRotateX, movieCardCenterRotateY,
+    movieCardNearParallaxX, movieCardNearParallaxY, movieCardNearRotateX, movieCardNearRotateY,
+    movieCardFarParallaxX, movieCardFarParallaxY, movieCardFarRotateX, movieCardFarRotateY
+  ])
+
+  // Партнеры из Excel файла
+  const partners = [
+    { name: 'Direct' },
+    { name: 'YBW' },
+    { name: 'Авивтор-продакшн' },
+    { name: 'Аврора-фильм' },
+    { name: 'Алекс Медиа' },
+    { name: 'Арт-Пикчерз' },
+    { name: 'ВВВ' },
+    { name: 'Вайт Медиа' },
+    { name: 'Глобал Фильм Дистрибьюшн' },
+    { name: 'Дирекция кино / Look film' },
+    { name: 'КИНО-ТВ' },
+    { name: 'КИТ' },
+    { name: 'Камеди клаб продакшн' },
+    { name: 'Космос Студио' },
+    { name: 'Монументал Вижн' },
+    { name: 'Небо' },
+    { name: 'РБ Продакшн' },
+    { name: 'Русское' },
+    { name: 'Сильвер Продакшн' },
+    { name: 'Социальный ролик' },
+    { name: 'СтарМедиа' },
+    { name: 'Студия 812' },
+    { name: 'Студия Федора Добронравова' },
+    { name: 'Телеформат' },
+    { name: 'Точка' },
+    { name: 'Форвард-фильм' },
+    { name: 'Форза Фильм' }
+  ]
+
+  // Функция для генерации SVG постера
+  const generatePosterSVG = (title, studio, period) => {
+    const escapeXml = (str) => (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const svgContent = `<svg width="200" height="300" xmlns="http://www.w3.org/2000/svg">
+      <rect width="200" height="300" fill="#1a1a1a"/>
+      <text x="100" y="140" font-family="Arial, sans-serif" font-size="14" fill="#ffffff" text-anchor="middle">${escapeXml(title)}</text>
+      <text x="100" y="160" font-family="Arial, sans-serif" font-size="11" fill="#888" text-anchor="middle">${escapeXml(studio)}</text>
+      <text x="100" y="180" font-family="Arial, sans-serif" font-size="10" fill="#666" text-anchor="middle">${escapeXml(period)}</text>
+    </svg>`
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent)
+  }
+
+  // Проекты из Excel файла
+  const projectsData = [
+    { title: 'След', studio: 'Телеформат', period: '2010 - 2013', format: 'Сериал' },
+    { title: 'Федеральный судья', studio: 'Телеформат', period: '2010 - 2013', format: 'Сериал' },
+    { title: 'Пятая Стража', studio: 'Телеформат', period: '2010 - 2013', format: 'Сериал' },
+    { title: 'Паутина - 8', studio: 'Форвард-фильм', period: '2014', format: 'Сериал' },
+    { title: 'Розыгрыш', studio: 'Авивтор-продакшн', period: '2014', format: 'Метр' },
+    { title: 'Рейтинг', studio: 'Арт-Пикчерз', period: '2015', format: 'Метр' },
+    { title: 'Фальшивая нота', studio: 'Русское', period: '2015', format: 'сериал' },
+    { title: 'Жили-Были', studio: 'Студия Федора Добронравова', period: '2016', format: 'Метр' },
+    { title: 'Толстяк', studio: 'Камеди клаб продакшн', period: '2016', format: 'Сериал' },
+    { title: 'Конверт', studio: 'РБ Продакшн', period: '2016', format: 'Метр' },
+    { title: 'Везунчики', studio: 'РБ Продакшн', period: '2016', format: 'Сериал' },
+    { title: 'Неваляшка', studio: 'Русское', period: '2016', format: 'Сериал' },
+    { title: 'Трейдер', studio: 'Аврора-фильм', period: '2017', format: 'Сериал' },
+    { title: 'Не плач я ухожу', studio: 'Русское', period: '2017', format: 'Сериал' },
+    { title: 'Золотце', studio: 'Русское', period: '2017', format: 'Сериал' },
+    { title: 'Как я стал русским', studio: 'Небо', period: '2018', format: 'Метр' },
+    { title: 'Даешь молодежь', studio: 'YBW', period: '2018', format: 'Сериал' },
+    { title: 'Трезвый водитель', studio: 'Небо', period: '2018', format: 'Метр' },
+    { title: 'Как Гусар во времени путешествовал', studio: 'Камеди клаб продакшн', period: '2018', format: 'Пилот' },
+    { title: 'Вражда Семей', studio: 'YBW', period: '2018', format: 'Пилот' },
+    { title: 'Фитнес - 2', studio: 'YBW', period: '2018', format: 'Сериал' },
+    { title: 'Доктор Лиза', studio: 'КИТ', period: '2019', format: 'Метр' },
+    { title: 'Вражда семей', studio: 'YBW', period: '2019', format: 'Сериал' },
+    { title: 'ВТБ', studio: 'Небо', period: '2019', format: 'Реклама' },
+    { title: 'Фитнес - 3', studio: 'YBW', period: '2019', format: 'Сериал' },
+    { title: 'Гости из Прошлого', studio: 'Небо', period: '2020', format: 'Сериал' },
+    { title: 'Фитнес - 4', studio: 'YBW', period: '2020', format: 'Сериал' },
+    { title: 'Короче', studio: 'YBW', period: '2020', format: 'Сериал' },
+    { title: 'Одноклассники', studio: 'Direct', period: '2020', format: 'Реклама' },
+    { title: 'Авито', studio: 'Direct', period: '2020', format: 'Реклама' },
+    { title: 'Фитнес - 5', studio: 'YBW', period: '2021', format: 'Сериал' },
+    { title: 'Союз спасения (1825 г)', studio: 'Дирекция кино / Look film', period: '2020 - 2021', format: 'Сериал' },
+    { title: 'Пассажиры - 2', studio: 'YBW', period: '2020 - 2021', format: 'Сериал' },
+    { title: 'Приход', studio: 'Небо', period: '2020 - 2021', format: 'Пилот' },
+    { title: 'КрисТина', studio: 'YBW', period: '2020 - 2021', format: 'Сериал' },
+    { title: 'Фитин', studio: 'Точка', period: '2020 - 2021', format: 'Сериал' },
+    { title: 'Аурус', studio: 'Direct', period: '2020 - 2021', format: 'Реклама' },
+    { title: 'КУ', studio: 'Небо', period: '2022', format: 'Метр' },
+    { title: 'Аврора', studio: 'СтарМедиа', period: '2022', format: 'Сериал' },
+    { title: 'Фишер', studio: 'Студия 812', period: '2022', format: 'Сериал' },
+    { title: 'Стас Михайлов', studio: 'ВВВ', period: '2022', format: 'Клип' },
+    { title: 'Княгиня Ольга', studio: 'Сильвер Продакшн', period: '2023', format: 'Сериал' },
+    { title: 'Пальма-2', studio: 'Сильвер Продакшн', period: '2023', format: 'Метр' },
+    { title: 'Честный развод. Бенефис', studio: 'Глобал Фильм Дистрибьюшн', period: '2023', format: 'Метр' },
+    { title: 'Авиатор', studio: 'КИНО-ТВ', period: '2023', format: 'Метр' },
+    { title: 'Авиатор', studio: 'КИНО-ТВ', period: '2024', format: 'Метр' },
+    { title: 'Княгиня Ольга', studio: 'Сильвер Продакшн', period: '2024', format: 'Сериал' },
+    { title: 'Быстрее врага', studio: 'Вайт Медиа', period: '2024', format: 'Метр' },
+    { title: 'Гусары (1812 г)', studio: 'Космос Студио', period: '2024', format: 'Сериал' },
+    { title: 'Хозяин Москвы (1810-1825гг)', studio: 'Алекс Медиа', period: '2024', format: 'Сериал' },
+    { title: 'Хозяин Москвы (1810-1825гг)', studio: 'Алекс Медиа', period: '2025', format: 'Сериал' },
+    { title: 'Разговоры о важном', studio: 'Социальный ролик', period: '2025', format: 'Ролик' },
+    { title: 'Московская касса невест', studio: 'Монументал Вижн', period: '2025', format: 'Метр' },
+    { title: 'Свора', studio: 'Форза Фильм', period: '2025', format: 'Сериал' },
+    { title: 'Большая Волна', studio: 'Монументал Вижн', period: '2025', format: 'Метр' }
+  ]
+
+  // Преобразуем проекты в формат для MoviesCarousel
+  const topMovies = projectsData.map(project => ({
+    title: project.title,
+    poster: generatePosterSVG(project.title, project.studio, project.period),
+    kinopoiskId: null,
+    studio: project.studio,
+    period: project.period,
+    format: project.format
+  }))
+  
+  // Генерация frames для ленты на основе lentaId (для стабильности)
+  const generateFramesForLenta = (lentaId, frameCount) => {
+    // Используем lentaId как seed для генерации стабильных цветов
+    const seed = lentaId.split('-')[1] // Извлекаем номер из "lenta-1" -> "1"
+    const seedNum = parseInt(seed) || 0
+    
+    return Array.from({ length: frameCount }, (_, i) => {
+      // Простая детерминированная генерация на основе seed и индекса
+      const r = (seedNum * 17 + i * 23) % 256
+      const g = (seedNum * 31 + i * 37) % 256
+      const b = (seedNum * 41 + i * 43) % 256
+      return `rgb(${r}, ${g}, ${b})`
+    })
+  }
+
+  // Массив всех лент с их данными - используем folderId для генерации путей к изображениям
+  // Количество файлов будет определено динамически при загрузке
+  const allLentas = useMemo(() => {
+    return [
+      { id: 'lenta-1', folderId: '1' },
+      { id: 'lenta-6', folderId: '2' },
+      { id: 'lenta-9', folderId: '3' },
+      { id: 'lenta-2', folderId: '4' },
+      { id: 'lenta-3', folderId: '5' },
+      { id: 'lenta-4', folderId: '6' },
+      { id: 'lenta-7', folderId: '7' },
+      { id: 'lenta-8', folderId: '8' },
+      { id: 'lenta-12', folderId: '9' },
+      { id: 'lenta-5', folderId: '10' },
+      { id: 'lenta-10', folderId: '11' },
+      { id: 'lenta-11', folderId: '12' }
+    ]
+  }, [])
+
+  const handleFrameClick = (lentaId, frameIndex, frames) => {
+    // Находим индекс ленты в массиве
+    const lentaIndex = allLentas.findIndex(l => l.id === lentaId)
+    
+    // Используем переданные frames (они уже содержат реальные изображения)
+    // allLentas будет обновлен в Gallery при загрузке
+    setActiveGallery({ 
+      lentaId, 
+      frameIndex, 
+      frames, // Передаем реальные frames с изображениями
+      lentaIndex: lentaIndex >= 0 ? lentaIndex : 0,
+      allLentas // Передаем allLentas для навигации между лентами
+    })
+  }
+  
+  const handleCloseGallery = () => {
+    setActiveGallery(null)
+  }
+  
+  const handleSign = () => {
+    setFlashActive(true)
+  }
+  
+  const handleFlashComplete = () => {
+    setFlashActive(false)
+  }
+  
+  // Показываем хлопушку на 1/3 времени всех вспышек раньше (~1 сек)
+  // Без автозакрытия - окно остается открытым до ручного закрытия
+  // Но верхняя створка закрывается после падения
+  useEffect(() => {
+    if (flashActive) {
+      // Показываем на 1 сек (на 1/3 времени всех вспышек раньше)
+      const showTimeout = setTimeout(() => {
+        setClapperboardActive(true) // Открыта
+        setClapperboardVisible(true) // Показываем и падает сверху
+      }, 1000) // 1 сек - на 1/3 времени всех вспышек раньше
+      
+      // Закрываем верхнюю створку после падения (через ~1.5 сек после начала падения)
+      // 1000ms (показ) + 1500ms (время падения) = 2500ms
+      const closeFlapTimeout = setTimeout(() => {
+        setClapperboardActive(false) // Закрываем верхнюю створку
+      }, 2500)
+      
+      return () => {
+        clearTimeout(showTimeout)
+        clearTimeout(closeFlapTimeout)
+      }
+    }
+    // Убираем else блок - окно остается видимым до ручного закрытия
+  }, [flashActive])
+  
+  const handleClapperboardClose = useCallback(() => {
+    setClapperboardActive(false)
+    setTimeout(() => {
+      setClapperboardVisible(false)
+    }, 600) // Время на анимацию закрытия
+  }, [])
+
+  // Отслеживаем скролл контейнера с помощью framer-motion
+  const { scrollYProgress, scrollY } = useScroll({
+    container: containerRef,
+    layoutEffect: false
+  })
+
+  // Отслеживаем прогресс каждого экрана от появления до исчезновения
+  // offset: ["start end"] - когда верхний край экрана касается нижней части viewport (0%)
+  // offset: ["end start"] - когда нижний край экрана касается верхней части viewport (100%)
+  const { scrollYProgress: firstScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: firstScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: secondScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: secondScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  const { scrollYProgress: thirdScreenScrollProgress } = useScroll({
+    container: containerRef,
+    target: thirdScreenRef,
+    offset: ["start end", "end start"],
+    layoutEffect: false
+  })
+
+  // Вычисляем прогресс через useTransform - без перерендеров, прямое обновление DOM
+  // Используем useTransform для преобразования scrollY в progress (0-1)
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const container = containerRef.current
+    const updateProgress = () => {
+      const viewportHeight = container.clientHeight
+      const containerHeight = container.scrollHeight
+      const full = containerHeight - viewportHeight
+      
+      if (full <= 0) {
+        progressMotionValue.set(0)
+        return
+      }
+      
+      // Подписываемся на изменения scrollY и обновляем progressMotionValue
+      const unsubscribe = scrollY.on("change", (latest) => {
+        const progressValue = Math.min(Math.max((latest / full) * 100, 0), 100) / 100
+        progressMotionValue.set(progressValue)
+      })
+      
+      return unsubscribe
+    }
+    
+    const unsubscribe = updateProgress()
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [scrollY, progressMotionValue])
+  
+  // Преобразуем scrollYProgress в motion value напрямую
+  useEffect(() => {
+    const unsubscribe1 = firstScreenScrollProgress.on("change", (latest) => {
+      firstScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe2 = secondScreenScrollProgress.on("change", (latest) => {
+      secondScreenProgressMotionValue.set(latest)
+    })
+    const unsubscribe3 = thirdScreenScrollProgress.on("change", (latest) => {
+      thirdScreenProgressMotionValue.set(latest)
+    })
+    
+    return () => {
+      unsubscribe1()
+      unsubscribe2()
+      unsubscribe3()
+    }
+  }, [firstScreenScrollProgress, secondScreenScrollProgress, thirdScreenScrollProgress, firstScreenProgressMotionValue, secondScreenProgressMotionValue, thirdScreenProgressMotionValue])
+  
+  // Motion values для изменения параметров шума (не движения, а изменения свойств)
+  const grainNoiseIntensity = useMotionValue(0.5) // Интенсивность шума
+  const grainNoiseOpacity = useMotionValue(0.6) // Прозрачность шума
+  
+  // Обновляем параметры шума при изменении скролла или мыши (не движение, а изменение)
+  useEffect(() => {
+    const updateNoise = () => {
+      const scroll = secondScreenScrollProgress.get()
+      const mouseXVal = mouseX.get() / 100 // 0-1
+      const mouseYVal = mouseY.get() / 100 // 0-1
+
+      // Изменяем backgroundPosition на основе скролла и мыши (движение фона)
+      if (isParallaxEnabled) {
+        grainBackgroundXValue.set(scroll * 200 + (mouseXVal - 0.5) * 50)
+        grainBackgroundYValue.set(scroll * 200 + (mouseYVal - 0.5) * 50)
+      } else {
+        grainBackgroundXValue.set(scroll * 200) // Только скролл, без мыши
+        grainBackgroundYValue.set(scroll * 200)
+      }
+
+      // Изменяем интенсивность шума на основе мыши и скролла (не движение, а изменение)
+      const mouseInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.1 : 0
+      const noiseIntensity = 0.4 + scroll * 0.3 + mouseInfluence
+      grainNoiseIntensity.set(Math.min(1, Math.max(0.3, noiseIntensity)))
+
+      const mouseOpacityInfluence = isParallaxEnabled ? (mouseXVal + mouseYVal) * 0.15 : 0
+      const noiseOpacity = 0.5 + scroll * 0.2 + mouseOpacityInfluence
+      grainNoiseOpacity.set(Math.min(1, Math.max(0.3, noiseOpacity)))
+    }
+    
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateNoise)
+    const unsubscribeMouseX = mouseX.on('change', updateNoise)
+    const unsubscribeMouseY = mouseY.on('change', updateNoise)
+    
+    // Инициализация
+    updateNoise()
+    
+    return () => {
+      unsubscribeScroll()
+      unsubscribeMouseX()
+      unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, grainBackgroundXValue, grainBackgroundYValue, grainNoiseIntensity, grainNoiseOpacity])
+  
+  // Motion values для перерисовки царапин (изменение их позиций)
+  const scratchRedrawTrigger = useMotionValue(0) // Триггер для перерисовки
+  
+  useEffect(() => {
+    const updateScratches = () => {
+      // Просто обновляем триггер, чтобы вызвать перерисовку
+      scratchRedrawTrigger.set(Date.now())
+    }
+
+    const unsubscribeScroll = secondScreenScrollProgress.on('change', updateScratches)
+    const unsubscribeMouseX = isParallaxEnabled ? mouseX.on('change', updateScratches) : null
+    const unsubscribeMouseY = isParallaxEnabled ? mouseY.on('change', updateScratches) : null
+
+    return () => {
+      unsubscribeScroll()
+      if (unsubscribeMouseX) unsubscribeMouseX()
+      if (unsubscribeMouseY) unsubscribeMouseY()
+    }
+  }, [secondScreenScrollProgress, mouseX, mouseY, scratchRedrawTrigger, isParallaxEnabled])
+  
+  // UI обновления - синхронные для плавной работы (дебаунсинг только для тяжелых диаграмм)
+  useMotionValueEvent(progressMotionValue, "change", (latest) => {
+    setProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(firstScreenProgressMotionValue, "change", (latest) => {
+    setFirstScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(secondScreenProgressMotionValue, "change", (latest) => {
+    setSecondScreenProgressText(Math.round(latest * 100))
+  })
+  useMotionValueEvent(thirdScreenProgressMotionValue, "change", (latest) => {
+    setThirdScreenProgressText(Math.round(latest * 100))
+  })
+
+  return (
+    <>
+      {/* Компонент Вспышка */}
+      <Flash isActive={flashActive} onComplete={handleFlashComplete} />
+      
+      {/* Галерея для активированной ленты */}
+      {activeGallery && (
+        <Gallery
+          frames={activeGallery.frames}
+          initialIndex={activeGallery.frameIndex}
+          onClose={handleCloseGallery}
+          lentaIndex={activeGallery.lentaIndex}
+          allLentas={activeGallery.allLentas}
+        />
+      )}
+      
+      {/* Логотип SI-PRODUCTION в правом нижнем углу */}
+      <div 
+        className="si-production-logo"
+        style={{
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          color: '#ffffff',
+          fontSize: 'clamp(32px, 6vw, 72px)',
+          fontFamily: "'Science Gothic', monospace",
+          fontWeight: 'bold',
+          zIndex: 10000,
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}
+      >
+        <span 
+          className="si-text"
+          style={{
+            fontFamily: "'Slovic', sans-serif",
+            color: '#ff0000',
+            transform: 'translateY(-3px)'
+          }}
+        >SI</span>
+        <span className="dash-text">-</span>
+        <span 
+          className="production-text"
+          style={{
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+          }}
+        >PRODUCTION</span>
+      </div>
+      
+      {/* Контейнер для хлопушки - fixed с overflow hidden */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        zIndex: 99999, // Ниже вспышки (100000)
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
+            </div>
+
+
+    <div 
+      ref={containerRef} 
+      className="main-scroll-container"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        overflowY: 'auto', // Нативный скролл
+        overflowX: 'hidden',
+        touchAction: 'pan-y' // Разрешаем вертикальный touch-скролл на мобильных
+      }}
+    >
+      {/* Ленты размещены внутри скроллящейся зоны */}
+      {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
+      {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
+      {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
+      {/* Каждая лента соответствует одной папке из public/photos (1-12) */}
+      {/* Центральные крупные ленты - быстрый spring для максимального эффекта */}
+      {/* Эти ленты самые заметные и должны реагировать мгновенно */}
+      <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Промежуточные ленты - средний spring */}
+      {/* Баланс между скоростью и плавностью */}
+      <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+
+      {/* Фоновые ленты - медленный spring для subtle эффекта */}
+      {/* Эти ленты создают глубину и не должны отвлекать внимание */}
+      <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      
+      {/* Индикатор прогресса в левом верхнем углу */}
+      <div style={{
+        position: 'fixed',
+        top: '16px',
+        left: '16px',
+        color: '#ffffff',
+        fontSize: 'clamp(14px, 2vw, 18px)',
+        fontFamily: "'Science Gothic', monospace",
+        zIndex: 10000,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: '8px 16px',
+        borderRadius: '4px',
+        backdropFilter: 'blur(4px)',
+        pointerEvents: 'none'
+      }}>
+        Прогресс кинопроизводства: {progressText}%
+            </div>
+
+      {/* Первый экран */}
+      <section 
+        ref={firstScreenRef}
+        style={{ 
+          width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a', // Чуть светлее черного
+          position: 'relative'
+        }}
+      >
+        {/* Индикатор прогресса первого экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '70px',
+          width: 'fit-content',
+          left: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Составление плана: {firstScreenProgressText}%
+            </div>
+
+        {/* Надпись ПЕРВЫЙ ЭКРАН */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+            Первый экран
+            </div>
+      </section>
+
+      {/* Второй экран */}
+      <section 
+        ref={secondScreenRef}
+        style={{ 
+        width: '100vw', 
+          height: 'calc(var(--vh, 1vh) * 100)', 
+          backgroundColor: '#0a0a0a',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          overflowX: 'hidden'
+        }}
+      >
+        {/* Индикатор прогресса второго экрана - обертка для правильной работы sticky */}
+        <ProgressIndicator progressText={secondScreenProgressText} />
+        
+        {/* Эффекты помех - только если включены */}
+        {isGrainEnabled && (
+          <>
+            {/* Статические помехи как на старой пленке - зернистость */}
+            <GrainLayerComponent
+          zIndex={100}
+          opacity={0.6}
+          backgroundImage={`
+            radial-gradient(circle at 0 0, rgba(255,255,255,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 2px 2px, rgba(0,0,0,0.15) 1px, transparent 1px),
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 0.5px, transparent 0.5px)
+          `}
+          backgroundSize="4px 4px, 4px 4px, 2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2) brightness(0.85)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Дополнительный слой зернистости - точки */}
+        <GrainLayerComponent
+          zIndex={101}
+          opacity={0.5}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(255,255,255,0.1) 1px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 3px),
+            repeating-linear-gradient(90deg, transparent 0px, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 3px)
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="screen"
+          filter="contrast(1.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Третий слой - более крупная зернистость */}
+        <GrainLayerComponent
+          zIndex={102}
+          opacity={0.4}
+          backgroundImage={`
+            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px),
+            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px)
+          `}
+          backgroundSize="3px 3px"
+          mixBlendMode="multiply"
+          filter="contrast(1.5)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Четвертый слой - очень заметная зернистость с точками */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.7}
+          backgroundImage={`
+            repeating-conic-gradient(from 0deg at 50% 50%, 
+              rgba(255,255,255,0.2) 0deg, 
+              transparent 1deg, 
+              transparent 2deg, 
+              rgba(0,0,0,0.2) 2deg, 
+              rgba(0,0,0,0.2) 3deg, 
+              transparent 3deg, 
+              transparent 4deg
+            )
+          `}
+          backgroundSize="2px 2px"
+          mixBlendMode="overlay"
+          filter="contrast(2.5) brightness(0.8)"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+        
+        {/* Горизонтальные царапины - перерисовываются при движении мыши */}
+        <ScratchesComponent count={15} scratchRedrawTrigger={scratchRedrawTrigger} />
+        
+        {/* Вертикальные полосы повреждений */}
+        <GrainLayerComponent
+          zIndex={103}
+          opacity={0.25}
+          backgroundImage={`
+            repeating-linear-gradient(
+              90deg,
+              transparent 0px,
+              transparent 2px,
+              rgba(255, 255, 255, 0.15) 2px,
+              rgba(255, 255, 255, 0.15) 3px,
+              transparent 3px,
+              transparent 8px
+            )
+          `}
+          backgroundSize="60px 100%"
+          mixBlendMode="overlay"
+          grainBackgroundPosition={grainBackgroundPosition}
+          grainNoiseOpacity={grainNoiseOpacity}
+        />
+          </>
+        )}
+
+        {/* Движущиеся ленты перфорации по границам экрана */}
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" mouseOffset={perforationMouseOffset} />
+        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" mouseOffset={perforationMouseOffset} />
+        
+        {/* Линейная диаграмма на весь экран */}
+        <LineChartComponent key="line-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        
+        {/* Радарная диаграмма - сверху с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            top: '2rem',
+            x: chartTopX,
+            y: chartTopY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadarChartComponent key="radar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+        
+        {/* Радиальная столбчатая диаграмма - снизу с отступом, задний план, СИЛЬНЫЙ параллакс */}
+        <ChartContainer
+          style={{
+            bottom: '2rem',
+            top: 'auto',
+            x: chartBottomX,
+            y: chartBottomY,
+            rotateX: chartBackRotateX,
+            rotateY: chartBackRotateY,
+          }}
+        >
+          <RadialBarChartComponent key="radial-bar-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </ChartContainer>
+
+        {/* Круговая диаграмма прогресса - по центру, передний план, СЛАБЫЙ параллакс */}
+        <CenterChartContainer
+          style={{
+            x: chartCenterX,
+            y: chartCenterY,
+            rotateX: chartCenterRotateX,
+            rotateY: chartCenterRotateY,
+          }}
+        >
+          <ProgressChart key="progress-chart-main" progressMotionValue={secondScreenScrollProgress} />
+        </CenterChartContainer>
+        
+          {/* Контейнер для договора */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(210mm, 90vw)',
+            height: 'min(297mm, calc(90vw * 1.414))',
+            maxHeight: 'calc(var(--vh, 1vh) * 90)',
+            zIndex: 20
+          }}>
+            {/* Сетчатый лист A4 - фон с сеткой */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backgroundImage: `
+                linear-gradient(to right, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px)
+              `,
+              backgroundSize: '1.5em 1.5em',
+              backgroundPosition: 'center center',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 4px 16px rgba(0, 0, 0, 0.6)'
+            }} />
+
+            {/* Контейнер с текстом договора */}
+            <div 
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                padding: 'clamp(16px, 3vw, 2rem)',
+                display: 'flex',
+                flexDirection: 'column',
+                fontSize: 'clamp(24px, 3vw, 36px)',
+                pointerEvents: 'auto',
+                zIndex: 1
+              }}
+            >
+            {/* Надпись ДОГОВОР сверху по центру */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: 'auto',
+              paddingTop: '1em'
+            }}>
+              <h1 
+                style={{
+                  fontSize: '2em',
+                  fontFamily: "'Slovic', sans-serif",
+                  color: '#ffffff',
+                  margin: 0
+                }}
+              >
+                ДОГОВОР
+              </h1>
+            </div>
+
+            {/* Список услуг с галочками в центре */}
+            <ContractItemsList progressMotionValue={secondScreenProgressMotionValue} />
+
+            {/* Кнопка Подписать снизу */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: 'auto',
+              paddingBottom: '1em'
+            }}>
+              <button 
+                onClick={handleSign}
+                style={{
+                  padding: '0.6em 1.6em',
+                  backgroundColor: '#ff0000',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0.2em',
+                  fontSize: '1em',
+                  fontFamily: "'Slovic', sans-serif",
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ff0000'
+                  e.currentTarget.style.color = '#ffffff'
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ffffff'
+                  e.currentTarget.style.color = '#ff0000'
+                }}
+              >
+                Подписать
+              </button>
+            </div>
+          </div>
+          </div>
+        
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#ffffff',
+          fontSize: 'clamp(24px, 5vw, 48px)',
+          fontFamily: "'Slovic', sans-serif",
+          textAlign: 'center',
+          zIndex: -1,
+          pointerEvents: 'none'
+        }}>
+          Второй экран
+        </div>
+      </section>
+
+      {/* Третий экран */}
+      <section 
+        ref={thirdScreenRef}
+        style={{
+        width: '100vw',
+          minHeight: 'calc(var(--vh, 1vh) * 100)',
+          background: 'linear-gradient(to bottom, #000000 0%, #0a0a2e 50%, #1a1a3e 100%)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Упрощенное звездное небо для производительности */}
+        <StarrySky starCount={50} />
+
+        {/* Индикатор прогресса третьего экрана */}
+        <div style={{
+          position: 'sticky',
+          top: '16px',
+          width: 'fit-content',
+          marginLeft: 'auto',
+          marginRight: '16px',
+          color: '#ffffff',
+          fontSize: 'clamp(14px, 2vw, 18px)',
+          fontFamily: "'Science Gothic', monospace",
+          zIndex: 1000,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          backdropFilter: 'blur(4px)',
+          pointerEvents: 'none'
+        }}>
+          Монтаж: {thirdScreenProgressText}%
+        </div>
+
+        {/* Секция ПРОЕКТЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПРОЕКТЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1 
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПРОЕКТЫ
+            </h1>
+          </div>
+
+          {/* Карусель с фильмами */}
+          <div style={{ minHeight: '500px' }}>
+            <MoviesCarousel 
+              movies={topMovies}
+              mouseParallaxValues={movieParallaxValues}
+            />
+          </div>
+        </div>
+
+        {/* Секция ПАРТНЕРЫ */}
+        <div style={{
+          width: '90%',
+          margin: '0 auto',
+          paddingTop: '4rem',
+          paddingBottom: '4rem',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 20,
+          position: 'relative'
+        }}>
+          {/* Заголовок ПАРТНЕРЫ */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '3rem'
+          }}>
+            <h1
+              style={{
+                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontFamily: "'Slovic', sans-serif",
+                color: '#ffffff',
+                margin: 0
+              }}
+            >
+              ПАРТНЕРЫ
+            </h1>
+          </div>
+
+          {/* Сетка с логотипами партнеров */}
+          <PartnersGrid partners={partners} />
+          
+          {/* Футер - Made in Zvenigorod на звездном фоне */}
+          <footer style={{
+            width: '100%',
+            textAlign: 'center',
+            marginTop: '4rem',
+            marginBottom: '150px',
+            pointerEvents: 'none'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
+              fontFamily: "'Slovic', sans-serif",
+              fontWeight: 'bold'
+            }}>
+              <span>Made in</span>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontFamily: "'Slovic', sans-serif",
+                fontWeight: 'bold'
+              }}>
+                {/* Иконка православного купола из SVG файла */}
+                <img 
+                  src="/tampls.svg" 
+                  alt="Zvenigorod dome" 
+                  style={{ 
+                    display: 'inline-block',
+                    verticalAlign: 'middle',
+                    width: '24px',
+                    height: '24px'
+                  }}
+                />
+                <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
+              </span>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+    </div>
+    </>
+  )
+}
+
+// Компонент кастомного скроллбара
+function CustomScrollbar({ containerRef, scrollTop, isDragging, setIsDragging, scrollbarRef }) {
+  const [scrollbarHeight, setScrollbarHeight] = useState(0)
+  const [scrollbarTop, setScrollbarTop] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(0)
+  const [contentHeight, setContentHeight] = useState(0)
+  const dragStartY = useRef(0)
+  const dragStartScroll = useRef(0)
+  
+  // Вычисляем размеры скроллбара
+  useEffect(() => {
+    if (!containerRef.current) return
+    
+    const updateScrollbar = () => {
+      const container = containerRef.current
+      if (!container) return
+      
+      const ch = container.clientHeight
+      const sh = container.scrollHeight
+      const st = scrollTop.get()
+      
+      setContainerHeight(ch)
+      setContentHeight(sh)
+      
+      // Высота скроллбара пропорциональна видимой области
+      const thumbHeight = Math.max(20, (ch / sh) * ch)
+      setScrollbarHeight(thumbHeight)
+      
+      // Позиция скроллбара пропорциональна scrollTop
+      const maxTop = ch - thumbHeight
+      const scrollProgress = sh > ch ? st / (sh - ch) : 0
+      setScrollbarTop(scrollProgress * maxTop)
+    }
+    
+    const unsubscribe = scrollTop.on('change', updateScrollbar)
+    updateScrollbar()
+    
+    // Обновляем при изменении размера окна
+    window.addEventListener('resize', updateScrollbar)
+    
+    return () => {
+      unsubscribe()
+      window.removeEventListener('resize', updateScrollbar)
+    }
+  }, [containerRef, scrollTop])
+  
+  // Обработка drag скроллбара
+  useEffect(() => {
+    if (!isDragging) return
+    
+    const handleMouseMove = (e) => {
+      if (!containerRef.current || !scrollbarRef.current) return
+      
+      const container = containerRef.current
+      const scrollbar = scrollbarRef.current
+      const containerRect = container.getBoundingClientRect()
+      const scrollbarRect = scrollbar.getBoundingClientRect()
+      
+      const deltaY = e.clientY - dragStartY.current
+      const scrollbarTrackHeight = containerHeight - scrollbarHeight
+      const scrollRatio = (deltaY / scrollbarTrackHeight) * (contentHeight - containerHeight)
+      
+      const newScroll = Math.max(0, Math.min(contentHeight - containerHeight, dragStartScroll.current + scrollRatio))
+      scrollTop.set(newScroll)
+    }
+    
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, containerRef, scrollbarRef, containerHeight, scrollbarHeight, contentHeight, scrollTop, setIsDragging])
+  
+  const handleMouseDown = (e) => {
+    e.preventDefault()
+    dragStartY.current = e.clientY
+    dragStartScroll.current = scrollTop.get()
+    setIsDragging(true)
+  }
+  
+  const handleTrackClick = (e) => {
+    if (!containerRef.current || !scrollbarRef.current) return
+    
+    const container = containerRef.current
+    const scrollbar = scrollbarRef.current
+    const containerRect = container.getBoundingClientRect()
+    const clickY = e.clientY - containerRect.top
+    
+    const scrollbarTrackHeight = containerHeight - scrollbarHeight
+    const clickRatio = clickY / scrollbarTrackHeight
+    const newScroll = clickRatio * (contentHeight - containerHeight)
+    
+    scrollTop.set(Math.max(0, Math.min(contentHeight - containerHeight, newScroll)))
+  }
+  
+  if (contentHeight <= containerHeight) return null // Не показываем скроллбар если контент помещается
+  
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        right: '10px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '8px',
+        height: `${containerHeight}px`,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '4px',
+        zIndex: 10000,
+        cursor: 'pointer'
+      }}
+      onClick={handleTrackClick}
+    >
+      <div
+        ref={scrollbarRef}
+        style={{
+          position: 'absolute',
+          top: `${scrollbarTop}px`,
+          left: 0,
+          width: '100%',
+          height: `${scrollbarHeight}px`,
+          backgroundColor: 'rgba(255, 255, 255, 0.5)',
+          borderRadius: '4px',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: isDragging ? 'none' : 'background-color 0.2s ease',
+          userSelect: 'none'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.7)'
+        }}
+        onMouseLeave={(e) => {
+          if (!isDragging) {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+```
+
+
+Удаляю временный файл и проверяю результат:
+
+
+
+Готово. Данные из Excel интегрированы напрямую в код сайта.
+
+**Что сделано:**
+
+1. Распарсил Excel файл `Фильмография_Щербаков.xlsx` с помощью pandas (готовый конвертер)
+2. Заменил хардкодные данные:
+   - **Партнеры**: теперь 27 реальных партнеров из Excel вместо 6 тестовых
+   - **Проекты**: теперь 55 реальных проектов из Excel вместо 20 тестовых
+3. Удалил все лишние файлы:
+   - Удален скрипт `parse_excel.py`
+   - Удалены JSON файлы
+   - Удален код загрузки данных из JSON
+4. Данные теперь напрямую в коде — без внешних файлов и скриптов
+
+На последнем экране сайта отображаются:
+- **Список проектов** — все 55 проектов из Excel с SVG-постерами (название, студия, период)
+- **Список партнеров** — все 27 студий/партнеров из Excel
+
+Все данные взяты из вашего Excel файла и встроены в код.
+
+---
+
+**User**
+
+Кажется я случайно откатил изменения примени их еще раз
+И нужно найти в интернете постеры для каждого кино проекта в галлерее проектов
+

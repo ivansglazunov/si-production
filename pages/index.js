@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, Suspense, memo, useMemo, useCallbac
 import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
 import { useParallaxStore } from '../store/parallaxStore'
+import Papa from 'papaparse'
 
 // Компонент пункта договора с галочкой
 const ContractItem = memo(function ContractItem({ text, progress, threshold, textColor }) {
@@ -351,11 +352,82 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
   const [currentFrameIndex, setCurrentFrameIndex] = useState(initialIndex)
   const [currentLentaIndex, setCurrentLentaIndex] = useState(lentaIndex || 0)
   const [isDragging, setIsDragging] = useState(false)
+  const [loadedLentas, setLoadedLentas] = useState({}) // Кэш загруженных лент
   const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+  
+  // Загружаем изображения для всех лент
+  useEffect(() => {
+    if (!allLentas || allLentas.length === 0) return
+    
+    const loadLentaImages = async (lenta) => {
+      if (loadedLentas[lenta.id]) return // Уже загружена
+      
+      const folderId = lenta.folderId
+      if (!folderId) return
+      
+      // Проверяем все файлы в папке (до 20) и собираем список существующих
+      const maxCheck = 20
+      const existingFiles = []
+      
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      if (existingFiles.length > 0) {
+        const lentaFrames = existingFiles.map((fileNum) => ({
+          type: 'image',
+          src: `/photos/${folderId}/${fileNum}.webp`
+        }))
+        
+        setLoadedLentas(prev => ({
+          ...prev,
+          [lenta.id]: lentaFrames
+        }))
+      }
+    }
+    
+    // Загружаем изображения для всех лент параллельно
+    allLentas.forEach(lenta => {
+      loadLentaImages(lenta)
+    })
+  }, [allLentas, loadedLentas])
   
   // Получаем текущую ленту и её frames
   const currentLenta = allLentas && allLentas[currentLentaIndex] ? allLentas[currentLentaIndex] : null
-  const currentFrames = currentLenta ? currentLenta.frames : frames
+  // Используем загруженные frames если есть, иначе переданные frames
+  const currentFrames = currentLenta && loadedLentas[currentLenta.id] 
+    ? loadedLentas[currentLenta.id] 
+    : (currentLenta ? currentLenta.frames : frames)
   
   // Обновляем индексы при изменении initialIndex или lentaIndex
   useEffect(() => {
@@ -505,6 +577,13 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
             {/* Все ленты вертикально */}
             {allLentas.map((lenta, lentaIdx) => {
               const isLentaActive = lentaIdx === currentLentaIndex
+              // Используем загруженные frames если есть, иначе генерируем пути
+              const lentaFrames = loadedLentas[lenta.id] || (lenta.folderId ? 
+                Array.from({ length: 20 }, (_, i) => ({
+                  type: 'image',
+                  src: `/photos/${lenta.folderId}/${i + 1}.webp`
+                })) : [])
+              
               return (
                 <motion.div
                   key={lenta.id}
@@ -531,7 +610,7 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
                   }}
                 >
                   {/* Кадры текущей ленты горизонтально */}
-                  {isLentaActive && lenta.frames.map((color, frameIdx) => {
+                  {isLentaActive && lentaFrames.map((frame, frameIdx) => {
                     const isFrameActive = frameIdx === currentFrameIndex
                     return (
                       <motion.div
@@ -564,18 +643,43 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
                           cursor: isDragging ? 'grabbing' : 'grab'
                         }}
                       >
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: color,
-                            borderRadius: '12px',
-                            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        />
+                        {frame.type === 'image' ? (
+                          <img
+                            src={frame.src}
+                            alt={`Frame ${frameIdx}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                            }}
+                            onError={(e) => {
+                              // При ошибке показываем серый фон
+                              e.target.style.display = 'none'
+                              const parent = e.target.parentElement
+                              if (parent && !parent.querySelector('.fallback-bg')) {
+                                const fallback = document.createElement('div')
+                                fallback.className = 'fallback-bg'
+                                fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                                parent.appendChild(fallback)
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: frame.value || frame || '#333',
+                              borderRadius: '12px',
+                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          />
+                        )}
                       </motion.div>
                     )
                   })}
@@ -594,8 +698,11 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
               maxHeight: '900px'
             }}
           >
-            {currentFrames && currentFrames.map((color, index) => {
+            {currentFrames && currentFrames.map((frame, index) => {
               const isActive = index === currentFrameIndex
+              // Поддерживаем обратную совместимость: если frame - строка (старый формат), преобразуем в объект
+              const frameData = typeof frame === 'string' ? { type: 'color', value: frame } : frame
+              
               return (
                 <motion.div
                   key={index}
@@ -627,18 +734,43 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
                     cursor: isDragging ? 'grabbing' : 'grab'
                   }}
                 >
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      backgroundColor: color,
-                      borderRadius: '12px',
-                      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  />
+                  {frameData.type === 'image' ? (
+                    <img
+                      src={frameData.src}
+                      alt={`Frame ${index}`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                      }}
+                      onError={(e) => {
+                        // При ошибке показываем серый фон
+                        e.target.style.display = 'none'
+                        const parent = e.target.parentElement
+                        if (parent && !parent.querySelector('.fallback-bg')) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'fallback-bg'
+                          fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: frameData.value || frameData || '#333',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    />
+                  )}
                 </motion.div>
               )
             })}
@@ -1774,10 +1906,10 @@ const ContractItemsList = memo(({ progressMotionValue }) => (
     paddingLeft: 'clamp(16px, 3vw, 2em)',
     paddingRight: 'clamp(16px, 3vw, 2em)'
   }}>
-    <ContractItem text="Организуем пре-продакшн и локации" progress={progressMotionValue} threshold={35} textColor="#ffffff" />
+    <ContractItem text="Подбор и согласование локаций любой сложности по всей России" progress={progressMotionValue} threshold={35} textColor="#ffffff" />
     <ContractItem text="Согласуем все договоренности и разрешения" progress={progressMotionValue} threshold={40} textColor="#ffffff" />
-    <ContractItem text="Проводим съемочный процесс и постпродакшн" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
-    <ContractItem text="Соберем результаты и финальный монтаж" progress={progressMotionValue} threshold={60} textColor="#ffffff" />
+    <ContractItem text="Полное сопровождение съемок и постродакшен" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
+    <ContractItem text="Кинопроизводство полного цикла" progress={progressMotionValue} threshold={60} textColor="#ffffff" />
     <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={progressMotionValue} threshold={65} textColor="#ffffff" />
   </div>
 ))
@@ -2181,17 +2313,85 @@ function LentaPerforationTexture({ width, height, position = 'top', scale = 1 })
   )
 }
 
-function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
+function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
   const { isParallaxEnabled } = useParallaxStore()
-  // Генерируем случайные цвета для каждого кадра один раз при монтировании
-  const [frames] = useState(() => {
-    return Array.from({ length: frameCount }, () => {
+  
+  // Определяем список существующих файлов в папке (проверяем до 20 файлов)
+  const [existingFileNumbers, setExistingFileNumbers] = useState([])
+  
+  useEffect(() => {
+    if (!folderId) {
+      setExistingFileNumbers([])
+      return
+    }
+    
+    // Проверяем все файлы в папке (до 20) и собираем список существующих
+    // Это позволяет находить файлы даже если они не начинаются с 1.webp
+    const checkImageCount = async () => {
+      const maxCheck = 20 // Максимальное количество файлов для проверки
+      const existingFiles = []
+      
+      // Проверяем все файлы от 1 до maxCheck
+      for (let i = 1; i <= maxCheck; i++) {
+        const testUrl = `/photos/${folderId}/${i}.webp`
+        const exists = await new Promise((resolve) => {
+          const img = new Image()
+          let resolved = false
+          
+          img.onload = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(true)
+            }
+          }
+          
+          img.onerror = () => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }
+          
+          img.src = testUrl
+          
+          // Таймаут увеличен до 500ms для более надежной проверки
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true
+              resolve(false)
+            }
+          }, 500)
+        })
+        
+        if (exists) {
+          existingFiles.push(i)
+        }
+      }
+      
+      setExistingFileNumbers(existingFiles)
+    }
+    
+    checkImageCount()
+  }, [folderId])
+  
+  // Генерируем список путей к изображениям на основе найденных файлов
+  const frames = useMemo(() => {
+    if (existingFileNumbers.length > 0 && folderId) {
+      return existingFileNumbers.map((fileNum) => ({
+        type: 'image',
+        src: `/photos/${folderId}/${fileNum}.webp`
+      }))
+    }
+    // Fallback на случайные цвета если изображения не найдены
+    return Array.from({ length: 8 }, () => {
       const r = Math.floor(Math.random() * 256)
       const g = Math.floor(Math.random() * 256)
       const b = Math.floor(Math.random() * 256)
-      return `rgb(${r}, ${g}, ${b})`
+      return { type: 'color', value: `rgb(${r}, ${g}, ${b})` }
     })
-  })
+  }, [existingFileNumbers, folderId])
+  
+  const frameCount = frames.length
   
   // Состояние для отслеживания hover на каждом кадре - временно отключено для производительности
   // const [hoveredIndex, setHoveredIndex] = useState(null)
@@ -2220,6 +2420,10 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
     return `translateX(${targetLeftPosition}vw)`
   })
 
+  // Вычисляем zIndex на основе scale - крупные ленты должны быть выше визуально
+  // Базовый zIndex 1000, добавляем scale * 100 для правильного порядка
+  const zIndex = 1000 + Math.round(scale * 100)
+
   return (
     // Внешний контейнер - позиционирование внутри скроллящейся области
     // Используем position: absolute для позиционирования относительно скроллящегося контейнера
@@ -2229,7 +2433,7 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
       left: '50%',
       transform: 'translate(-50%, -50%)',
       transformOrigin: 'center center',
-      zIndex: 1000,
+      zIndex: zIndex,
       pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
           }}>
       {/* Контейнер поворота - поворачивается на angle градусов + параллакс */}
@@ -2293,7 +2497,7 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
           })()}
           
           {/* Кадры ленты */}
-          {frames.map((color, index) => {
+          {frames.map((frame, index) => {
             const isHovered = false // Временно отключено для производительности
             const frameWidth = 120 * scale
             const frameHeight = 80 * scale
@@ -2343,17 +2547,38 @@ function KinoLenta({ frameCount, progress, center, topOffset = 0, speed = 1, ang
                 }}
               >
                 {/* Сам кадр в центре */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: `${borderWidth}px`,
-                    left: 0,
-                    width: '100%',
-                    height: `${frameHeight}px`,
-                    backgroundColor: color,
-                    borderRadius: '2px'
-                  }}
-                />
+                {frame.type === 'image' ? (
+                  <img
+                    src={frame.src}
+                    alt={`Frame ${index}`}
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      objectFit: 'cover',
+                      borderRadius: '2px'
+                    }}
+                    onError={(e) => {
+                      // При ошибке загрузки показываем серый фон
+                      e.target.style.display = 'none'
+                      e.target.parentElement.style.backgroundColor = '#333'
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: `${borderWidth}px`,
+                      left: 0,
+                      width: '100%',
+                      height: `${frameHeight}px`,
+                      backgroundColor: frame.value || '#333',
+                      borderRadius: '2px'
+                    }}
+                  />
+                )}
               </div>
             )
           })}
@@ -2368,6 +2593,9 @@ export default function Home() {
   const firstScreenRef = useRef(null)
   const secondScreenRef = useRef(null)
   const thirdScreenRef = useRef(null)
+
+  // Данные фильмографии из CSV (который получаем готовой конвертацией xlsx -> csv)
+  const [filmographyData, setFilmographyData] = useState({ partners: [], projects: [] })
 
   // Zustand store для управления эффектами
   const { isParallaxEnabled, toggleParallax, isGrainEnabled } = useParallaxStore()
@@ -2670,39 +2898,130 @@ export default function Home() {
     movieCardFarParallaxX, movieCardFarParallaxY, movieCardFarRotateX, movieCardFarRotateY
   ])
 
-  // 6 популярных российских кинопродакшенов/киностудий, принимающих госзаказы
-  const partners = [
-    { name: 'Мосфильм' },
-    { name: 'Ленфильм' },
-    { name: 'СТВ' },
-    { name: 'Централ Партнершип' },
-    { name: 'ВГТРК' },
-    { name: 'Первый канал' }
-  ]
+  // Fallback: генерим простой SVG постер, если внешний постер не найден/не загрузился
+  const generatePosterSVG = (title, studio, period) => {
+    const escapeXml = (str) => (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const svgContent = `<svg width="200" height="300" xmlns="http://www.w3.org/2000/svg">
+      <rect width="200" height="300" fill="#1a1a1a"/>
+      <text x="100" y="140" font-family="Arial, sans-serif" font-size="14" fill="#ffffff" text-anchor="middle">${escapeXml(title)}</text>
+      <text x="100" y="160" font-family="Arial, sans-serif" font-size="11" fill="#888" text-anchor="middle">${escapeXml(studio)}</text>
+      <text x="100" y="180" font-family="Arial, sans-serif" font-size="10" fill="#666" text-anchor="middle">${escapeXml(period)}</text>
+    </svg>`
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent)
+  }
 
-  // Топ-20 популярных российских фильмов последних 5 лет (2019-2024) с правильными ID для Кинопоиска
-  const topMovies = [
-    { title: 'Т-34', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1900788/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Движение вверх', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Холоп', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Серебряные коньки', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Огонь', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Вторжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Лёд 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Союз спасения', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Стриптизёрши', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Время первых', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Экипаж', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Притяжение', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Лёд', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: '28 панфиловцев', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Душа', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Селфи', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Холоп 2', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Чебурашка', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Сердце Пармы', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 },
-    { title: 'Вызов', poster: 'https://avatars.mds.yandex.net/get-kinopoisk-image/1599028/9ed687b1-0c44-4f0c-8b0f-3b0f3b0f3b0f/orig', kinopoiskId: 1115433 }
-  ]
+  // Загружаем CSV и преобразуем в projects/partners.
+  // CSV берётся из public/data/filmography.csv, который генерится готовым конвертером (xlsx -> csv).
+  useEffect(() => {
+    let cancelled = false
+
+    const normalize = (s) => (s || '').toString().trim()
+
+    const hasHeader = (row) => {
+      const r = row.map((v) => normalize(v).toLowerCase())
+      const hasPeriod = r.some((c) => c.includes('период'))
+      const hasStudio = r.some((c) => c.includes('студ'))
+      const hasProject = r.some((c) => c.includes('проект'))
+      const hasFormat = r.some((c) => c.includes('формат'))
+      return hasPeriod && hasStudio && hasProject && hasFormat
+    }
+
+    const load = async () => {
+      try {
+        const res = await fetch('/data/filmography.csv', { cache: 'no-store' })
+        const text = await res.text()
+        const parsed = Papa.parse(text, { skipEmptyLines: false })
+        const rows = Array.isArray(parsed.data) ? parsed.data : []
+
+        // find header row
+        let headerIdx = -1
+        for (let i = 0; i < Math.min(40, rows.length); i++) {
+          const row = Array.isArray(rows[i]) ? rows[i] : []
+          if (hasHeader(row)) {
+            headerIdx = i
+            break
+          }
+        }
+        if (headerIdx === -1) throw new Error('Header row not found in filmography.csv')
+
+        const header = rows[headerIdx].map((v) => normalize(v))
+        const idx = (name) => header.findIndex((h) => h.toLowerCase().includes(name))
+        const periodI = idx('период')
+        const studioI = idx('студ')
+        const projectI = idx('проект')
+        const formatI = idx('формат')
+
+        let lastPeriod = ''
+        let lastStudio = ''
+        let lastFormat = ''
+
+        const projects = []
+        for (let i = headerIdx + 1; i < rows.length; i++) {
+          const row = Array.isArray(rows[i]) ? rows[i] : []
+          const period = normalize(row[periodI])
+          const studio = normalize(row[studioI])
+          const title = normalize(row[projectI])
+          const format = normalize(row[formatI])
+
+          if (period) lastPeriod = period
+          if (studio) lastStudio = studio
+          if (format) lastFormat = format
+
+          if (!title) continue
+          if (!lastStudio) continue
+
+          projects.push({
+            title,
+            period: lastPeriod,
+            studio: lastStudio,
+            format: lastFormat
+          })
+        }
+
+        const partners = Array.from(new Set(projects.map((p) => p.studio).filter(Boolean)))
+          .sort((a, b) => a.localeCompare(b, 'ru'))
+          .map((name) => ({ name }))
+
+        if (!cancelled) setFilmographyData({ partners, projects })
+      } catch (e) {
+        // fallback: keep empty (будет использоваться fallback ниже)
+        if (!cancelled) setFilmographyData({ partners: [], projects: [] })
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Партнеры из CSV (с fallback на 6 значений)
+  const partners = useMemo(() => {
+    if (filmographyData.partners && filmographyData.partners.length > 0) return filmographyData.partners
+    return [
+      { name: 'Мосфильм' },
+      { name: 'Ленфильм' },
+      { name: 'СТВ' },
+      { name: 'Централ Партнершип' },
+      { name: 'ВГТРК' },
+      { name: 'Первый канал' }
+    ]
+  }, [filmographyData.partners])
+
+  // Проекты из CSV -> формат для MoviesCarousel
+  const topMovies = useMemo(() => {
+    if (filmographyData.projects && filmographyData.projects.length > 0) {
+      return filmographyData.projects.map((p) => ({
+        title: p.title,
+        poster: generatePosterSVG(p.title, p.studio, p.period),
+        kinopoiskId: null,
+        studio: p.studio,
+        period: p.period,
+        format: p.format
+      }))
+    }
+    return []
+  }, [filmographyData.projects])
   
   // Генерация frames для ленты на основе lentaId (для стабильности)
   const generateFramesForLenta = (lentaId, frameCount) => {
@@ -2719,35 +3038,37 @@ export default function Home() {
     })
   }
 
-  // Массив всех лент с их данными
-  const allLentas = useMemo(() => [
-    { id: 'lenta-1', frameCount: 8 },
-    { id: 'lenta-2', frameCount: 8 },
-    { id: 'lenta-3', frameCount: 8 },
-    { id: 'lenta-4', frameCount: 8 },
-    { id: 'lenta-5', frameCount: 8 },
-    { id: 'lenta-6', frameCount: 8 },
-    { id: 'lenta-7', frameCount: 8 },
-    { id: 'lenta-8', frameCount: 8 },
-    { id: 'lenta-9', frameCount: 8 },
-    { id: 'lenta-10', frameCount: 8 },
-    { id: 'lenta-11', frameCount: 8 },
-    { id: 'lenta-12', frameCount: 8 },
-    { id: 'lenta-13', frameCount: 8 },
-  ].map(lenta => ({
-    ...lenta,
-    frames: generateFramesForLenta(lenta.id, lenta.frameCount)
-  })), [])
+  // Массив всех лент с их данными - используем folderId для генерации путей к изображениям
+  // Количество файлов будет определено динамически при загрузке
+  const allLentas = useMemo(() => {
+    return [
+      { id: 'lenta-1', folderId: '1' },
+      { id: 'lenta-6', folderId: '2' },
+      { id: 'lenta-9', folderId: '3' },
+      { id: 'lenta-2', folderId: '4' },
+      { id: 'lenta-3', folderId: '5' },
+      { id: 'lenta-4', folderId: '6' },
+      { id: 'lenta-7', folderId: '7' },
+      { id: 'lenta-8', folderId: '8' },
+      { id: 'lenta-12', folderId: '9' },
+      { id: 'lenta-5', folderId: '10' },
+      { id: 'lenta-10', folderId: '11' },
+      { id: 'lenta-11', folderId: '12' }
+    ]
+  }, [])
 
   const handleFrameClick = (lentaId, frameIndex, frames) => {
     // Находим индекс ленты в массиве
     const lentaIndex = allLentas.findIndex(l => l.id === lentaId)
+    
+    // Используем переданные frames (они уже содержат реальные изображения)
+    // allLentas будет обновлен в Gallery при загрузке
     setActiveGallery({ 
       lentaId, 
       frameIndex, 
-      frames,
+      frames, // Передаем реальные frames с изображениями
       lentaIndex: lentaIndex >= 0 ? lentaIndex : 0,
-      allLentas 
+      allLentas // Передаем allLentas для навигации между лентами
     })
   }
   
@@ -3040,28 +3361,27 @@ export default function Home() {
       {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
       {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
       {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
-      {/* Первая лента: когда Составление плана 60%, лента по центру экрана, размер вдвое */}
+      {/* Каждая лента соответствует одной папке из public/photos (1-12) */}
       {/* Центральные крупные ленты - быстрый spring для максимального эффекта */}
       {/* Эти ленты самые заметные и должны реагировать мгновенно */}
-      <KinoLenta lentaId="lenta-1" frameCount={8} progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
-      <KinoLenta lentaId="lenta-6" frameCount={8} progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
-      <KinoLenta lentaId="lenta-9" frameCount={8} progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
 
       {/* Промежуточные ленты - средний spring */}
       {/* Баланс между скоростью и плавностью */}
-      <KinoLenta lentaId="lenta-2" frameCount={8} progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-3" frameCount={8} progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
-      <KinoLenta lentaId="lenta-4" frameCount={8} progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-7" frameCount={8} progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-8" frameCount={8} progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-12" frameCount={8} progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
 
       {/* Фоновые ленты - медленный spring для subtle эффекта */}
       {/* Эти ленты создают глубину и не должны отвлекать внимание */}
-      <KinoLenta lentaId="lenta-5" frameCount={8} progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-10" frameCount={8} progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-11" frameCount={8} progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-13" frameCount={8} progress={springProgressSlow} center={0.85 * 0.6 / 3} topOffset={38} speed={1.1} angle={-20} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
       
       {/* Индикатор прогресса в левом верхнем углу */}
       <div style={{
