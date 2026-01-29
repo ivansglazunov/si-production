@@ -123,44 +123,23 @@ function Flash({ isActive, onComplete }) {
   )
 }
 
-// Компонент Хлопушка (Clapperboard) - теперь окно контактов
+// Компонент Хлопушка-Нумератор (Clapperboard)
 const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
-  const [isDragging, setIsDragging] = useState(false)
-  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
-
-  // Оптимизируем вычисления размеров с useMemo
-  const dimensions = useMemo(() => ({
-    width: '80vw',
-    height: 'calc(80vw / 1.333)'
-  }), [])
-  
-  const handleDragStart = () => {
-    setIsDragging(true)
-  }
-
-  const handleDragEnd = (event, info) => {
-    // Закрытие окна при смахивании в любую сторону
-    const threshold = Math.min(window.innerHeight, window.innerWidth) * 0.25 // 25% от меньшей стороны экрана
-    const distance = Math.sqrt(info.offset.x ** 2 + info.offset.y ** 2)
-    
-    if (distance > threshold) {
-      if (onClose) {
-        onClose()
-      }
-    }
-    setIsDragging(false)
-  }
+  // Фиксированный размер, который уместится на мобильном и десктопе
+  const clapperboardWidth = 280 // px - поместится на мобильных (минимум обычно 320px)
+  const clapperboardHeight = 186 // px - соотношение примерно 3:2
+  const flapHeight = 40 // px - толщина хлопающей части
   
   return (
-        <motion.div
+    <motion.div
       className="clapperboard-container"
       initial={false}
       animate={{
         y: isVisible
           ? ['calc(var(--vh, 1vh) * -100)', 0, -30, 0, -15, 0, -8, 0] // Падение сверху с отскоками
           : 'calc(var(--vh, 1vh) * -100)',
-        x: isVisible ? 0 : '100vw', // При показе x=0, при скрытии улетает вправо
-        opacity: isVisible ? 1 : 0
+        opacity: isVisible ? 1 : 0,
+        scale: isVisible ? 1 : 0.8
       }}
       transition={{
         y: isVisible ? {
@@ -168,181 +147,93 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
           times: [0, 0.4, 0.5, 0.65, 0.75, 0.85, 0.92, 1],
           ease: [0.25, 0.46, 0.45, 0.94] // Ease out для падения
         } : {
-          type: "spring",
-          stiffness: 200,
-          damping: 15,
-          bounce: 0.6
-        },
-        x: {
-          type: "spring",
-          stiffness: 150,
-          damping: 18,
-          bounce: 0.4
+          duration: 0.3
         },
         opacity: {
           duration: 0.3
+        },
+        scale: {
+          duration: 0.3
         }
       }}
-      drag={true}
-      dragConstraints={dragConstraints}
-      dragElastic={0.3}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-          style={{
+      style={{
         position: 'relative',
-        width: dimensions.width,
-        height: dimensions.height,
-        minHeight: dimensions.height,
+        width: `${clapperboardWidth}px`,
+        height: `${clapperboardHeight}px`,
         pointerEvents: 'auto',
-        transformOrigin: 'top right',
-        cursor: isDragging ? 'grabbing' : 'grab'
+        transformOrigin: 'center center',
+        cursor: 'pointer'
       }}
+      onClick={onClose}
     >
-      {/* Верхняя створка - черная с текстом SI-PRODUCTION */}
-        <motion.div
+      {/* Верхняя хлопающая створка - полосатая по диагонали, 40px толщины */}
+      <motion.div
         className="clapperboard-top"
         initial={false}
-        animate={{ rotate: isActive ? 90 : 0 }}
+        animate={{ 
+          rotateX: isActive ? -90 : 0
+        }}
         transition={{ 
           duration: 0.6,
-          ease: [0.25, 0.46, 0.45, 0.94] // Плавная анимация без spring эффекта
+          ease: [0.25, 0.46, 0.45, 0.94]
         }}
-          style={{
-            position: 'absolute',
-            top: 0,
-          right: 0,
-            width: '100%',
-          height: '40%', // Уменьшено с 50% до 40% чтобы освободить место для нижней зоны
-          backgroundColor: '#000000',
-          border: '2px solid #333',
-          transformOrigin: 'bottom right',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-                  color: '#ffffff',
-          fontSize: 'clamp(20px, 4vw, 48px)',
-                  fontFamily: "'Science Gothic', monospace",
-                        fontWeight: 'bold',
-          zIndex: 2
-        }}
-      >
-            <span style={{
-          fontFamily: "'Slovic', sans-serif",
-          color: '#ff0000',
-          transform: 'translateY(-3px)'
-        }}>SI</span>
-        <span style={{
-          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
-        }}>-PRODUCTION</span>
-      </motion.div>
-
-      {/* Нижний блок - контакты с фейковыми данными */}
-      <div 
-        className="clapperboard-contacts"
         style={{
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        width: '100%',
-        minHeight: '60%', // Минимальная высота 60%, но может расширяться
-        height: 'auto', // Высота адаптируется под содержимое
-        backgroundColor: '#000000',
-        border: '2px solid #333',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: 'clamp(16px, 3vw, 32px)',
-        fontSize: 'clamp(14px, 2.5vw, 24px)',
-        fontFamily: "'Science Gothic', monospace",
-        color: '#ffffff',
-        zIndex: 1,
-        gap: '1rem',
-        overflowY: 'auto', // Добавляем скролл если контент не вписывается
-        boxSizing: 'border-box' // Учитываем padding в высоте
-      }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          marginBottom: '1rem'
-        }}>
-          <div style={{ fontSize: 'clamp(18px, 3vw, 28px)', fontWeight: 'bold' }}>КОНТАКТЫ</div>
-          <button
-            onClick={onClose}
-            style={{
-              backgroundColor: 'transparent',
-              border: '2px solid #ffffff',
-              color: '#ffffff',
-              padding: '0.5rem 1rem',
-              fontSize: 'clamp(12px, 2vw, 18px)',
-              fontFamily: "'Science Gothic', monospace",
-              cursor: 'pointer',
-              borderRadius: '4px',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#ffffff'
-              e.currentTarget.style.color = '#000000'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-              e.currentTarget.style.color = '#ffffff'
-            }}
-          >
-            ЗАКРЫТЬ
-          </button>
-        </div>
-        
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '1rem',
-          flex: 1
-        }}>
-          <div style={{ 
-            border: '1px solid #333', 
-            padding: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-          }}>
-            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телеграм:</div>
-            <a 
-              href="https://t.me/example" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              style={{ 
-                color: '#00a8ff',
-                textDecoration: 'underline',
-                cursor: 'pointer'
-              }}
-            >
-              @example_contact
-            </a>
-          </div>
-          
-          <div style={{ 
-            border: '1px solid #333', 
-            padding: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-          }}>
-            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Email:</div>
-            <div>contact@example.com</div>
-          </div>
-          
-          <div style={{ 
-            border: '1px solid #333', 
-            padding: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-          }}>
-            <div style={{ fontWeight: 'bold', minWidth: '120px' }}>Телефон:</div>
-            <div>+7 (999) 123-45-67</div>
-          </div>
-        </div>
-        </div>
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: `${flapHeight}px`,
+          background: `repeating-linear-gradient(
+            45deg,
+            #000000 0px,
+            #000000 10px,
+            #ffffff 10px,
+            #ffffff 20px
+          )`,
+          transformStyle: 'preserve-3d',
+          transformOrigin: 'bottom center',
+          zIndex: 2,
+          borderTopLeftRadius: '8px',
+          borderTopRightRadius: '8px',
+          overflow: 'hidden',
+          boxShadow: isActive ? '0 4px 8px rgba(0, 0, 0, 0.3)' : 'none',
+          backfaceVisibility: 'hidden'
+        }}
+      />
+
+      {/* Средняя статичная часть - полосатая по диагонали */}
+      <div
+        style={{
+          position: 'absolute',
+          top: `${flapHeight}px`,
+          left: 0,
+          width: '100%',
+          height: `${clapperboardHeight - flapHeight - 40}px`, // Оставляем место для нижней части
+          background: `repeating-linear-gradient(
+            45deg,
+            #000000 0px,
+            #000000 10px,
+            #ffffff 10px,
+            #ffffff 20px
+          )`,
+          zIndex: 1
+        }}
+      />
+
+      {/* Нижняя часть с закругленными углами и градиентом */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          width: '100%',
+          height: '40px',
+          background: 'linear-gradient(to bottom, #000000 0%, #2a2a2a 100%)',
+          borderBottomLeftRadius: '8px',
+          borderBottomRightRadius: '8px',
+          zIndex: 1
+        }}
+      />
     </motion.div>
   )
 })
@@ -577,12 +468,8 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
             {/* Все ленты вертикально */}
             {allLentas.map((lenta, lentaIdx) => {
               const isLentaActive = lentaIdx === currentLentaIndex
-              // Используем загруженные frames если есть, иначе генерируем пути
-              const lentaFrames = loadedLentas[lenta.id] || (lenta.folderId ? 
-                Array.from({ length: 20 }, (_, i) => ({
-                  type: 'image',
-                  src: `/photos/${lenta.folderId}/${i + 1}.webp`
-                })) : [])
+              // Используем загруженные frames если есть, иначе пустой массив (файлы проверяются асинхронно)
+              const lentaFrames = loadedLentas[lenta.id] || []
               
               return (
                 <motion.div
@@ -1164,7 +1051,9 @@ const LineChartComponent = memo(function LineChartComponent({ progressMotionValu
       left: 0,
       padding: 0,
       zIndex: 1,
-      pointerEvents: 'none'
+      pointerEvents: 'none',
+      minWidth: '200px',
+      minHeight: '200px'
     }}>
       <ResponsiveContainer key="line-responsive-container" width="100%" height="100%">
         <LineChart data={data}>
@@ -1244,7 +1133,7 @@ const RadarChartComponent = memo(function RadarChartComponent({ progressMotionVa
   ]
 
   return (
-    <div key="radar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div key="radar-chart-container" style={{ width: '100%', height: '100%', minWidth: '200px', minHeight: '200px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <ResponsiveContainer key="radar-responsive-container" width="100%" height="100%">
         <RadarChart key="radar-chart" data={data}>
           <PolarGrid stroke="#ffffff" strokeOpacity={0.3} />
@@ -1299,7 +1188,7 @@ const RadialBarChartComponent = memo(function RadialBarChartComponent({ progress
   ], [progress])
 
   return (
-    <div key="radial-bar-chart-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div key="radial-bar-chart-container" style={{ width: '100%', height: '100%', minWidth: '200px', minHeight: '200px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <ResponsiveContainer key="radial-responsive-container" width="100%" height="100%">
         <RadialBarChart
           key="radial-bar-chart" 
@@ -2650,6 +2539,9 @@ export default function Home() {
   // Ленивая загрузка лент для производительности
   const [showLents, setShowLents] = useState(false)
 
+  // Постеры из TMDb API (загружаются из data/posters.json)
+  const [postersMap, setPostersMap] = useState({})
+
   // Показываем ленты после полной загрузки страницы (оптимизация производительности)
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -2898,8 +2790,31 @@ export default function Home() {
     movieCardFarParallaxX, movieCardFarParallaxY, movieCardFarRotateX, movieCardFarRotateY
   ])
 
+  // Загружаем постеры из Кинопоиска (public/data/posters.json)
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch('/data/posters.json', { cache: 'no-store' })
+        if (res.ok) {
+          const data = await res.json()
+          if (!cancelled) setPostersMap(data)
+        }
+      } catch (e) {
+        // fallback: пустой объект (будет использоваться SVG)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  // Title aliases для отображения (Селфи -> Хейтер)
+  const DISPLAY_ALIASES = {
+    'Селфи': 'Хейтер'
+  }
+
   // Fallback: генерим простой SVG постер, если внешний постер не найден/не загрузился
-  const generatePosterSVG = (title, studio, period) => {
+  const generatePosterSVG = useCallback((title, studio, period) => {
     const escapeXml = (str) => (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     const svgContent = `<svg width="200" height="300" xmlns="http://www.w3.org/2000/svg">
       <rect width="200" height="300" fill="#1a1a1a"/>
@@ -2908,7 +2823,16 @@ export default function Home() {
       <text x="100" y="180" font-family="Arial, sans-serif" font-size="10" fill="#666" text-anchor="middle">${escapeXml(period)}</text>
     </svg>`
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent)
-  }
+  }, [])
+
+  // Получить постер для проекта (Кинопоиск или SVG fallback)
+  const getPoster = useCallback((title) => {
+    const posterData = postersMap[title]
+    if (posterData && posterData.posterUrl) {
+      return posterData.posterUrl
+    }
+    return null // вернём null, чтобы использовать SVG fallback в компоненте
+  }, [postersMap])
 
   // Загружаем CSV и преобразуем в projects/partners.
   // CSV берётся из public/data/filmography.csv, который генерится готовым конвертером (xlsx -> csv).
@@ -2997,31 +2921,47 @@ export default function Home() {
 
   // Партнеры из CSV (с fallback на 6 значений)
   const partners = useMemo(() => {
-    if (filmographyData.partners && filmographyData.partners.length > 0) return filmographyData.partners
-    return [
-      { name: 'Мосфильм' },
-      { name: 'Ленфильм' },
-      { name: 'СТВ' },
-      { name: 'Централ Партнершип' },
-      { name: 'ВГТРК' },
-      { name: 'Первый канал' }
-    ]
+    let processedPartners = []
+    
+    if (filmographyData.partners && filmographyData.partners.length > 0) {
+      processedPartners = [...filmographyData.partners]
+    } else {
+      processedPartners = [
+        { name: 'Мосфильм' },
+        { name: 'Ленфильм' },
+        { name: 'СТВ' },
+        { name: 'Централ Партнершип' },
+        { name: 'ВГТРК' },
+        { name: 'Первый канал' }
+      ]
+    }
+    
+    // Партнеры уже разделены в CSV, просто возвращаем их
+    return processedPartners
   }, [filmographyData.partners])
 
   // Проекты из CSV -> формат для MoviesCarousel
+  // Все проекты отображаются в галерее, даже без постеров (используется SVG fallback)
   const topMovies = useMemo(() => {
     if (filmographyData.projects && filmographyData.projects.length > 0) {
-      return filmographyData.projects.map((p) => ({
-        title: p.title,
-        poster: generatePosterSVG(p.title, p.studio, p.period),
-        kinopoiskId: null,
-        studio: p.studio,
-        period: p.period,
-        format: p.format
-      }))
+      return filmographyData.projects.map((p) => {
+        // Используем alias для отображения (Селфи -> Хейтер)
+        const displayTitle = DISPLAY_ALIASES[p.title] || p.title
+        // Пытаемся найти постер из Кинопоиска
+        const posterUrl = getPoster(p.title)
+        // Если постер не найден, используем SVG placeholder
+        return {
+          title: displayTitle,
+          poster: posterUrl || generatePosterSVG(displayTitle, p.studio, p.period),
+          kinopoiskId: null,
+          studio: p.studio,
+          period: p.period,
+          format: p.format
+        }
+      })
     }
     return []
-  }, [filmographyData.projects])
+  }, [filmographyData.projects, postersMap, getPoster, generatePosterSVG])
   
   // Генерация frames для ленты на основе lentaId (для стабильности)
   const generateFramesForLenta = (lentaId, frameCount) => {
@@ -3337,7 +3277,8 @@ export default function Home() {
         zIndex: 99999, // Ниже вспышки (100000)
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        perspective: '1000px' // Для 3D эффекта хлопающей створки
       }}>
         <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
             </div>

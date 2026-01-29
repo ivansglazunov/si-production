@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:filmography": "node scripts/convert_filmography.js"
+    "build:filmography": "node scripts/convert_filmography.js",
+    "download:posters": "node scripts/download_posters.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.1.0",
