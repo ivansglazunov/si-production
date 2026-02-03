@@ -1897,7 +1897,7 @@ const ContractItemsList = memo(({ progressMotionValue }) => (
   }}>
     <ContractItem text="Подбор и согласование локаций любой сложности по всей России" progress={progressMotionValue} threshold={35} textColor="#ffffff" />
     <ContractItem text="Согласуем все договоренности и разрешения" progress={progressMotionValue} threshold={40} textColor="#ffffff" />
-    <ContractItem text="Полное сопровождение съемок и постродакшен" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
+    <ContractItem text="Полное сопровождение съемок и постпродакшен" progress={progressMotionValue} threshold={50} textColor="#ffffff" />
     <ContractItem text="Кинопроизводство полного цикла" progress={progressMotionValue} threshold={60} textColor="#ffffff" />
     <ContractItem text="Обеспечим дистрибуцию и промо-компанию" progress={progressMotionValue} threshold={65} textColor="#ffffff" />
   </div>
@@ -3461,7 +3461,7 @@ export default function Home() {
           color: '#ffffff',
           fontSize: 'clamp(14px, 2vw, 18px)',
           fontFamily: "'Science Gothic', monospace",
-          zIndex: 1000,
+          zIndex: 10000,
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
           padding: '8px 16px',
           borderRadius: '4px',
@@ -3831,19 +3831,140 @@ export default function Home() {
                 fontSize: 'clamp(2em, 5vw, 4em)',
                 fontFamily: "'Slovic', sans-serif",
                 color: '#ffffff',
-                margin: 0
+                margin: 0,
+                lineHeight: '0.9'
               }}
             >
-              ПРОЕКТЫ
+              ПРОЕКТЫ<br />
+              <span style={{ opacity: 0.7, fontSize: 'clamp(0.6em, 1.5vw, 1.25em)', marginTop: '-0.3em', display: 'inline-block' }}>В КОТОРЫХ МЫ ПРИНИМАЛИ УЧАСТИЕ</span>
             </h1>
           </div>
 
           {/* Карусель с фильмами */}
-          <div style={{ minHeight: '500px' }}>
+          <div style={{ minHeight: '500px', position: 'relative', zIndex: 21 }}>
             <MoviesCarousel 
               movies={topMovies}
               mouseParallaxValues={movieParallaxValues}
             />
+          </div>
+
+          {/* Титры с названиями проектов на заднем плане - бесконечная прокрутка */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10,
+            width: '100%',
+            pointerEvents: 'none',
+            height: '500px',
+            overflow: 'hidden',
+            maskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 1) 15%, rgba(0, 0, 0, 1) 85%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 1) 15%, rgba(0, 0, 0, 1) 85%, transparent 100%)'
+          }}>
+            <div style={{
+              display: 'flex',
+              gap: '3rem',
+              maxWidth: '800px',
+              margin: '0 auto',
+              justifyContent: 'center',
+              height: '100%',
+              position: 'relative',
+              zIndex: 1
+            }}>
+              {/* Первый столбец - прокрутка снизу вверх */}
+              <div style={{
+                flex: 1,
+                height: '100%',
+                overflow: 'hidden',
+                position: 'relative'
+              }}>
+                <motion.div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem'
+                  }}
+                  initial={{ y: '0%' }}
+                  animate={{
+                    y: '-33.333%'
+                  }}
+                  transition={{
+                    duration: 30,
+                    repeat: Infinity,
+                    ease: 'linear'
+                  }}
+                >
+                  {/* Дублируем список 3 раза для бесшовной прокрутки */}
+                  {[...Array(3)].map((_, repeatIndex) => (
+                    <React.Fragment key={`repeat-${repeatIndex}`}>
+                      {topMovies.filter((_, index) => index % 2 === 0).map((movie, index) => (
+                        <div
+                          key={`col1-${repeatIndex}-${index}`}
+                          style={{
+                            textAlign: 'center',
+                            color: '#ffffff',
+                            fontSize: 'clamp(0.7rem, 1.2vw, 1rem)',
+                            fontFamily: "'Slovic', sans-serif",
+                            opacity: 0.6,
+                            lineHeight: '1.8',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {movie.title}
+                        </div>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </motion.div>
+              </div>
+              {/* Второй столбец - прокрутка сверху вниз */}
+              <div style={{
+                flex: 1,
+                height: '100%',
+                overflow: 'hidden',
+                position: 'relative'
+              }}>
+                <motion.div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem'
+                  }}
+                  initial={{ y: '-33.333%' }}
+                  animate={{
+                    y: '0%'
+                  }}
+                  transition={{
+                    duration: 30,
+                    repeat: Infinity,
+                    ease: 'linear'
+                  }}
+                >
+                  {/* Дублируем список 3 раза для бесшовной прокрутки */}
+                  {[...Array(3)].map((_, repeatIndex) => (
+                    <React.Fragment key={`repeat-${repeatIndex}`}>
+                      {topMovies.filter((_, index) => index % 2 === 1).map((movie, index) => (
+                        <div
+                          key={`col2-${repeatIndex}-${index}`}
+                          style={{
+                            textAlign: 'center',
+                            color: '#ffffff',
+                            fontSize: 'clamp(0.7rem, 1.2vw, 1rem)',
+                            fontFamily: "'Slovic', sans-serif",
+                            opacity: 0.6,
+                            lineHeight: '1.8',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {movie.title}
+                        </div>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </motion.div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -3865,13 +3986,16 @@ export default function Home() {
           }}>
             <h1
               style={{
-                fontSize: 'clamp(2em, 5vw, 4em)',
+                fontSize: 'clamp(1.2em, 3vw, 2.5em)',
                 fontFamily: "'Slovic', sans-serif",
                 color: '#ffffff',
-                margin: 0
+                margin: 0,
+                lineHeight: '1.4'
               }}
             >
-              ПАРТНЕРЫ
+              <span style={{ opacity: 0.7 }}>В разное время мы{'\u00A0\u00A0'}</span>
+              <span style={{ opacity: 1, fontSize: '1.2em', fontWeight: 'bold' }}>СОТРУДНИЧАЛИ</span>
+              <span style={{ opacity: 0.7 }}><br />с такими компаниями как:</span>
             </h1>
           </div>
 
