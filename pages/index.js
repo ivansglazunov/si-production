@@ -129,10 +129,43 @@ function Flash({ isActive, onComplete }) {
 
 // Компонент Хлопушка-Нумератор (Clapperboard)
 const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
-  // Фиксированный размер, который уместится на мобильном и десктопе
-  const clapperboardWidth = 280 // px - поместится на мобильных (минимум обычно 320px)
-  const clapperboardHeight = 186 // px - соотношение примерно 3:2
-  const flapHeight = 40 // px - толщина хлопающей части
+  const clapperboardWidth = 600 // px
+  const topHeight = 30 // px - верхняя половинка
+  const bottomHeight = 400 // px - нижний див
+  const stripeHeight = 30 // px - полоса с косыми чертами внутри нижнего дива
+  
+  const containerRef = useRef(null)
+  const mouseX = useMotionValue(0) // Позиция мыши относительно центра (от -1 до 1)
+  const mouseY = useMotionValue(0)
+  
+  // Отслеживаем позицию мыши относительно счелкунчика
+  useEffect(() => {
+    if (!isVisible || !containerRef.current) return
+    
+    const handleMouseMove = (e) => {
+      const rect = containerRef.current.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+      
+      // Вычисляем относительную позицию мыши от центра (-1 до 1)
+      const relativeX = (e.clientX - centerX) / (rect.width / 2)
+      const relativeY = (e.clientY - centerY) / (rect.height / 2)
+      
+      mouseX.set(relativeX)
+      mouseY.set(relativeY)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+    }
+  }, [isVisible, mouseX, mouseY])
+  
+  // Вычисляем смещение света (в противоположном направлении от мышки)
+  // Центр элемента находится на 50% top/left, поэтому нужно вычесть половину размера (300px)
+  const lightOffsetX = useTransform(mouseX, (x) => -x * 50 - 300) // Максимальное смещение 50px + центрирование
+  const lightOffsetY = useTransform(mouseY, (y) => -y * 50 - 300)
   
   return (
     <motion.div
@@ -160,84 +193,96 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
           duration: 0.3
         }
       }}
+      ref={containerRef}
       style={{
         position: 'relative',
         width: `${clapperboardWidth}px`,
-        height: `${clapperboardHeight}px`,
+        height: `${topHeight + bottomHeight}px`,
         pointerEvents: 'auto',
         transformOrigin: 'center center',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column'
       }}
       onClick={onClose}
     >
-      {/* Верхняя хлопающая створка - полосатая по диагонали, 40px толщины */}
+      {/* Верхний див - верхняя половинка киносчелкунчика w600 h30 с косыми чертами */}
       <motion.div
         className="clapperboard-top"
-        initial={false}
+        initial={{ rotate: 90 }} // Начальное состояние - повернут на 90 градусов (открыт)
         animate={{ 
-          rotateX: isActive ? -90 : 0
+          rotate: isActive ? 90 : 0 // При появлении (isActive=true) открыт (90°), потом закрывается (0°)
         }}
         transition={{ 
           duration: 0.6,
           ease: [0.25, 0.46, 0.45, 0.94]
         }}
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: `${flapHeight}px`,
+          width: `${clapperboardWidth}px`,
+          height: `${topHeight}px`,
           background: `repeating-linear-gradient(
-            45deg,
+            -45deg,
             #000000 0px,
             #000000 10px,
             #ffffff 10px,
             #ffffff 20px
           )`,
-          transformStyle: 'preserve-3d',
-          transformOrigin: 'bottom center',
+          transformOrigin: 'bottom right', // Точка крепления - правый нижний угол
           zIndex: 2,
-          borderTopLeftRadius: '8px',
-          borderTopRightRadius: '8px',
           overflow: 'hidden',
-          boxShadow: isActive ? '0 4px 8px rgba(0, 0, 0, 0.3)' : 'none',
-          backfaceVisibility: 'hidden'
+          boxShadow: isActive ? '0 4px 8px rgba(0, 0, 0, 0.3)' : 'none'
         }}
       />
 
-      {/* Средняя статичная часть - полосатая по диагонали */}
+      {/* Нижний див - w600 h400px черный с закругленными на 60px нижними углами */}
       <div
         style={{
-          position: 'absolute',
-          top: `${flapHeight}px`,
-          left: 0,
-          width: '100%',
-          height: `${clapperboardHeight - flapHeight - 40}px`, // Оставляем место для нижней части
-          background: `repeating-linear-gradient(
-            45deg,
-            #000000 0px,
-            #000000 10px,
-            #ffffff 10px,
-            #ffffff 20px
-          )`,
+          width: `${clapperboardWidth}px`,
+          height: `${bottomHeight}px`,
+          backgroundColor: '#000000', // Чисто черный
+          borderBottomLeftRadius: '60px',
+          borderBottomRightRadius: '60px',
+          position: 'relative',
           zIndex: 1
         }}
-      />
-
-      {/* Нижняя часть с закругленными углами и градиентом */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          width: '100%',
-          height: '40px',
-          background: 'linear-gradient(to bottom, #000000 0%, #2a2a2a 100%)',
-          borderBottomLeftRadius: '8px',
-          borderBottomRightRadius: '8px',
-          zIndex: 1
-        }}
-      />
+      >
+        {/* Внутри нижнего дива сверху прямоугольный див с косыми чертами w600 h30 */}
+        <div
+          style={{
+            width: `${clapperboardWidth}px`,
+            height: `${stripeHeight}px`,
+            background: `repeating-linear-gradient(
+              45deg,
+              #000000 0px,
+              #000000 10px,
+              #ffffff 10px,
+              #ffffff 20px
+            )`,
+            position: 'absolute',
+            top: 0,
+            left: 0
+          }}
+        />
+        
+        {/* Градиентное круговое свечение темно-серым в центре нижнего дива */}
+        {isVisible && (
+          <motion.div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: '600px', // Втрое больше (было 200px)
+              height: '600px',
+              background: 'radial-gradient(circle, rgba(42, 42, 42, 0.4) 0%, rgba(42, 42, 42, 0.2) 40%, transparent 70%)', // Вдвое менее яркий (было 0.8 и 0.4)
+              borderRadius: '50%',
+              pointerEvents: 'none',
+              zIndex: 2,
+              x: lightOffsetX,
+              y: lightOffsetY
+            }}
+          />
+        )}
+      </div>
     </motion.div>
   )
 })
