@@ -4,6 +4,9 @@ import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { useParallaxStore } from '../store/parallaxStore'
 import Papa from 'papaparse'
 import Image from 'next/image'
+// Встроенные изображения для лент - загружаются синхронно при импорте модуля
+// Все данные встроены в JS код, никаких запросов к серверу
+import { lentaImages } from '../data/lenta_images'
 
 // Компонент пункта договора с галочкой
 const ContractItem = memo(function ContractItem({ text, progress, threshold, textColor }) {
@@ -2493,10 +2496,10 @@ function LentaPerforationTexture({ width, height, position = 'top', scale = 1 })
   )
 }
 
-function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY }) {
+function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY, embeddedImages }) {
   const { isParallaxEnabled } = useParallaxStore()
   
-  // Определяем список существующих файлов в папке (проверяем до 20 файлов)
+  // Используем встроенные base64 изображения если доступны, иначе загружаем через API
   const [existingFileNumbers, setExistingFileNumbers] = useState([])
   
   useEffect(() => {
@@ -2505,33 +2508,37 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
       return
     }
     
-    // Оптимизированная проверка: один запрос вместо множественных
-    const checkImageCount = async () => {
-      try {
-        const response = await fetch(`/api/list-photos?folderId=${folderId}&maxCheck=20`)
-        const data = await response.json()
-        if (data.files && Array.isArray(data.files)) {
-          setExistingFileNumbers(data.files)
-        } else {
-          setExistingFileNumbers([])
-        }
-      } catch (error) {
-        console.debug(`Failed to list photos for folder ${folderId}:`, error)
-        setExistingFileNumbers([])
-      }
+    // Используем только встроенные изображения - никаких запросов к серверу
+    // Если файл lenta_images.js не сгенерирован (npm run embed:lenta-images), изображений не будет
+    if (embeddedImages && embeddedImages[folderId] && Array.isArray(embeddedImages[folderId]) && embeddedImages[folderId].length > 0) {
+      const images = embeddedImages[folderId]
+      setExistingFileNumbers(images.map(img => img.fileNum))
+    } else {
+      // Нет встроенных изображений - пустой массив (покажутся placeholder цвета)
+      setExistingFileNumbers([])
+    }
+  }, [folderId, embeddedImages])
+  
+  // Генерируем список изображений: используем base64 если доступны, иначе пути к файлам
+  const frames = useMemo(() => {
+    // Приоритет: встроенные base64 изображения
+    if (embeddedImages && embeddedImages[folderId] && embeddedImages[folderId].length > 0) {
+      return embeddedImages[folderId].map((img) => ({
+        type: 'image',
+        src: img.data, // base64 data URL
+        isEmbedded: true
+      }))
     }
     
-    checkImageCount()
-  }, [folderId])
-  
-  // Генерируем список путей к изображениям на основе найденных файлов
-  const frames = useMemo(() => {
+    // Fallback: пути к файлам
     if (existingFileNumbers.length > 0 && folderId) {
       return existingFileNumbers.map((fileNum) => ({
         type: 'image',
-        src: `/photos/${folderId}/${fileNum}.webp`
+        src: `/photos/${folderId}/${fileNum}.webp`,
+        isEmbedded: false
       }))
     }
+    
     // Fallback на случайные цвета если изображения не найдены
     return Array.from({ length: 8 }, () => {
       const r = Math.floor(Math.random() * 256)
@@ -2539,7 +2546,7 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
       const b = Math.floor(Math.random() * 256)
       return { type: 'color', value: `rgb(${r}, ${g}, ${b})` }
     })
-  }, [existingFileNumbers, folderId])
+  }, [existingFileNumbers, folderId, embeddedImages])
   
   const frameCount = frames.length
   
@@ -2698,31 +2705,53 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
               >
                 {/* Сам кадр в центре */}
                 {frame.type === 'image' ? (
-                  <Image
-                    src={frame.src}
-                    alt={`Frame ${index}`}
-                    width={Math.round(frameWidth)}
-                    height={Math.round(frameHeight)}
-                    style={{
-                      position: 'absolute',
-                      top: `${borderWidth}px`,
-                      left: 0,
-                      width: '100%',
-                      height: `${frameHeight}px`,
-                      objectFit: 'cover',
-                      borderRadius: '2px'
-                    }}
-                    priority={index < 3} // Первые 3 кадра загружаем с приоритетом
-                    loading={index < 3 ? undefined : 'lazy'} // Остальные - lazy
-                    onError={(e) => {
-                      // При ошибке загрузки показываем серый фон
-                      e.target.style.display = 'none'
-                      if (e.target.parentElement) {
-                        e.target.parentElement.style.backgroundColor = '#333'
-                      }
-                    }}
-                    unoptimized={false} // Используем оптимизацию Next.js
-                  />
+                  // Для встроенных base64 используем обычный img (next/image не поддерживает data URLs)
+                  frame.isEmbedded ? (
+                    <img
+                      src={frame.src}
+                      alt={`Frame ${index}`}
+                      style={{
+                        position: 'absolute',
+                        top: `${borderWidth}px`,
+                        left: 0,
+                        width: '100%',
+                        height: `${frameHeight}px`,
+                        objectFit: 'cover',
+                        borderRadius: '2px'
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        if (e.target.parentElement) {
+                          e.target.parentElement.style.backgroundColor = '#333'
+                        }
+                      }}
+                    />
+                  ) : (
+                    <Image
+                      src={frame.src}
+                      alt={`Frame ${index}`}
+                      width={Math.round(frameWidth)}
+                      height={Math.round(frameHeight)}
+                      style={{
+                        position: 'absolute',
+                        top: `${borderWidth}px`,
+                        left: 0,
+                        width: '100%',
+                        height: `${frameHeight}px`,
+                        objectFit: 'cover',
+                        borderRadius: '2px'
+                      }}
+                      priority={index < 3} // Первые 3 кадра загружаем с приоритетом
+                      loading={index < 3 ? undefined : 'lazy'} // Остальные - lazy
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        if (e.target.parentElement) {
+                          e.target.parentElement.style.backgroundColor = '#333'
+                        }
+                      }}
+                      unoptimized={false} // Используем оптимизацию Next.js
+                    />
+                  )
                 ) : (
                   <div
                     style={{
@@ -2753,6 +2782,10 @@ export default function Home() {
 
   // Данные фильмографии из CSV (который получаем готовой конвертацией xlsx -> csv)
   const [filmographyData, setFilmographyData] = useState({ partners: [], projects: [] })
+  
+  // Встроенные base64 изображения для лент - загружены синхронно при импорте модуля
+  // Все данные встроены в JS код страницы, никаких запросов к серверу
+  const embeddedLentaImages = lentaImages || {}
 
   // Zustand store для управления эффектами
   const { isParallaxEnabled, toggleParallax, isGrainEnabled } = useParallaxStore()
@@ -3685,24 +3718,24 @@ export default function Home() {
       {/* Каждая лента соответствует одной папке из public/photos (1-12) */}
       {/* Центральные крупные ленты - быстрый spring для максимального эффекта */}
       {/* Эти ленты самые заметные и должны реагировать мгновенно */}
-      <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
-      <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
-      <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
+      <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
+      <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
 
       {/* Промежуточные ленты - средний spring */}
       {/* Баланс между скоростью и плавностью */}
-      <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
-      <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} />
+      <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+      <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
+      <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+      <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+      <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+      <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
 
       {/* Фоновые ленты - медленный spring для subtle эффекта */}
       {/* Эти ленты создают глубину и не должны отвлекать внимание */}
-      <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
-      <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} />
+      <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+      <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+      <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
       
       {/* Индикатор прогресса в левом верхнем углу */}
       <div style={{
