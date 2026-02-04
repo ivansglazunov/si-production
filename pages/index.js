@@ -2499,6 +2499,64 @@ const StarrySky = React.memo(function StarrySky({ starCount = 50 }) {
   return prevProps.starCount === nextProps.starCount
 })
 
+// Компонент ярких звезд для фона при открытии счелкунчика (без синивы, ярче, сильнее мерцают)
+const BrightStarrySky = React.memo(function BrightStarrySky({ starCount = 100, isVisible = false }) {
+  const [stars] = useState(() => {
+    return Array.from({ length: starCount }, () => ({
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 3 + 1, // Размер от 1px до 4px (больше)
+      baseOpacity: Math.random() * 0.5 + 0.5, // Базовая прозрачность от 0.5 до 1.0 (ярче)
+      peakOpacity: 1, // Пиковая прозрачность всегда 1.0 (максимальная яркость)
+      duration: Math.random() * 1 + 0.5, // Длительность от 0.5 до 1.5 секунд (быстрее мерцание)
+      delay: Math.random() * 1 // Задержка от 0 до 1 секунды
+    }))
+  })
+
+  if (!isVisible) return null
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      pointerEvents: 'none',
+      zIndex: 0,
+      backgroundColor: '#000000' // Чисто черный фон без синивы
+    }}>
+      {stars.map((star, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: star.baseOpacity }}
+          animate={{
+            opacity: [star.baseOpacity, star.peakOpacity, star.baseOpacity]
+          }}
+          transition={{
+            duration: star.duration,
+            repeat: Infinity,
+            delay: star.delay,
+            ease: "easeInOut"
+          }}
+          style={{
+            position: 'absolute',
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            borderRadius: '50%',
+            backgroundColor: '#ffffff',
+            boxShadow: `0 0 ${star.size * 2}px rgba(255, 255, 255, 0.9), 0 0 ${star.size * 4}px rgba(255, 255, 255, 0.5)` // Более яркое свечение
+          }}
+        />
+      ))}
+    </div>
+  )
+}, (prevProps, nextProps) => {
+  return prevProps.starCount === nextProps.starCount && prevProps.isVisible === nextProps.isVisible
+})
+
 // Компонент текстуры перфорации для лент
 function LentaPerforationTexture({ width, height, position = 'top', scale = 1 }) {
   // Параметры текстуры - масштабируемые
@@ -3741,19 +3799,64 @@ export default function Home() {
         <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
             </div>
 
+      {/* Яркие звезды снаружи уменьшаемой страницы */}
+      <BrightStarrySky starCount={100} isVisible={clapperboardVisible} />
 
-    <div 
+      {/* Голубое свечение вокруг уменьшающейся скроллящейся зоны */}
+      {clapperboardVisible && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.6 }}
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            width: '100vw',
+            height: '100vh',
+            pointerEvents: 'none',
+            zIndex: 1, // Выше звезд, но ниже счелкунчика
+            transform: 'translate(-50%, -50%)',
+            // Многократно ярче - голубое свечение вокруг уменьшающейся страницы
+            background: `
+              radial-gradient(ellipse 80vw 80vh at center, 
+                rgba(135, 206, 250, 0.8) 0%, 
+                rgba(100, 180, 255, 0.6) 20%, 
+                rgba(70, 130, 220, 0.4) 40%, 
+                rgba(26, 26, 62, 0.3) 60%, 
+                rgba(10, 10, 46, 0.2) 80%, 
+                transparent 100%
+              )
+            `,
+            mixBlendMode: 'screen',
+            filter: 'blur(60px)',
+            opacity: 0.9
+          }}
+        />
+      )}
+
+    <motion.div 
       ref={containerRef} 
       className="main-scroll-container"
+      animate={{
+        scale: clapperboardVisible ? 0.8 : 1,
+        height: clapperboardVisible ? '200vh' : '100vh',
+        y: clapperboardVisible ? '-50vh' : 0
+      }}
+      transition={{
+        duration: 0.6,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }}
       style={{ 
         position: 'fixed',
         top: 0,
         left: 0,
         width: '100vw',
-        height: '100vh',
         overflowY: 'auto', // Нативный скролл
         overflowX: 'hidden',
-        touchAction: 'pan-y' // Разрешаем вертикальный touch-скролл на мобильных
+        touchAction: 'pan-y', // Разрешаем вертикальный touch-скролл на мобильных
+        transformOrigin: 'center center'
       }}
     >
       {/* Ленты размещены внутри скроллящейся зоны */}
@@ -4519,7 +4622,7 @@ export default function Home() {
         </div>
       </section>
 
-    </div>
+    </motion.div>
     </>
   )
 }
