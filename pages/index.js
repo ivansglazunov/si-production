@@ -3,6 +3,7 @@ import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMot
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
 import { useParallaxStore } from '../store/parallaxStore'
 import Papa from 'papaparse'
+import Image from 'next/image'
 
 // Компонент пункта договора с галочкой
 const ContractItem = memo(function ContractItem({ text, progress, threshold, textColor }) {
@@ -238,6 +239,101 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
   )
 })
 
+// Компонент для lazy loading кадров в лентах
+const LazyFrame = memo(({ frame, index, frameWidth, frameHeight, borderWidth, isVisible, onError }) => {
+  const frameRef = useRef(null)
+  const [shouldLoad, setShouldLoad] = useState(false)
+  
+  useEffect(() => {
+    if (!frameRef.current || shouldLoad) return
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setShouldLoad(true)
+            observer.disconnect()
+          }
+        })
+      },
+      {
+        rootMargin: '50px' // Начинаем загрузку за 50px до появления в viewport
+      }
+    )
+    
+    observer.observe(frameRef.current)
+    
+    return () => {
+      observer.disconnect()
+    }
+  }, [shouldLoad])
+  
+  // Если кадр уже видим или должен загружаться, показываем изображение
+  const loadImage = isVisible || shouldLoad
+  
+  return (
+    <div
+      ref={frameRef}
+      style={{
+        width: `${frameWidth}px`,
+        height: `${frameHeight + borderWidth * 2}px`,
+        flexShrink: 0,
+        position: 'relative',
+        backgroundColor: '#000000',
+      }}
+    >
+      {frame.type === 'image' ? (
+        loadImage ? (
+          <Image
+            src={frame.src}
+            alt={`Frame ${index}`}
+            width={frameWidth}
+            height={frameHeight}
+            style={{
+              position: 'absolute',
+              top: `${borderWidth}px`,
+              left: 0,
+              width: '100%',
+              height: `${frameHeight}px`,
+              objectFit: 'cover',
+              borderRadius: '2px'
+            }}
+            loading="lazy"
+            onError={onError}
+            unoptimized={false} // Используем оптимизацию Next.js
+          />
+        ) : (
+          <div
+            style={{
+              position: 'absolute',
+              top: `${borderWidth}px`,
+              left: 0,
+              width: '100%',
+              height: `${frameHeight}px`,
+              backgroundColor: '#333',
+              borderRadius: '2px'
+            }}
+          />
+        )
+      ) : (
+        <div
+          style={{
+            position: 'absolute',
+            top: `${borderWidth}px`,
+            left: 0,
+            width: '100%',
+            height: `${frameHeight}px`,
+            backgroundColor: frame.value || '#333',
+            borderRadius: '2px'
+          }}
+        />
+      )}
+    </div>
+  )
+})
+
+LazyFrame.displayName = 'LazyFrame'
+
 // Компонент Галерея для активированной ленты (слайдер)
 function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
   const [currentFrameIndex, setCurrentFrameIndex] = useState(initialIndex)
@@ -256,33 +352,24 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
       const folderId = lenta.folderId
       if (!folderId) return
       
-      // Проверяем все файлы в папке (до 20) и собираем список существующих
-      const maxCheck = 20
-      const existingFiles = []
-      
-      for (let i = 1; i <= maxCheck; i++) {
-        try {
-          const response = await fetch(`/api/check-photo?folderId=${folderId}&fileNum=${i}`)
-          const data = await response.json()
-          if (data.exists) {
-            existingFiles.push(i)
-          }
-        } catch (error) {
-          // Игнорируем ошибки проверки
-          console.debug(`Failed to check photo ${folderId}/${i}.webp:`, error)
-        }
-      }
-      
-      if (existingFiles.length > 0) {
-        const lentaFrames = existingFiles.map((fileNum) => ({
-          type: 'image',
-          src: `/photos/${folderId}/${fileNum}.webp`
-        }))
+      // Оптимизированная проверка: один запрос вместо множественных
+      try {
+        const response = await fetch(`/api/list-photos?folderId=${folderId}&maxCheck=20`)
+        const data = await response.json()
         
-        setLoadedLentas(prev => ({
-          ...prev,
-          [lenta.id]: lentaFrames
-        }))
+        if (data.files && Array.isArray(data.files) && data.files.length > 0) {
+          const lentaFrames = data.files.map((fileNum) => ({
+            type: 'image',
+            src: `/photos/${folderId}/${fileNum}.webp`
+          }))
+          
+          setLoadedLentas(prev => ({
+            ...prev,
+            [lenta.id]: lentaFrames
+          }))
+        }
+      } catch (error) {
+        console.debug(`Failed to list photos for folder ${folderId}:`, error)
       }
     }
     
@@ -510,28 +597,32 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
                         }}
                       >
                         {frame.type === 'image' ? (
-                          <img
-                            src={frame.src}
-                            alt={`Frame ${frameIdx}`}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'contain',
-                              borderRadius: '12px',
-                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
-                            }}
-                            onError={(e) => {
-                              // При ошибке показываем серый фон
-                              e.target.style.display = 'none'
-                              const parent = e.target.parentElement
-                              if (parent && !parent.querySelector('.fallback-bg')) {
-                                const fallback = document.createElement('div')
-                                fallback.className = 'fallback-bg'
-                                fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
-                                parent.appendChild(fallback)
-                              }
-                            }}
-                          />
+                          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                            <Image
+                              src={frame.src}
+                              alt={`Frame ${frameIdx}`}
+                              fill
+                              style={{
+                                objectFit: 'contain',
+                                borderRadius: '12px',
+                                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                              }}
+                              priority={frameIdx === currentFrameIndex} // Текущий кадр загружаем с приоритетом
+                              loading={frameIdx === currentFrameIndex ? undefined : 'lazy'}
+                              onError={(e) => {
+                                // При ошибке показываем серый фон
+                                e.target.style.display = 'none'
+                                const parent = e.target.parentElement
+                                if (parent && !parent.querySelector('.fallback-bg')) {
+                                  const fallback = document.createElement('div')
+                                  fallback.className = 'fallback-bg'
+                                  fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                                  parent.appendChild(fallback)
+                                }
+                              }}
+                              unoptimized={false}
+                            />
+                          </div>
                         ) : (
                           <div
                             style={{
@@ -601,28 +692,32 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
                   }}
                 >
                   {frameData.type === 'image' ? (
-                    <img
-                      src={frameData.src}
-                      alt={`Frame ${index}`}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'contain',
-                        borderRadius: '12px',
-                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
-                      }}
-                      onError={(e) => {
-                        // При ошибке показываем серый фон
-                        e.target.style.display = 'none'
-                        const parent = e.target.parentElement
-                        if (parent && !parent.querySelector('.fallback-bg')) {
-                          const fallback = document.createElement('div')
-                          fallback.className = 'fallback-bg'
-                          fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
-                          parent.appendChild(fallback)
-                        }
-                      }}
-                    />
+                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                      <Image
+                        src={frameData.src}
+                        alt={`Frame ${index}`}
+                        fill
+                        style={{
+                          objectFit: 'contain',
+                          borderRadius: '12px',
+                          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
+                        }}
+                        priority={index === currentFrameIndex} // Текущий кадр загружаем с приоритетом
+                        loading={index === currentFrameIndex ? undefined : 'lazy'}
+                        onError={(e) => {
+                          // При ошибке показываем серый фон
+                          e.target.style.display = 'none'
+                          const parent = e.target.parentElement
+                          if (parent && !parent.querySelector('.fallback-bg')) {
+                            const fallback = document.createElement('div')
+                            fallback.className = 'fallback-bg'
+                            fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
+                            parent.appendChild(fallback)
+                          }
+                        }}
+                        unoptimized={false}
+                      />
+                    </div>
                   ) : (
                     <div
                       style={{
@@ -2410,27 +2505,20 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
       return
     }
     
-    // Проверяем все файлы в папке (до 20) и собираем список существующих
-    // Это позволяет находить файлы даже если они не начинаются с 1.webp
+    // Оптимизированная проверка: один запрос вместо множественных
     const checkImageCount = async () => {
-      const maxCheck = 20 // Максимальное количество файлов для проверки
-      const existingFiles = []
-      
-      // Проверяем все файлы от 1 до maxCheck
-      for (let i = 1; i <= maxCheck; i++) {
-        try {
-          const response = await fetch(`/api/check-photo?folderId=${folderId}&fileNum=${i}`)
-          const data = await response.json()
-          if (data.exists) {
-            existingFiles.push(i)
-          }
-        } catch (error) {
-          // Игнорируем ошибки проверки
-          console.debug(`Failed to check photo ${folderId}/${i}.webp:`, error)
+      try {
+        const response = await fetch(`/api/list-photos?folderId=${folderId}&maxCheck=20`)
+        const data = await response.json()
+        if (data.files && Array.isArray(data.files)) {
+          setExistingFileNumbers(data.files)
+        } else {
+          setExistingFileNumbers([])
         }
+      } catch (error) {
+        console.debug(`Failed to list photos for folder ${folderId}:`, error)
+        setExistingFileNumbers([])
       }
-      
-      setExistingFileNumbers(existingFiles)
     }
     
     checkImageCount()
@@ -2610,9 +2698,11 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
               >
                 {/* Сам кадр в центре */}
                 {frame.type === 'image' ? (
-                  <img
+                  <Image
                     src={frame.src}
                     alt={`Frame ${index}`}
+                    width={Math.round(frameWidth)}
+                    height={Math.round(frameHeight)}
                     style={{
                       position: 'absolute',
                       top: `${borderWidth}px`,
@@ -2622,11 +2712,16 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
                       objectFit: 'cover',
                       borderRadius: '2px'
                     }}
+                    priority={index < 3} // Первые 3 кадра загружаем с приоритетом
+                    loading={index < 3 ? undefined : 'lazy'} // Остальные - lazy
                     onError={(e) => {
                       // При ошибке загрузки показываем серый фон
                       e.target.style.display = 'none'
-                      e.target.parentElement.style.backgroundColor = '#333'
+                      if (e.target.parentElement) {
+                        e.target.parentElement.style.backgroundColor = '#333'
+                      }
                     }}
+                    unoptimized={false} // Используем оптимизацию Next.js
                   />
                 ) : (
                   <div
