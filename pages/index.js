@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, Suspense, memo, useMemo, useCallback } from 'react'
-import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
+import { motion, useScroll, useMotionValueEvent, useSpring, useTransform, useMotionValue, useMotionTemplate, useMotionValueEvent as useMotionValueEvent2 } from 'framer-motion'
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadialBarChart, RadialBar } from 'recharts'
 import { useParallaxStore } from '../store/parallaxStore'
 import Papa from 'papaparse'
@@ -167,6 +167,13 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
   const lightOffsetX = useTransform(mouseX, (x) => -x * 50 - 300) // Максимальное смещение 50px + центрирование
   const lightOffsetY = useTransform(mouseY, (y) => -y * 50 - 300)
   
+  // Вычисляем 3D поворот на основе позиции мыши
+  const rotateXValue = useTransform(mouseY, (y) => -y * 15) // Поворот по X (наклон вперед/назад) до 15 градусов
+  const rotateYValue = useTransform(mouseX, (x) => x * 15) // Поворот по Y (наклон влево/вправо) до 15 градусов
+  
+  // Используем useMotionTemplate для создания transform строки из motion values
+  const transform = useMotionTemplate`perspective(1000px) rotateX(${rotateXValue}deg) rotateY(${rotateYValue}deg)`
+  
   return (
     <motion.div
       className="clapperboard-container"
@@ -182,15 +189,19 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
         y: isVisible ? {
           duration: 1.5,
           times: [0, 0.4, 0.5, 0.65, 0.75, 0.85, 0.92, 1],
-          ease: [0.25, 0.46, 0.45, 0.94] // Ease out для падения
+          ease: [0.25, 0.46, 0.45, 0.94], // Ease out для падения
+          type: 'tween' // Явно указываем тип для keyframes анимации
         } : {
-          duration: 0.3
+          duration: 0.3,
+          type: 'tween'
         },
         opacity: {
-          duration: 0.3
+          duration: 0.3,
+          type: 'tween'
         },
         scale: {
-          duration: 0.3
+          duration: 0.3,
+          type: 'tween'
         }
       }}
       ref={containerRef}
@@ -200,9 +211,12 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
         height: `${topHeight + bottomHeight}px`,
         pointerEvents: 'auto',
         transformOrigin: 'center center',
+        transformStyle: 'preserve-3d',
         cursor: 'pointer',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        transform: transform,
+        transition: 'transform 0.1s ease-out'
       }}
       onClick={onClose}
     >
@@ -3836,29 +3850,43 @@ export default function Home() {
         />
       )}
 
-    <motion.div 
-      ref={containerRef} 
-      className="main-scroll-container"
+    {/* Wrapper для трансформаций - не мешает скроллу */}
+    <motion.div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        pointerEvents: 'none', // Не блокирует события скролла
+        zIndex: 0,
+        transformOrigin: 'center center'
+      }}
       animate={{
         scale: clapperboardVisible ? 0.8 : 1,
-        height: clapperboardVisible ? '200vh' : '100vh',
         y: clapperboardVisible ? '-50vh' : 0
       }}
       transition={{
         duration: 0.6,
         ease: [0.25, 0.46, 0.45, 0.94]
       }}
-      style={{ 
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        overflowY: 'auto', // Нативный скролл
-        overflowX: 'hidden',
-        touchAction: 'pan-y', // Разрешаем вертикальный touch-скролл на мобильных
-        transformOrigin: 'center center'
-      }}
     >
+      <div 
+        ref={containerRef} 
+        className="main-scroll-container"
+        style={{ 
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: clapperboardVisible ? '200vh' : '100vh',
+          overflowY: 'auto', // Нативный скролл
+          overflowX: 'hidden',
+          touchAction: 'pan-y', // Разрешаем вертикальный touch-скролл на мобильных
+          pointerEvents: 'auto', // Явно разрешаем события для скролла
+          transition: 'height 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)' // Плавный переход для height
+        }}
+      >
       {/* Ленты размещены внутри скроллящейся зоны */}
       {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
       {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
@@ -4621,7 +4649,7 @@ export default function Home() {
           </footer>
         </div>
       </section>
-
+      </div>
     </motion.div>
     </>
   )
