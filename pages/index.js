@@ -261,36 +261,15 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
       const existingFiles = []
       
       for (let i = 1; i <= maxCheck; i++) {
-        const testUrl = `/photos/${folderId}/${i}.webp`
-        const exists = await new Promise((resolve) => {
-          const img = new Image()
-          let resolved = false
-          
-          img.onload = () => {
-            if (!resolved) {
-              resolved = true
-              resolve(true)
-            }
+        try {
+          const response = await fetch(`/api/check-photo?folderId=${folderId}&fileNum=${i}`)
+          const data = await response.json()
+          if (data.exists) {
+            existingFiles.push(i)
           }
-          
-          img.onerror = () => {
-            if (!resolved) {
-              resolved = true
-              resolve(false)
-            }
-          }
-          
-          img.src = testUrl
-          setTimeout(() => {
-            if (!resolved) {
-              resolved = true
-              resolve(false)
-            }
-          }, 500)
-        })
-        
-        if (exists) {
-          existingFiles.push(i)
+        } catch (error) {
+          // Игнорируем ошибки проверки
+          console.debug(`Failed to check photo ${folderId}/${i}.webp:`, error)
         }
       }
       
@@ -1012,6 +991,30 @@ const ProgressChart = memo(function ProgressChart({ progressMotionValue }) {
 // Компонент линейной диаграммы с точками, зависящими от скролла
 const LineChartComponent = memo(function LineChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const containerRef = useRef(null)
+
+  // Отслеживаем размеры контейнера
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect()
+        if (width > 0 && height > 0) {
+          setContainerSize({ width, height })
+        }
+      }
+    }
+    
+    updateSize()
+    const resizeObserver = new ResizeObserver(updateSize)
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+    
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
   useEffect(() => {
@@ -1040,8 +1043,31 @@ const LineChartComponent = memo(function LineChartComponent({ progressMotionValu
     { name: 'J', value: 65 - progress * 0.4, value2: 30 + progress * 0.45 }  // Первая вниз, вторая вверх
   ], [progress])
 
+  // Не рендерим график, пока контейнер не имеет размеров
+  if (containerSize.width === 0 || containerSize.height === 0) {
+    return (
+      <div
+        ref={containerRef}
+        key="line-chart-container"
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          padding: 0,
+          zIndex: 1,
+          pointerEvents: 'none',
+          minWidth: '200px',
+          minHeight: '200px'
+        }}
+      />
+    )
+  }
+
   return (
     <div
+      ref={containerRef}
       key="line-chart-container"
       style={{
       width: '100%',
@@ -1055,7 +1081,7 @@ const LineChartComponent = memo(function LineChartComponent({ progressMotionValu
       minWidth: '200px',
       minHeight: '200px'
     }}>
-      <ResponsiveContainer key="line-responsive-container" width="100%" height="100%">
+      <ResponsiveContainer key="line-responsive-container" width="100%" height="100%" minWidth={200} minHeight={200}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
           <XAxis 
@@ -1109,6 +1135,30 @@ const LineChartComponent = memo(function LineChartComponent({ progressMotionValu
 // Компонент радарной диаграммы
 const RadarChartComponent = memo(function RadarChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const containerRef = useRef(null)
+
+  // Отслеживаем размеры контейнера
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect()
+        if (width > 0 && height > 0) {
+          setContainerSize({ width, height })
+        }
+      }
+    }
+    
+    updateSize()
+    const resizeObserver = new ResizeObserver(updateSize)
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+    
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
   useEffect(() => {
@@ -1132,9 +1182,20 @@ const RadarChartComponent = memo(function RadarChartComponent({ progressMotionVa
     { subject: 'F', value: 45 - progress * 0.35, fullMark: 100 }
   ]
 
+  // Не рендерим график, пока контейнер не имеет размеров
+  if (containerSize.width === 0 || containerSize.height === 0) {
+    return (
+      <div 
+        ref={containerRef}
+        key="radar-chart-container" 
+        style={{ width: '100%', height: '100%', minWidth: '200px', minHeight: '200px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      />
+    )
+  }
+
   return (
-    <div key="radar-chart-container" style={{ width: '100%', height: '100%', minWidth: '200px', minHeight: '200px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <ResponsiveContainer key="radar-responsive-container" width="100%" height="100%">
+    <div ref={containerRef} key="radar-chart-container" style={{ width: '100%', height: '100%', minWidth: '200px', minHeight: '200px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radar-responsive-container" width="100%" height="100%" minWidth={200} minHeight={200}>
         <RadarChart key="radar-chart" data={data}>
           <PolarGrid stroke="#ffffff" strokeOpacity={0.3} />
           <PolarAngleAxis 
@@ -1163,6 +1224,30 @@ const RadarChartComponent = memo(function RadarChartComponent({ progressMotionVa
 // Компонент радиальной столбчатой диаграммы, зависимый от скролла
 const RadialBarChartComponent = memo(function RadialBarChartComponent({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const containerRef = useRef(null)
+
+  // Отслеживаем размеры контейнера
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect()
+        if (width > 0 && height > 0) {
+          setContainerSize({ width, height })
+        }
+      }
+    }
+    
+    updateSize()
+    const resizeObserver = new ResizeObserver(updateSize)
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+    
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   // Таймер для автоматического изменения значений диаграммы каждые 3 секунды
   useEffect(() => {
@@ -1187,9 +1272,20 @@ const RadialBarChartComponent = memo(function RadialBarChartComponent({ progress
     { name: 'F', value: 70 - progress * 0.35, fill: '#ffffff' }
   ], [progress])
 
+  // Не рендерим график, пока контейнер не имеет размеров
+  if (containerSize.width === 0 || containerSize.height === 0) {
+    return (
+      <div 
+        ref={containerRef}
+        key="radial-bar-chart-container" 
+        style={{ width: '100%', height: '100%', minWidth: '200px', minHeight: '200px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      />
+    )
+  }
+
   return (
-    <div key="radial-bar-chart-container" style={{ width: '100%', height: '100%', minWidth: '200px', minHeight: '200px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <ResponsiveContainer key="radial-responsive-container" width="100%" height="100%">
+    <div ref={containerRef} key="radial-bar-chart-container" style={{ width: '100%', height: '100%', minWidth: '200px', minHeight: '200px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ResponsiveContainer key="radial-responsive-container" width="100%" height="100%" minWidth={200} minHeight={200}>
         <RadialBarChart
           key="radial-bar-chart" 
           cx="50%" 
@@ -2322,38 +2418,15 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
       
       // Проверяем все файлы от 1 до maxCheck
       for (let i = 1; i <= maxCheck; i++) {
-        const testUrl = `/photos/${folderId}/${i}.webp`
-        const exists = await new Promise((resolve) => {
-          const img = new Image()
-          let resolved = false
-          
-          img.onload = () => {
-            if (!resolved) {
-              resolved = true
-              resolve(true)
-            }
+        try {
+          const response = await fetch(`/api/check-photo?folderId=${folderId}&fileNum=${i}`)
+          const data = await response.json()
+          if (data.exists) {
+            existingFiles.push(i)
           }
-          
-          img.onerror = () => {
-            if (!resolved) {
-              resolved = true
-              resolve(false)
-            }
-          }
-          
-          img.src = testUrl
-          
-          // Таймаут увеличен до 500ms для более надежной проверки
-          setTimeout(() => {
-            if (!resolved) {
-              resolved = true
-              resolve(false)
-            }
-          }, 500)
-        })
-        
-        if (exists) {
-          existingFiles.push(i)
+        } catch (error) {
+          // Игнорируем ошибки проверки
+          console.debug(`Failed to check photo ${folderId}/${i}.webp:`, error)
         }
       }
       
@@ -2627,6 +2700,28 @@ export default function Home() {
   // Для отображения в UI (только для текста) - используем useState только для индикаторов
   const [progressText, setProgressText] = useState(0)
   const [firstScreenProgressText, setFirstScreenProgressText] = useState(0)
+  
+  // Состояние для тултипов SI - показываются одновременно
+  const [showTooltips, setShowTooltips] = useState(false)
+  
+  // Функция для расчета возраста от даты рождения
+  const calculateAge = (birthDate) => {
+    const today = new Date()
+    const birth = new Date(birthDate)
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+    
+    // Если день рождения еще не прошел в этом году, уменьшаем возраст на 1
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--
+    }
+    
+    return age
+  }
+  
+  // Даты рождения: Саша - 24.04.2015, Игнат - 23.06.2021
+  const sashaBirthDate = '2015-04-24'
+  const ignatBirthDate = '2021-06-23'
   const [secondScreenProgressText, setSecondScreenProgressText] = useState(0)
   const [thirdScreenProgressText, setThirdScreenProgressText] = useState(0)
   const [flashActive, setFlashActive] = useState(false)
@@ -3044,7 +3139,8 @@ export default function Home() {
   // Все проекты отображаются в галерее, даже без постеров (используется SVG fallback)
   const topMovies = useMemo(() => {
     if (filmographyData.projects && filmographyData.projects.length > 0) {
-      return filmographyData.projects.map((p) => {
+      // Переставляем проекты в обратном порядке
+      return filmographyData.projects.slice().reverse().map((p) => {
         // Используем alias для отображения (Селфи -> Хейтер)
         const displayTitle = DISPLAY_ALIASES[p.title] || p.title
         // Пытаемся найти постер из Кинопоиска
@@ -3342,25 +3438,114 @@ export default function Home() {
           fontFamily: "'Science Gothic', monospace",
           fontWeight: 'bold',
           zIndex: 10000,
-          pointerEvents: 'none',
           display: 'flex',
           alignItems: 'center',
           gap: '4px'
         }}
       >
-        <span 
-          className="si-text"
+        {/* Контейнер для SI с обработчиками событий */}
+        <span
           style={{
-            fontFamily: "'Slovic', sans-serif",
-            color: '#ff0000',
-            transform: 'translateY(-3px)'
+            position: 'relative',
+            display: 'inline-flex',
+            alignItems: 'center',
+            cursor: 'pointer',
+            pointerEvents: 'auto'
           }}
-        >SI</span>
-        <span className="dash-text">-</span>
+          onMouseEnter={() => setShowTooltips(true)}
+          onMouseLeave={() => setShowTooltips(false)}
+          onClick={() => setShowTooltips(!showTooltips)}
+        >
+          {/* Буква S */}
+          <span 
+            style={{
+              fontFamily: "'Slovic', sans-serif",
+              color: '#ff0000',
+              transform: 'translateY(-3px)'
+            }}
+          >
+            S
+          </span>
+          
+          {/* Буква I */}
+          <span 
+            style={{
+              fontFamily: "'Slovic', sans-serif",
+              color: '#ff0000',
+              transform: 'translateY(-3px)'
+            }}
+          >
+            I
+          </span>
+          
+          {/* Центральная точка отсчета для позиционирования тултипа */}
+          {showTooltips && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                width: '0px',
+                height: '0px',
+                pointerEvents: 'none'
+              }}
+            >
+              {/* Общий тултип над SI, разделенный вертикальной чертой */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 10px)',
+                  left: '50%',
+                  padding: '8px 0',
+                  backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                  borderRadius: '6px',
+                  fontSize: 'clamp(14px, 1.5vw, 18px)',
+                  fontFamily: "'Slovic', sans-serif",
+                  pointerEvents: 'none',
+                  zIndex: 10001,
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  alignItems: 'stretch',
+                  whiteSpace: 'nowrap',
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                {/* Левая часть - Саша */}
+                <div style={{
+                  padding: '8px 12px',
+                  textAlign: 'center',
+                  borderRight: '1px solid rgba(255, 255, 255, 0.3)'
+                }}>
+                  <div style={{ color: '#ffffff' }}>Саша</div>
+                  <div style={{ fontSize: '0.9em', opacity: 0.8, marginTop: '2px', color: '#ffffff' }}>
+                    {calculateAge(sashaBirthDate)} годиков
+                  </div>
+                </div>
+                
+                {/* Правая часть - Игнат */}
+                <div style={{
+                  padding: '8px 12px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ color: '#ffffff' }}>Игнат</div>
+                  <div style={{ fontSize: '0.9em', opacity: 0.8, marginTop: '2px', color: '#ffffff' }}>
+                    {calculateAge(ignatBirthDate)} годиков
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </span>
+        
+        <span className="dash-text" style={{ pointerEvents: 'none' }}>-</span>
         <span 
           className="production-text"
           style={{
-            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)'
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)',
+            pointerEvents: 'none'
           }}
         >PRODUCTION</span>
       </div>
@@ -3449,9 +3634,33 @@ export default function Home() {
           width: '100vw', 
           height: 'calc(var(--vh, 1vh) * 100)', 
           backgroundColor: '#0a0a0a', // Чуть светлее черного
-          position: 'relative'
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
+        {/* Видео фон */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            minWidth: '100%',
+            minHeight: '100%',
+            width: 'auto',
+            height: 'auto',
+            zIndex: 0,
+            objectFit: 'cover'
+          }}
+        >
+          <source src="/video_background.webm" type="video/webm" />
+          <source src="/video_2026-02-04_19-56-39.mp4" type="video/mp4" />
+        </video>
         {/* Индикатор прогресса первого экрана */}
         <div style={{
           position: 'sticky',
@@ -3469,22 +3678,6 @@ export default function Home() {
           pointerEvents: 'none'
         }}>
           Составление плана: {firstScreenProgressText}%
-            </div>
-
-        {/* Надпись ПЕРВЫЙ ЭКРАН */}
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: '#ffffff',
-          fontSize: 'clamp(24px, 5vw, 48px)',
-          fontFamily: "'Slovic', sans-serif",
-          textAlign: 'center',
-          zIndex: -1,
-          pointerEvents: 'none'
-        }}>
-            Первый экран
             </div>
       </section>
 
@@ -3810,7 +4003,7 @@ export default function Home() {
           Монтаж: {thirdScreenProgressText}%
         </div>
 
-        {/* Секция ПРОЕКТЫ */}
+        {/* Секция НАША ФИЛЬМОГРАФИЯ */}
         <div style={{
           width: '90%',
           margin: '0 auto',
@@ -3821,7 +4014,7 @@ export default function Home() {
           zIndex: 20,
           position: 'relative'
         }}>
-          {/* Заголовок ПРОЕКТЫ */}
+          {/* Заголовок НАША ФИЛЬМОГРАФИЯ */}
           <div style={{
             textAlign: 'center',
             marginBottom: '3rem'
@@ -3835,8 +4028,7 @@ export default function Home() {
                 lineHeight: '0.9'
               }}
             >
-              ПРОЕКТЫ<br />
-              <span style={{ opacity: 0.7, fontSize: 'clamp(0.6em, 1.5vw, 1.25em)', marginTop: '-0.3em', display: 'inline-block' }}>В КОТОРЫХ МЫ ПРИНИМАЛИ УЧАСТИЕ</span>
+              НАША ФИЛЬМОГРАФИЯ
             </h1>
           </div>
 
@@ -3968,7 +4160,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Секция ПАРТНЕРЫ */}
+        {/* Секция СОТРУДНИЧЕСТВА */}
         <div style={{
           width: '90%',
           margin: '0 auto',
@@ -3979,7 +4171,7 @@ export default function Home() {
           zIndex: 20,
           position: 'relative'
         }}>
-          {/* Заголовок ПАРТНЕРЫ */}
+          {/* Заголовок СОТРУДНИЧЕСТВА */}
           <div style={{
             textAlign: 'center',
             marginBottom: '3rem'
@@ -4007,39 +4199,148 @@ export default function Home() {
             width: '100%',
             textAlign: 'center',
             marginTop: '4rem',
-            marginBottom: '150px',
-            pointerEvents: 'none'
+            marginBottom: '150px'
           }}>
             <div style={{
-              display: 'inline-flex',
+              display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '0.5rem',
-              color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
-              fontFamily: "'Slovic', sans-serif",
-              fontWeight: 'bold'
+              gap: '1rem'
             }}>
-              <span>Made in</span>
-              <span style={{
+              <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.3rem',
+                gap: '0.5rem',
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontSize: 'clamp(1.2rem, 2.25vw, 1.8rem)', // Увеличено в 1.5 раза
                 fontFamily: "'Slovic', sans-serif",
                 fontWeight: 'bold'
               }}>
-                {/* Иконка православного купола из SVG файла */}
-                <img 
-                  src="/tampls.svg" 
-                  alt="Zvenigorod dome" 
-                  style={{ 
-                    display: 'inline-block',
-                    verticalAlign: 'middle',
-                    width: '24px',
-                    height: '24px'
+                <span>Made in</span>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  fontFamily: "'Slovic', sans-serif",
+                  fontWeight: 'bold'
+                }}>
+                  {/* Иконка православного купола из SVG файла */}
+                  <img 
+                    src="/tampls.svg" 
+                    alt="Zvenigorod dome" 
+                    style={{ 
+                      display: 'inline-block',
+                      verticalAlign: 'middle',
+                      width: '24px',
+                      height: '24px'
+                    }}
+                  />
+                  <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
+                </span>
+              </div>
+              {/* Контактные данные */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '0.75rem',
+                marginTop: '0.5rem'
+              }}>
+                {/* Email */}
+                <a 
+                  href="mailto:89161228435@mail.ru"
+                  style={{
+                    color: 'rgba(255, 255, 255, 0.85)',
+                    fontSize: 'clamp(0.95rem, 1.6vw, 1.15rem)',
+                    fontFamily: "'Slovic', sans-serif",
+                    textDecoration: 'none',
+                    transition: 'color 0.3s ease, opacity 0.3s ease',
+                    pointerEvents: 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
                   }}
-                />
-                <span style={{ fontFamily: "'Slovic', sans-serif", fontWeight: 'bold' }}>Zvenigorod</span>
-              </span>
+                  onMouseEnter={(e) => {
+                    e.target.style.color = 'rgba(255, 255, 255, 1)'
+                    e.target.style.opacity = '1'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.color = 'rgba(255, 255, 255, 0.85)'
+                    e.target.style.opacity = '0.85'
+                  }}
+                >
+                  <span style={{ opacity: 0.6 }}>✉</span>
+                  <span>89161228435@mail.ru</span>
+                </a>
+                
+                {/* Телефоны */}
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  gap: '1rem',
+                  fontSize: 'clamp(0.95rem, 1.6vw, 1.15rem)',
+                  fontFamily: "'Slovic', sans-serif"
+                }}>
+                  <a 
+                    href="tel:+79258465052"
+                    style={{
+                      color: 'rgba(255, 255, 255, 0.85)',
+                      textDecoration: 'none',
+                      transition: 'color 0.3s ease, opacity 0.3s ease',
+                      pointerEvents: 'auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.color = 'rgba(255, 255, 255, 1)'
+                      e.target.style.opacity = '1'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.color = 'rgba(255, 255, 255, 0.85)'
+                      e.target.style.opacity = '0.85'
+                    }}
+                  >
+                    <span style={{ opacity: 0.6 }}>📞</span>
+                    <span>+7 (925) 846-50-52</span>
+                  </a>
+                  <a 
+                    href="tel:+79777473377"
+                    style={{
+                      color: 'rgba(255, 255, 255, 0.85)',
+                      textDecoration: 'none',
+                      transition: 'color 0.3s ease, opacity 0.3s ease',
+                      pointerEvents: 'auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.color = 'rgba(255, 255, 255, 1)'
+                      e.target.style.opacity = '1'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.color = 'rgba(255, 255, 255, 0.85)'
+                      e.target.style.opacity = '0.85'
+                    }}
+                  >
+                    <span style={{ opacity: 0.6 }}>📞</span>
+                    <span>+7 (977) 747-33-77</span>
+                  </a>
+                </div>
+                
+                {/* ИП информация */}
+                <div style={{
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  fontSize: 'clamp(0.8rem, 1.3vw, 1rem)',
+                  fontFamily: "'Slovic', sans-serif",
+                  marginTop: '0.25rem',
+                  fontStyle: 'italic'
+                }}>
+                  ИП Щербаков М.А.
+                </div>
+              </div>
             </div>
           </footer>
         </div>

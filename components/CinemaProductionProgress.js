@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, memo } from 'react'
+import { useState, useRef, useMemo, memo, useEffect } from 'react'
 import { useMotionValueEvent } from 'framer-motion'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Label } from 'recharts'
 
@@ -82,6 +82,8 @@ function generateDemoData(maxMonths) {
 
 function CinemaProductionProgress({ progressMotionValue }) {
   const [progress, setProgress] = useState(0)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const containerRef = useRef(null)
   const lastUpdateRef = useRef(0)
 
   // Максимальное количество месяцев (3 года = 36 месяцев)
@@ -139,6 +141,28 @@ function CinemaProductionProgress({ progressMotionValue }) {
     'Стриминг': '#fcfcfc' // Почти чисто белый
   }), [])
 
+  // Отслеживаем размеры контейнера
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect()
+        if (width > 0 && height > 0) {
+          setContainerSize({ width, height })
+        }
+      }
+    }
+    
+    updateSize()
+    const resizeObserver = new ResizeObserver(updateSize)
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+    
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
+  
   // Мемоизируем позиции лейблов
   const labelPositions = useMemo(() => ({
     'Охват аудитории': { dataIndexPercent: 0.70, offsetX: 10, offsetY: 0, anchor: 'start' },
@@ -187,18 +211,44 @@ function CinemaProductionProgress({ progressMotionValue }) {
     )
   }
   
+  // Не рендерим график, пока контейнер не имеет размеров
+  if (containerSize.width === 0 || containerSize.height === 0) {
+    return (
+      <div 
+        ref={containerRef}
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          minWidth: '200px',
+          minHeight: '200px',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          padding: 0,
+          zIndex: 1,
+          pointerEvents: 'none'
+        }}
+      />
+    )
+  }
+  
   return (
-    <div style={{ 
-      width: '100%', 
-      height: '100%', 
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      padding: 0,
-      zIndex: 1,
-      pointerEvents: 'none'
-    }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div 
+      ref={containerRef}
+      style={{ 
+        width: '100%', 
+        height: '100%', 
+        minWidth: '200px',
+        minHeight: '200px',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        padding: 0,
+        zIndex: 1,
+        pointerEvents: 'none'
+      }}
+    >
+      <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
         <AreaChart data={data} margin={{ top: -50, right: 0, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
           <XAxis
