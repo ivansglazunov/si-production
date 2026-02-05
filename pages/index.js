@@ -174,26 +174,26 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
   // Используем useMotionTemplate для создания transform строки из motion values
   const transform = useMotionTemplate`perspective(1000px) rotateX(${rotateXValue}deg) rotateY(${rotateYValue}deg)`
   
+  // Не рендерим компонент, если он не виден
+  if (!isVisible) {
+    return null
+  }
+
   return (
     <motion.div
       className="clapperboard-container"
       initial={false}
       animate={{
-        y: isVisible
-          ? ['calc(var(--vh, 1vh) * -100)', 0, -30, 0, -15, 0, -8, 0] // Падение сверху с отскоками
-          : 'calc(var(--vh, 1vh) * -100)',
-        opacity: isVisible ? 1 : 0,
-        scale: isVisible ? 1 : 0.8
+        y: ['calc(var(--vh, 1vh) * -100)', 0, -30, 0, -15, 0, -8, 0], // Падение сверху с отскоками
+        opacity: 1,
+        scale: 1
       }}
       transition={{
-        y: isVisible ? {
+        y: {
           duration: 1.5,
           times: [0, 0.4, 0.5, 0.65, 0.75, 0.85, 0.92, 1],
           ease: [0.25, 0.46, 0.45, 0.94], // Ease out для падения
           type: 'tween' // Явно указываем тип для keyframes анимации
-        } : {
-          duration: 0.3,
-          type: 'tween'
         },
         opacity: {
           duration: 0.3,
