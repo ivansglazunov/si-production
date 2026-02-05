@@ -159,14 +159,6 @@
     "kinopoiskId": "1197711",
     "localPath": "/projects/Короче.jpg"
   },
-  "Одноклассники": {
-    "posterUrl": "/projects/Одноклассники.jpg",
-    "matchedTitle": "Одноклассники",
-    "matchedYear": 2010,
-    "matchedType": "film",
-    "kinopoiskId": "494549",
-    "localPath": "/projects/Одноклассники.jpg"
-  },
   "Союз спасения (1825 г)": {
     "posterUrl": "/projects/Союз_спасения_(1825_г).jpg",
     "matchedTitle": "Союз Спасения",
@@ -254,5 +246,93 @@
     "matchedType": "film",
     "kinopoiskId": "9928228",
     "localPath": "/projects/Большая_Волна.jpg"
+  },
+  "Авиатор": {
+    "posterUrl": "/projects/Авиатор.jpg",
+    "matchedTitle": "Авиатор",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Авиатор.jpg"
+  },
+  "Пальма - 2": {
+    "posterUrl": "/projects/Пальма_-_2.jpg",
+    "matchedTitle": "Пальма - 2",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Пальма_-_2.jpg"
+  },
+  "Война семей": {
+    "posterUrl": "/projects/Война_семей.jpg",
+    "matchedTitle": "Война семей",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Война_семей.jpg"
+  },
+  "Гусар во времени путешествовал": {
+    "posterUrl": "/projects/Гусар_во_времени_путешествовал.jpg",
+    "matchedTitle": "Гусар во времени путешествовал",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Гусар_во_времени_путешествовал.jpg"
+  },
+  "сериал Фитнес": {
+    "posterUrl": "/projects/сериал_Фитнес.jpg",
+    "matchedTitle": "сериал Фитнес",
+    "matchedYear": null,
+    "matchedType": "series",
+    "kinopoiskId": null,
+    "localPath": "/projects/сериал_Фитнес.jpg"
+  },
+  "Гусары (1812 г)": {
+    "posterUrl": "/projects/Гусары_(1812_г).jpg",
+    "matchedTitle": "Гусары (1812 г)",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Гусары_(1812_г).jpg"
+  },
+  "Свора": {
+    "posterUrl": "/projects/Свора.jpg",
+    "matchedTitle": "Свора",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Свора.jpg"
+  },
+  "Хозяин Москвы (1810-1825гг)": {
+    "posterUrl": "/projects/Хозяин_Москвы_(1810-1825гг).jpg",
+    "matchedTitle": "Хозяин Москвы (1810-1825гг)",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Хозяин_Москвы_(1810-1825гг).jpg"
+  },
+  "Быстрее варга": {
+    "posterUrl": "/projects/Быстрее_варга.jpg",
+    "matchedTitle": "Быстрее варга",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Быстрее_варга.jpg"
+  },
+  "Пальма-2": {
+    "posterUrl": "/projects/Пальма_-_2.jpg",
+    "matchedTitle": "Пальма - 2",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Пальма_-_2.jpg"
+  },
+  "КУ": {
+    "posterUrl": "/projects/Приход.jpg",
+    "matchedTitle": "Приход (сериал)",
+    "matchedYear": 2022,
+    "matchedType": "series",
+    "kinopoiskId": "5047300",
+    "localPath": "/projects/Приход.jpg"
   }
 }

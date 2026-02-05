@@ -167,9 +167,9 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
   const lightOffsetX = useTransform(mouseX, (x) => -x * 50 - 300) // Максимальное смещение 50px + центрирование
   const lightOffsetY = useTransform(mouseY, (y) => -y * 50 - 300)
   
-  // Вычисляем 3D поворот на основе позиции мыши
-  const rotateXValue = useTransform(mouseY, (y) => -y * 15) // Поворот по X (наклон вперед/назад) до 15 градусов
-  const rotateYValue = useTransform(mouseX, (x) => x * 15) // Поворот по Y (наклон влево/вправо) до 15 градусов
+  // Вычисляем 3D поворот на основе позиции мыши (в 4 раза слабее)
+  const rotateXValue = useTransform(mouseY, (y) => -y * 3.75) // Поворот по X (наклон вперед/назад) до 3.75 градусов
+  const rotateYValue = useTransform(mouseX, (x) => x * 3.75) // Поворот по Y (наклон влево/вправо) до 3.75 градусов
   
   // Используем useMotionTemplate для создания transform строки из motion values
   const transform = useMotionTemplate`perspective(1000px) rotateX(${rotateXValue}deg) rotateY(${rotateYValue}deg)`
@@ -296,6 +296,131 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
             }}
           />
         )}
+
+        {/* Линейная сетка: 2 колонки и 4 строки через CSS Grid */}
+        <div
+          style={{
+            position: 'absolute',
+            top: `${stripeHeight}px`,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gridTemplateRows: 'repeat(4, 1fr)',
+            zIndex: 3,
+            pointerEvents: 'none'
+          }}
+        >
+          {/* Строка 1, Колонка 1: PHONE */}
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center',
+            padding: '12px',
+            borderRight: '2px solid #888888',
+            borderBottom: '2px solid #888888',
+            color: '#ffffff',
+            fontFamily: "'Science Gothic', monospace",
+            fontSize: '26px'
+          }}>
+            <div style={{ opacity: 0.8, fontSize: '22px', marginBottom: '4px' }}>PHONE</div>
+          </div>
+
+          {/* Строка 1, Колонка 2: +7 (925) 846-50-52 */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            padding: '12px',
+            borderBottom: '2px solid #888888',
+            color: '#ffffff',
+            fontFamily: "'Slovic', cursive",
+            fontSize: '26px'
+          }}>
+            +7 (925) 846-50-52
+          </div>
+
+          {/* Строка 2, Колонка 1: пусто */}
+          <div style={{ 
+            borderRight: '2px solid #888888',
+            borderBottom: '2px solid #888888'
+          }} />
+
+          {/* Строка 2, Колонка 2: +7 (977) 747-33-77 */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            padding: '12px',
+            borderBottom: '2px solid #888888',
+            color: '#ffffff',
+            fontFamily: "'Slovic', cursive",
+            fontSize: '26px'
+          }}>
+            +7 (977) 747-33-77
+          </div>
+
+          {/* Строка 3, Колонка 1: TELEGRAM */}
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center',
+            padding: '12px',
+            borderRight: '2px solid #888888',
+            borderBottom: '2px solid #888888',
+            color: '#ffffff',
+            fontFamily: "'Science Gothic', monospace",
+            fontSize: '26px'
+          }}>
+            <div style={{ opacity: 0.8, fontSize: '22px', marginBottom: '4px' }}>TELEGRAM</div>
+          </div>
+
+          {/* Строка 3, Колонка 2: @si_production_bot */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            padding: '12px',
+            borderBottom: '2px solid #888888',
+            color: '#ffffff',
+            fontFamily: "'Slovic', cursive",
+            fontSize: '26px'
+          }}>
+            <a
+              href="https://t.me/si_production_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: '#ffffff',
+                textDecoration: 'none',
+                pointerEvents: 'auto',
+                transition: 'opacity 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.opacity = '0.8'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.opacity = '1'
+              }}
+            >
+              @si_production_bot
+            </a>
+          </div>
+
+          {/* Строка 4, Колонка 1-2: ИП Щербаков М.А. (объединенная ячейка) */}
+          <div style={{ 
+            gridColumn: '1 / -1',
+            display: 'flex', 
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '12px',
+            color: '#ffffff',
+            fontFamily: "'Science Gothic', monospace",
+            fontSize: '22px',
+            fontStyle: 'italic',
+            opacity: 0.7
+          }}>
+            ИП Щербаков М.А.
+          </div>
+        </div>
       </div>
     </motion.div>
   )
@@ -4342,6 +4467,133 @@ export default function Home() {
               movies={topMovies}
               mouseParallaxValues={movieParallaxValues}
             />
+          </div>
+
+          {/* Блок с рекламными компаниями */}
+          <div style={{
+            marginTop: '4rem',
+            padding: '2rem',
+            textAlign: 'center',
+            position: 'relative',
+            zIndex: 22
+          }}>
+            <h3 style={{
+              color: '#ffffff',
+              fontFamily: "'Slovic', sans-serif",
+              fontSize: 'clamp(1.2em, 2.5vw, 1.8em)',
+              marginBottom: '2rem',
+              opacity: 0.9
+            }}>
+              Участвовали в съемке рекламы для:
+            </h3>
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: '1rem',
+              maxWidth: '800px',
+              margin: '0 auto'
+            }}>
+              {/* Одноклассники */}
+              <div style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                backgroundColor: 'transparent',
+                border: '1px solid rgba(255, 140, 0, 0.5)',
+                color: 'rgba(255, 140, 0, 0.7)',
+                fontFamily: "'Slovic', sans-serif",
+                fontSize: 'clamp(0.75rem, 1.2vw, 0.9rem)',
+                fontWeight: 'normal',
+                transition: 'all 0.3s ease',
+                cursor: 'default'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 140, 0, 0.8)'
+                e.currentTarget.style.color = 'rgba(255, 140, 0, 0.9)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 140, 0, 0.5)'
+                e.currentTarget.style.color = 'rgba(255, 140, 0, 0.7)'
+              }}
+              >
+                Одноклассники
+              </div>
+
+              {/* ВТБ */}
+              <div style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                backgroundColor: 'transparent',
+                border: '1px solid rgba(0, 57, 166, 0.5)',
+                color: 'rgba(0, 57, 166, 0.7)',
+                fontFamily: "'Slovic', sans-serif",
+                fontSize: 'clamp(0.75rem, 1.2vw, 0.9rem)',
+                fontWeight: 'normal',
+                transition: 'all 0.3s ease',
+                cursor: 'default'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(0, 57, 166, 0.8)'
+                e.currentTarget.style.color = 'rgba(0, 57, 166, 0.9)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(0, 57, 166, 0.5)'
+                e.currentTarget.style.color = 'rgba(0, 57, 166, 0.7)'
+              }}
+              >
+                ВТБ
+              </div>
+
+              {/* Авито */}
+              <div style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                backgroundColor: 'transparent',
+                border: '1px solid rgba(255, 107, 53, 0.5)',
+                color: 'rgba(255, 107, 53, 0.7)',
+                fontFamily: "'Slovic', sans-serif",
+                fontSize: 'clamp(0.75rem, 1.2vw, 0.9rem)',
+                fontWeight: 'normal',
+                transition: 'all 0.3s ease',
+                cursor: 'default'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 107, 53, 0.8)'
+                e.currentTarget.style.color = 'rgba(255, 107, 53, 0.9)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 107, 53, 0.5)'
+                e.currentTarget.style.color = 'rgba(255, 107, 53, 0.7)'
+              }}
+              >
+                Авито
+              </div>
+
+              {/* Аурус */}
+              <div style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                backgroundColor: 'transparent',
+                border: '1px solid rgba(212, 175, 55, 0.5)',
+                color: 'rgba(212, 175, 55, 0.7)',
+                fontFamily: "'Slovic', sans-serif",
+                fontSize: 'clamp(0.75rem, 1.2vw, 0.9rem)',
+                fontWeight: 'normal',
+                transition: 'all 0.3s ease',
+                cursor: 'default'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.8)'
+                e.currentTarget.style.color = 'rgba(212, 175, 55, 0.9)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.5)'
+                e.currentTarget.style.color = 'rgba(212, 175, 55, 0.7)'
+              }}
+              >
+                Аурус
+              </div>
+            </div>
           </div>
 
           {/* Титры с названиями проектов на заднем плане - бесконечная прокрутка */}
