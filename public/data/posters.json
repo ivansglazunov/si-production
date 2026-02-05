@@ -334,5 +334,61 @@
     "matchedType": "series",
     "kinopoiskId": "5047300",
     "localPath": "/projects/Приход.jpg"
+  },
+  "Вражда Семей": {
+    "posterUrl": "/projects/Война_семей.jpg",
+    "matchedTitle": "Война семей",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Война_семей.jpg"
+  },
+  "Вражда семей": {
+    "posterUrl": "/projects/Война_семей.jpg",
+    "matchedTitle": "Война семей",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Война_семей.jpg"
+  },
+  "Как Гусар во времени путешествовал": {
+    "posterUrl": "/projects/Гусар_во_времени_путешествовал.jpg",
+    "matchedTitle": "Гусар во времени путешествовал",
+    "matchedYear": null,
+    "matchedType": "film",
+    "kinopoiskId": null,
+    "localPath": "/projects/Гусар_во_времени_путешествовал.jpg"
+  },
+  "Фитнес - 2": {
+    "posterUrl": "/projects/сериал_Фитнес.jpg",
+    "matchedTitle": "сериал Фитнес",
+    "matchedYear": null,
+    "matchedType": "series",
+    "kinopoiskId": null,
+    "localPath": "/projects/сериал_Фитнес.jpg"
+  },
+  "Фитнес - 3": {
+    "posterUrl": "/projects/сериал_Фитнес.jpg",
+    "matchedTitle": "сериал Фитнес",
+    "matchedYear": null,
+    "matchedType": "series",
+    "kinopoiskId": null,
+    "localPath": "/projects/сериал_Фитнес.jpg"
+  },
+  "Фитнес - 4": {
+    "posterUrl": "/projects/сериал_Фитнес.jpg",
+    "matchedTitle": "сериал Фитнес",
+    "matchedYear": null,
+    "matchedType": "series",
+    "kinopoiskId": null,
+    "localPath": "/projects/сериал_Фитнес.jpg"
+  },
+  "Фитнес - 5": {
+    "posterUrl": "/projects/сериал_Фитнес.jpg",
+    "matchedTitle": "сериал Фитнес",
+    "matchedYear": null,
+    "matchedType": "series",
+    "kinopoiskId": null,
+    "localPath": "/projects/сериал_Фитнес.jpg"
   }
 }
