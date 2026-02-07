@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * Запуск бота в режиме long polling (для локальной разработки)
- * Используется когда веб-хук недоступен (localhost)
+ * Запуск бота в режиме long polling
+ * Используется как основной режим работы
  */
 
+import 'dotenv/config'
 import { bot } from '../lib/telegram-bot.js'
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
@@ -19,9 +20,18 @@ if (!GROUP_ID) {
   process.exit(1)
 }
 
-console.log('🤖 Запуск бота в режиме long polling...')
-console.log(`   Бот: @${(await bot.telegram.getMe()).username}`)
-console.log(`   Группа: ${GROUP_ID}\n`)
+if (!process.env.OPENROUTER_API_KEY) {
+  console.error('❌ Ошибка: OPENROUTER_API_KEY не найден в .env')
+  process.exit(1)
+}
+
+console.log('🤖 Запуск бота SI-Production в режиме polling...')
+
+const me = await bot.telegram.getMe()
+console.log(`   Бот: @${me.username}`)
+console.log(`   Группа: ${GROUP_ID}`)
+console.log(`   AI модель: ${process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001'}`)
+console.log('')
 
 // Запускаем бота в режиме long polling
 bot.launch({
