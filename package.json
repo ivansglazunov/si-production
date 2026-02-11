@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "./dev.sh",
     "build": "next build",
-    "start": "next start",
+    "start": "./start.sh",
     "lint": "next lint",
     "build:filmography": "node scripts/convert_filmography.js",
     "download:posters": "node scripts/download_posters.js",
@@ -15,7 +15,9 @@
     "service:start": "sudo systemctl start si-production.service",
     "service:stop": "sudo systemctl stop si-production.service",
     "service:restart": "sudo systemctl restart si-production.service",
-    "service:status": "sudo systemctl status si-production.service"
+    "service:status": "sudo systemctl status si-production.service",
+    "dev:next": "next dev",
+    "start:next": "next start"
   },
   "dependencies": {
     "@headlessui/react": "^2.1.0",

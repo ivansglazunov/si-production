@@ -137,5 +137,14 @@ section div[style*="overflowX"]::-webkit-scrollbar {
 
 /* Стили для хлопушки-нумератора удалены - используются inline стили в компоненте */
 
+/* ТВ-шум — CSS-анимация сдвига фоновой текстуры */
+@keyframes tvNoise {
+  0%   { background-position: 0 0; }
+  25%  { background-position: -96px -48px; }
+  50%  { background-position: 48px -96px; }
+  75%  { background-position: -48px 96px; }
+  100% { background-position: 96px 48px; }
+}
+
 
 

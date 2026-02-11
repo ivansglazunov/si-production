@@ -3016,6 +3016,37 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
   )
 }
 
+// FPS-счётчик для замера производительности (временный, для бенчмарка)
+function FPSCounter() {
+  const ref = useRef(null)
+  useEffect(() => {
+    let frameCount = 0
+    let lastTime = performance.now()
+    let rafId
+    const loop = () => {
+      frameCount++
+      const now = performance.now()
+      if (now - lastTime >= 1000) {
+        const fps = Math.round(frameCount * 1000 / (now - lastTime))
+        if (ref.current) ref.current.textContent = fps + ' FPS'
+        frameCount = 0
+        lastTime = now
+      }
+      rafId = requestAnimationFrame(loop)
+    }
+    rafId = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(rafId)
+  }, [])
+  return (
+    <div ref={ref} style={{
+      position: 'fixed', top: 8, right: 8, zIndex: 99999,
+      background: 'rgba(0,0,0,0.8)', color: '#0f0', padding: '4px 10px',
+      fontFamily: 'monospace', fontSize: '14px', borderRadius: 4,
+      pointerEvents: 'none'
+    }}>-- FPS</div>
+  )
+}
+
 export default function Home() {
   const containerRef = useRef(null)
   const firstScreenRef = useRef(null)
@@ -3035,25 +3066,11 @@ export default function Home() {
   // Motion values для progress - без перерендеров
   const progressMotionValue = useMotionValue(0)
 
-  // Spring версии progress для эластичной анимации лент с разными характеристиками
-  // Все ленты слушают один progressMotionValue, но с разными spring эффектами
-  const springProgressFast = useSpring(progressMotionValue, {
-    stiffness: 200, // Высокая жесткость - быстрый отклик
-    damping: 25,   // Низкое затухание - больше "пружинистости"
-    mass: 0.3      // Малая масса - легкость
-  })
-
-  const springProgressMedium = useSpring(progressMotionValue, {
-    stiffness: 150, // Средняя жесткость
-    damping: 30,   // Среднее затухание
-    mass: 0.5      // Средняя масса
-  })
-
-  const springProgressSlow = useSpring(progressMotionValue, {
-    stiffness: 100, // Низкая жесткость - медленный отклик
-    damping: 35,   // Высокое затухание - меньше "пружинистости"
-    mass: 0.8      // Большая масса - инертность
-  })
+  // Ленты двигаются синхронно со скроллом — без spring-задержки
+  // Разные "скорости" достигаются через параметр speed в каждой KinoLenta
+  const springProgressFast = progressMotionValue
+  const springProgressMedium = progressMotionValue
+  const springProgressSlow = progressMotionValue
   const firstScreenProgressMotionValue = useMotionValue(0)
   const secondScreenProgressMotionValue = useMotionValue(0)
   const thirdScreenProgressMotionValue = useMotionValue(0)
@@ -3782,6 +3799,8 @@ export default function Home() {
 
   return (
     <>
+      {/* FPS-счётчик (временный бенчмарк) */}
+      <FPSCounter />
       {/* Компонент Вспышка */}
       <Flash isActive={flashActive} onComplete={handleFlashComplete} />
       
@@ -4128,101 +4147,24 @@ export default function Home() {
         {/* Индикатор прогресса второго экрана - обертка для правильной работы sticky */}
         <ProgressIndicator progressText={secondScreenProgressText} />
         
-        {/* Эффекты помех - только если включены */}
+        {/* Эффект ТВ-шума — статическая PNG-текстура с CSS-анимацией */}
         {isGrainEnabled && (
-          <>
-            {/* Статические помехи как на старой пленке - зернистость */}
-            <GrainLayerComponent
-          zIndex={100}
-          opacity={0.6}
-          backgroundImage={`
-            radial-gradient(circle at 0 0, rgba(255,255,255,0.15) 1px, transparent 1px),
-            radial-gradient(circle at 2px 2px, rgba(0,0,0,0.15) 1px, transparent 1px),
-            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 0.5px, transparent 0.5px)
-          `}
-          backgroundSize="4px 4px, 4px 4px, 2px 2px"
-          mixBlendMode="overlay"
-          filter="contrast(2) brightness(0.85)"
-          grainBackgroundPosition={grainBackgroundPosition}
-          grainNoiseOpacity={grainNoiseOpacity}
-        />
-        
-        {/* Дополнительный слой зернистости - точки */}
-        <GrainLayerComponent
-          zIndex={101}
-          opacity={0.5}
-          backgroundImage={`
-            repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(255,255,255,0.1) 1px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 3px),
-            repeating-linear-gradient(90deg, transparent 0px, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 3px)
-          `}
-          backgroundSize="2px 2px"
-          mixBlendMode="screen"
-          filter="contrast(1.8)"
-          grainBackgroundPosition={grainBackgroundPosition}
-          grainNoiseOpacity={grainNoiseOpacity}
-        />
-        
-        {/* Третий слой - более крупная зернистость */}
-        <GrainLayerComponent
-          zIndex={102}
-          opacity={0.4}
-          backgroundImage={`
-            repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px),
-            repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 0px, transparent 1px, rgba(0,0,0,0.03) 1px, rgba(0,0,0,0.03) 2px, transparent 2px)
-          `}
-          backgroundSize="3px 3px"
-          mixBlendMode="multiply"
-          filter="contrast(1.5)"
-          grainBackgroundPosition={grainBackgroundPosition}
-          grainNoiseOpacity={grainNoiseOpacity}
-        />
-        
-        {/* Четвертый слой - очень заметная зернистость с точками */}
-        <GrainLayerComponent
-          zIndex={103}
-          opacity={0.7}
-          backgroundImage={`
-            repeating-conic-gradient(from 0deg at 50% 50%, 
-              rgba(255,255,255,0.2) 0deg, 
-              transparent 1deg, 
-              transparent 2deg, 
-              rgba(0,0,0,0.2) 2deg, 
-              rgba(0,0,0,0.2) 3deg, 
-              transparent 3deg, 
-              transparent 4deg
-            )
-          `}
-          backgroundSize="2px 2px"
-          mixBlendMode="overlay"
-          filter="contrast(2.5) brightness(0.8)"
-          grainBackgroundPosition={grainBackgroundPosition}
-          grainNoiseOpacity={grainNoiseOpacity}
-        />
-        
-        {/* Горизонтальные царапины - перерисовываются при движении мыши */}
-        <ScratchesComponent count={15} scratchRedrawTrigger={scratchRedrawTrigger} />
-        
-        {/* Вертикальные полосы повреждений */}
-        <GrainLayerComponent
-          zIndex={103}
-          opacity={0.25}
-          backgroundImage={`
-            repeating-linear-gradient(
-              90deg,
-              transparent 0px,
-              transparent 2px,
-              rgba(255, 255, 255, 0.15) 2px,
-              rgba(255, 255, 255, 0.15) 3px,
-              transparent 3px,
-              transparent 8px
-            )
-          `}
-          backgroundSize="60px 100%"
-          mixBlendMode="overlay"
-          grainBackgroundPosition={grainBackgroundPosition}
-          grainNoiseOpacity={grainNoiseOpacity}
-        />
-          </>
+          <div
+            style={{
+              position: 'absolute',
+              top: '-128px',
+              left: '-128px',
+              width: 'calc(100% + 256px)',
+              height: 'calc(100% + 256px)',
+              pointerEvents: 'none',
+              zIndex: 100,
+              opacity: 0.15,
+              backgroundImage: 'url(/noise.png)',
+              backgroundSize: '128px 128px',
+              backgroundRepeat: 'repeat',
+              animation: 'tvNoise 0.3s steps(4) infinite',
+            }}
+          />
         )}
 
         {/* Движущиеся ленты перфорации по границам экрана */}
