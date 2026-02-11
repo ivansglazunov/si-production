@@ -2015,48 +2015,15 @@ const MoviesCarousel = memo(function MoviesCarousel({ movies, mouseParallaxValue
 })
 
 // Компонент текстуры с закругленными прямоугольниками для границ экрана
-function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset = null }) {
-  // Параметры текстуры - одинаковые отступы
-  const gap = 5 // Отступ между элементами и от краев
+function PerforatedBorderTexture({ position = 'top' }) {
+  // Параметры текстуры
+  const gap = 5
   const rectWidth = 20
   const rectHeight = 16
-  const rectSpacing = rectWidth + gap * 2 // Ширина элемента + отступы с обеих сторон
-  const borderRadius = 2 // Меньше закругление
-  const edgeOffset = 20 // Отступ от края экрана
+  const rectSpacing = rectWidth + gap * 2
+  const borderRadius = 2
+  const edgeOffset = 20
 
-  // Преобразуем scrollProgress в смещение текстуры с spring эффектом
-  const scrollOffsetRaw = useTransform(scrollProgress, [0, 1], [0, 600]) // Увеличено в 3 раза (200 -> 600)
-  const scrollOffset = useSpring(scrollOffsetRaw, {
-    stiffness: 50,
-    damping: 20,
-    mass: 1
-  })
-  
-  // Комбинируем скролл и накопленное смещение от мыши (всегда в одну сторону)
-  const combinedOffset = useMotionValue(0)
-  
-  useEffect(() => {
-    const updateOffset = () => {
-      const scroll = scrollOffset.get()
-      const mouse = mouseOffset ? mouseOffset.get() : 0
-      // Мышь всегда добавляет смещение в одну сторону (вправо)
-      combinedOffset.set(scroll + mouse)
-    }
-    
-    const unsubscribeScroll = scrollOffset.on('change', updateOffset)
-    const unsubscribeMouse = mouseOffset ? mouseOffset.on('change', updateOffset) : null
-    
-    updateOffset()
-    
-    return () => {
-      unsubscribeScroll()
-      if (unsubscribeMouse) unsubscribeMouse()
-    }
-  }, [scrollOffset, mouseOffset, combinedOffset])
-  
-  const backgroundPosition = useTransform(combinedOffset, (value) => `${value}px 0`)
-
-  // Создаем SVG паттерн с закругленными прямоугольниками
   const createPattern = () => {
     const svg = `<svg width="${rectSpacing}" height="${rectHeight}" xmlns="http://www.w3.org/2000/svg">
 <rect x="${gap}" y="0" width="${rectWidth}" height="${rectHeight}" rx="${borderRadius}" ry="${borderRadius}" fill="#ffffff" opacity="0.4"/>
@@ -2067,18 +2034,20 @@ function PerforatedBorderTexture({ scrollProgress, position = 'top', mouseOffset
 
   const patternUrl = createPattern()
 
+  // Автономное движение — чистый CSS, без JS
+  // Обе полосы двигаются вправо (как в старом проекторе)
   return (
-    <motion.div
+    <div
+      className="perf-scroll-right"
       style={{
         position: 'absolute',
-        [position]: `${edgeOffset}px`, // Отступ от края
+        [position]: `${edgeOffset}px`,
         left: 0,
         width: '100%',
         height: `${rectHeight + 4}px`,
         backgroundImage: `url("${patternUrl}")`,
         backgroundRepeat: 'repeat-x',
         backgroundSize: `${rectSpacing}px ${rectHeight}px`,
-        backgroundPosition: backgroundPosition,
         pointerEvents: 'none',
         zIndex: 25
       }}
@@ -2738,7 +2707,7 @@ function LentaPerforationTexture({ width, height, position = 'top', scale = 1 })
   )
 }
 
-function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY, embeddedImages }) {
+function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle = 0, inverse = false, scale = 1, onFrameClick, lentaId, containerRef, parallaxX, parallaxY, rotateX, rotateY, embeddedImages, spreadMultiplier = 1 }) {
   const { isParallaxEnabled } = useParallaxStore()
   
   // Используем встроенные base64 изображения если доступны, иначе загружаем через API
@@ -2811,8 +2780,9 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
   }, [progress, progressMotion])
   
   // Прямое преобразование progress в позицию - без задержки, синхронно
+  // spreadMultiplier увеличивает разброс лент на узких экранах (1 на десктопе, до 2 на мобильном)
   const translateXValue = useTransform(progressMotion, (prog) => {
-    let targetLeftPosition = Math.max(-200, Math.min(200, (prog - center) * 500 * speed))
+    let targetLeftPosition = Math.max(-300, Math.min(300, (prog - center) * 500 * speed * spreadMultiplier))
     if (inverse) {
       targetLeftPosition = -targetLeftPosition
     }
@@ -2833,7 +2803,7 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
       transform: 'translate(-50%, -50%)',
       transformOrigin: 'center center',
       zIndex: zIndex,
-      pointerEvents: 'none' // Контейнер не перехватывает события - скролл проходит сквозь
+      pointerEvents: 'none'
           }}>
       {/* Контейнер поворота - поворачивается на angle градусов + параллакс */}
             <motion.div
@@ -3062,6 +3032,21 @@ export default function Home() {
 
   // Zustand store для управления эффектами
   const { isParallaxEnabled, toggleParallax, isGrainEnabled } = useParallaxStore()
+
+  // Множитель разброса лент: на узких экранах ленты задвинуты дальше за края
+  // 1.0 на десктопе (≥1200px) → 3.0 на мобильном (≤480px), плавная интерполяция
+  const [lentaSpread, setLentaSpread] = useState(1)
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth
+      if (w >= 1200) setLentaSpread(1)
+      else if (w <= 480) setLentaSpread(3)
+      else setLentaSpread(1 + 2 * (1200 - w) / (1200 - 480)) // линейная интерполяция 1→3
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
   
   // Motion values для progress - без перерендеров
   const progressMotionValue = useMotionValue(0)
@@ -3273,41 +3258,7 @@ export default function Home() {
   const grainTransformX = grainTransformXValue
   const grainTransformY = grainTransformYValue
   
-  // Для лент перфорации: накапливаем смещение при движении мыши (как вращение пленки)
-  const perforationMouseOffset = useMotionValue(0)
-  const lastMouseX = useRef(50) // Начальная позиция мыши (центр)
-  
-  useEffect(() => {
-    const updatePerforationOffset = () => {
-      if (!isParallaxEnabled) return
-
-      const currentMouseX = mouseX.get()
-      const delta = Math.abs(currentMouseX - lastMouseX.current)
-
-      // Если мышь движется, добавляем смещение в одну сторону (вправо)
-      if (delta > 0.1) { // Порог для определения движения
-        // Скорость зависит от скорости движения мыши
-        const speed = Math.min(delta * 2, 5) // Ограничиваем максимальную скорость
-        perforationMouseOffset.set(perforationMouseOffset.get() + speed)
-        lastMouseX.current = currentMouseX
-      }
-    }
-
-    // Небольшое затухание накопленного смещения (имитация трения пленки)
-    const decayInterval = setInterval(() => {
-      const current = perforationMouseOffset.get()
-      if (current > 0) {
-        perforationMouseOffset.set(Math.max(0, current - 0.5)) // Медленное затухание
-      }
-    }, 100) // Каждые 100мс уменьшаем на 0.5
-
-    const unsubscribe = isParallaxEnabled ? mouseX.on('change', updatePerforationOffset) : null
-
-    return () => {
-      if (unsubscribe) unsubscribe()
-      clearInterval(decayInterval)
-    }
-  }, [mouseX, perforationMouseOffset, isParallaxEnabled])
+  // Перфорация теперь полностью на CSS-анимации, JS-логика удалена
   
   // Для карточек проектов: разная сила параллакса в зависимости от расстояния от центра
   // Центральная карточка (выбранная) - сильный параллакс
@@ -4031,31 +3982,35 @@ export default function Home() {
           transition: 'height 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)' // Плавный переход для height
         }}
       >
-      {/* Ленты размещены внутри скроллящейся зоны */}
-      {/* Используем общий прогресс скролла (progress / 100), чтобы ленты могли двигаться непрерывно */}
-      {/* center пересчитывается относительно первого экрана: делим на количество экранов (3) */}
-      {/* Ленты используют absolute позиционирование внутри скроллящегося контейнера */}
-      {/* Каждая лента соответствует одной папке из public/photos (1-12) */}
-      {/* Центральные крупные ленты - быстрый spring для максимального эффекта */}
-      {/* Эти ленты самые заметные и должны реагировать мгновенно */}
-      <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
-      <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
-      <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
+      {/* Ленты — sticky контейнер, прилипает к viewport при скролле */}
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: 0,
+        pointerEvents: 'none',
+        zIndex: 900,
+        overflow: 'visible'
+      }}>
+        {/* Центральные крупные ленты */}
+        <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
+        <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
+        <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
 
-      {/* Промежуточные ленты - средний spring */}
-      {/* Баланс между скоростью и плавностью */}
-      <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
-      <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
-      <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
-      <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
-      <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
-      <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
+        {/* Промежуточные ленты */}
+        <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+        <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
+        <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+        <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+        <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+        <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
 
-      {/* Фоновые ленты - медленный spring для subtle эффекта */}
-      {/* Эти ленты создают глубину и не должны отвлекать внимание */}
-      <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
-      <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
-      <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+        {/* Фоновые ленты */}
+        <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+        <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+        <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
+      </div>
       
       {/* Индикатор прогресса в левом верхнем углу */}
       <div style={{
@@ -4075,40 +4030,50 @@ export default function Home() {
         Прогресс кинопроизводства: {progressText}%
             </div>
 
-      {/* Первый экран */}
-      <section 
+      {/* Первый экран — на мобильном растягивается до 200vh чтобы ленты не перекрывали видео */}
+      <section
         ref={firstScreenRef}
-        style={{ 
-          width: '100vw', 
-          height: 'calc(var(--vh, 1vh) * 100)', 
-          backgroundColor: '#0a0a0a', // Чуть светлее черного
+        style={{
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 200)',
+          backgroundColor: '#0a0a0a',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'clip', // clip не ломает sticky (в отличие от hidden)
+          overflowX: 'clip'
         }}
       >
-        {/* Видео фон */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            minWidth: '100%',
-            minHeight: '100%',
-            width: 'auto',
-            height: 'auto',
-            zIndex: 0,
-            objectFit: 'cover'
-          }}
-        >
-          <source src="/video_background.webm" type="video/webm" />
-          <source src="/video_2026-02-04_19-56-39.mp4" type="video/mp4" />
-        </video>
+        {/* Видео фон — sticky: следует за viewport пока section видна */}
+        <div style={{
+          position: 'sticky',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          zIndex: 0,
+          overflow: 'hidden'
+        }}>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              minWidth: '100%',
+              minHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'cover'
+            }}
+          >
+            <source src="/video_background.webm" type="video/webm" />
+            <source src="/video_2026-02-04_19-56-39.mp4" type="video/mp4" />
+          </video>
+        </div>
         {/* Индикатор прогресса первого экрана */}
         <div style={{
           position: 'sticky',
@@ -4168,8 +4133,8 @@ export default function Home() {
         )}
 
         {/* Движущиеся ленты перфорации по границам экрана */}
-        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="top" mouseOffset={perforationMouseOffset} />
-        <PerforatedBorderTexture scrollProgress={secondScreenScrollProgress} position="bottom" mouseOffset={perforationMouseOffset} />
+        <PerforatedBorderTexture position="top" />
+        <PerforatedBorderTexture position="bottom" />
         
         {/* Линейная диаграмма на весь экран */}
         <LineChartComponent key="line-chart-main" progressMotionValue={secondScreenScrollProgress} />

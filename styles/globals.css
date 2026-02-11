@@ -49,6 +49,18 @@ html {
 html {
   --vh: 1vh; /* fallback */
   --vw: 1vw; /* fallback */
+  /* Множитель высоты первого экрана: 100vh на десктопе → 200vh на мобильном */
+  --first-screen-mult: 100;
+}
+
+@media (max-width: 1000px) {
+  html { --first-screen-mult: 130; }
+}
+@media (max-width: 768px) {
+  html { --first-screen-mult: 160; }
+}
+@media (max-width: 480px) {
+  html { --first-screen-mult: 200; }
 }
 
 body {
@@ -146,5 +158,20 @@ section div[style*="overflowX"]::-webkit-scrollbar {
   100% { background-position: 96px 48px; }
 }
 
+/* Перфорация — автономное движение */
+@keyframes perfScrollRight {
+  from { background-position: 0 0; }
+  to   { background-position: 300px 0; }
+}
+@keyframes perfScrollLeft {
+  from { background-position: 0 0; }
+  to   { background-position: -300px 0; }
+}
 
-
+/* Классы для перфорации */
+.perf-scroll-right {
+  animation: perfScrollRight 3s linear infinite !important;
+}
+.perf-scroll-left {
+  animation: perfScrollLeft 3s linear infinite !important;
+}
