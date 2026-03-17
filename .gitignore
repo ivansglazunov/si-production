@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# bot runtime data (не для публичного репо)
+/lib/
+/scripts/
+/data/
+/pages/api/

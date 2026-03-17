@@ -539,11 +539,13 @@ function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
       const folderId = lenta.folderId
       if (!folderId) return
       
-      // Оптимизированная проверка: один запрос вместо множественных
+      // Статический индекс фотографий (GitHub Pages compatible)
       try {
-        const response = await fetch(`/api/list-photos?folderId=${folderId}&maxCheck=20`)
-        const data = await response.json()
-        
+        const response = await fetch(`/photos/index.json`)
+        const index = await response.json()
+        const fileNums = index[folderId] || []
+        const data = { files: fileNums }
+
         if (data.files && Array.isArray(data.files) && data.files.length > 0) {
           const lentaFrames = data.files.map((fileNum) => ({
             type: 'image',
