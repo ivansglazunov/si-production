@@ -521,656 +521,593 @@ const LazyFrame = memo(({ frame, index, frameWidth, frameHeight, borderWidth, is
 
 LazyFrame.displayName = 'LazyFrame'
 
-// Компонент Галерея для активированной ленты (слайдер)
-function Gallery({ frames, initialIndex, onClose, lentaIndex, allLentas }) {
-  const [currentFrameIndex, setCurrentFrameIndex] = useState(initialIndex)
-  const [currentLentaIndex, setCurrentLentaIndex] = useState(lentaIndex || 0)
-  const [isDragging, setIsDragging] = useState(false)
-  const [loadedLentas, setLoadedLentas] = useState({}) // Кэш загруженных лент
-  const dragConstraints = { left: 0, right: 0, top: 0, bottom: 0 }
+// Славянские названия городов для галерей
+const CITY_NAMES = [
+  'Светлоград',
+  'Звенигород', 
+  'Переславль',
+  'Беловодье',
+  'Гориславль',
+  'Ярославль',
+  'Велиград',
+  'Славутич',
+  'Микулин',
+  'Радогощ',
+  'Любеч',
+  'Киянь'
+]
+
+// Компонент нижней ленты фотографий (по 1 фото из каждой галереи) в стиле киноленты
+function BottomPhotoStrip({ allLentas, embeddedImages, onPhotoClick, firstScreenProgress }) {
+  const [firstPhotos, setFirstPhotos] = useState([])
   
-  // Загружаем изображения для всех лент
   useEffect(() => {
-    if (!allLentas || allLentas.length === 0) return
-    
-    const loadLentaImages = async (lenta) => {
-      if (loadedLentas[lenta.id]) return // Уже загружена
-      
+    const photos = allLentas.map((lenta, index) => {
       const folderId = lenta.folderId
-      if (!folderId) return
-      
-      // Статический индекс фотографий (GitHub Pages compatible)
-      try {
-        const response = await fetch(`/photos/index.json`)
-        const index = await response.json()
-        const fileNums = index[folderId] || []
-        const data = { files: fileNums }
-
-        if (data.files && Array.isArray(data.files) && data.files.length > 0) {
-          const lentaFrames = data.files.map((fileNum) => ({
-            type: 'image',
-            src: `/photos/${folderId}/${fileNum}.webp`
-          }))
-          
-          setLoadedLentas(prev => ({
-            ...prev,
-            [lenta.id]: lentaFrames
-          }))
-        }
-      } catch (error) {
-        console.debug(`Failed to list photos for folder ${folderId}:`, error)
+      // Используем thumbnail версию для быстрой загрузки
+      return {
+        lentaId: lenta.id,
+        folderId,
+        cityName: CITY_NAMES[index] || `Альбом ${index + 1}`,
+        src: `/photos/${folderId}/1_thumb.webp`,
+        index: 0
       }
-    }
-    
-    // Загружаем изображения для всех лент параллельно
-    allLentas.forEach(lenta => {
-      loadLentaImages(lenta)
     })
-  }, [allLentas, loadedLentas])
-  
-  // Получаем текущую ленту и её frames
-  const currentLenta = allLentas && allLentas[currentLentaIndex] ? allLentas[currentLentaIndex] : null
-  // Используем загруженные frames если есть, иначе переданные frames
-  const currentFrames = currentLenta && loadedLentas[currentLenta.id] 
-    ? loadedLentas[currentLenta.id] 
-    : (currentLenta ? currentLenta.frames : frames)
-  
-  // Обновляем индексы при изменении initialIndex или lentaIndex
-  useEffect(() => {
-    setCurrentFrameIndex(initialIndex)
-    if (lentaIndex !== undefined) {
-      setCurrentLentaIndex(lentaIndex)
-    }
-  }, [initialIndex, lentaIndex])
+    setFirstPhotos(photos)
+  }, [allLentas])
 
-  // Обработка клавиатуры для навигации
+  const frameWidth = 200
+  const frameHeight = 120
+  const borderWidth = 20
+  const holeWidth = 12
+  const holeHeight = 8
+  const holeSpacing = 20
+  const innerPadding = 8
+  const innerBorderRadius = 12
+
+  const translateX = useTransform(firstScreenProgress, [0, 1], ['150vw', '-150vw'])
+  const translateY = useTransform(firstScreenProgress, [0, 1], [0, 160])
+
+  return (
+    <motion.div style={{
+      position: 'absolute',
+      bottom: '15em',
+      left: '-10vw',
+      width: '120vw',
+      height: `${frameHeight + borderWidth * 2 + 40}px`,
+      overflow: 'hidden',
+      pointerEvents: 'auto',
+      zIndex: 100,
+      rotate: -15,
+      transformOrigin: 'center center',
+      y: translateY
+    }}>
+      <motion.div
+        style={{
+          display: 'flex',
+          gap: 0,
+          alignItems: 'stretch',
+          height: '100%',
+          paddingLeft: '40px',
+          paddingRight: '40px',
+          x: translateX
+        }}
+      >
+        {firstPhotos.map((photo, index) => (
+          <div
+            key={photo.lentaId}
+            onClick={() => onPhotoClick(photo.lentaId, 0, photo.folderId)}
+            style={{
+              flexShrink: 0,
+              width: `${frameWidth}px`,
+              height: `${frameHeight + borderWidth * 2}px`,
+              backgroundColor: '#0d0d0d',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'transform 0.2s ease',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+              borderLeft: '1px solid #1a1a1a',
+              borderRight: '1px solid #1a1a1a'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.03)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
+          >
+            <div style={{
+              width: '100%',
+              height: `${borderWidth}px`,
+              backgroundColor: '#0a0a0a',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 6px'
+            }}>
+              {[0, 1, 2, 3, 4, 5].map(i => (
+                <div
+                  key={i}
+                  style={{
+                    width: `${holeWidth}px`,
+                    height: `${holeHeight}px`,
+                    backgroundColor: '#222',
+                    borderRadius: '2px',
+                    marginRight: `${holeSpacing - holeWidth}px`,
+                    flexShrink: 0
+                  }}
+                />
+              ))}
+            </div>
+            
+            <div style={{
+              width: '100%',
+              height: `${frameHeight}px`,
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: '#0d0d0d'
+            }}>
+              <div style={{
+                width: `calc(100% - ${innerPadding * 2}px)`,
+                height: `calc(100% - ${innerPadding * 2}px)`,
+                borderRadius: `${innerBorderRadius}px`,
+                overflow: 'hidden',
+                position: 'relative',
+                border: '4px solid #1a1a1a',
+                boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)',
+                backgroundColor: '#111'
+              }}>
+                {photo.src ? (
+                  <Image
+                    src={photo.src}
+                    alt={photo.cityName}
+                    fill
+                    style={{ objectFit: 'cover' }}
+                    priority={index < 4}
+                    loading={index < 4 ? undefined : 'lazy'}
+                    unoptimized
+                  />
+                ) : (
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: '#222'
+                  }} />
+                )}
+              </div>
+            </div>
+            
+            <div style={{
+              width: '100%',
+              height: `${borderWidth}px`,
+              backgroundColor: '#0a0a0a',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 6px'
+            }}>
+              {[0, 1, 2, 3, 4, 5].map(i => (
+                <div
+                  key={i}
+                  style={{
+                    width: `${holeWidth}px`,
+                    height: `${holeHeight}px`,
+                    backgroundColor: '#222',
+                    borderRadius: '2px',
+                    marginRight: `${holeSpacing - holeWidth}px`,
+                    flexShrink: 0
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// Компонент ссылки на галерею
+const GalleryLink = memo(function GalleryLink({ onClick, firstScreenProgress }) {
+  const [isHovered, setIsHovered] = useState(false)
+  const isActive = firstScreenProgress > 0.65
+
+  const color = (isHovered || isActive) ? '#ff0000' : '#ffffff'
+
+  return (
+    <motion.div
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        position: 'absolute',
+        bottom: 'calc((clamp(32px, 6vw, 72px) * 2 + 16px) * 1.5)',
+        right: '32px',
+        color: color,
+        fontFamily: "'Science Gothic', monospace",
+        fontWeight: 'bold',
+        zIndex: 100,
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8)',
+        transition: 'color 0.3s ease'
+      }}
+      className="gallery-link"
+    >
+      <span style={{
+        fontSize: 'clamp(24px, 4vw, 48px)',
+        letterSpacing: '0.05em',
+        position: 'relative'
+      }}>
+        галерея
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: (isHovered || isActive) ? 1 : 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          style={{
+            position: 'absolute',
+            bottom: '-4px',
+            left: 0,
+            right: 0,
+            height: '3px',
+            backgroundColor: '#ff0000',
+            transformOrigin: 'left center'
+          }}
+        />
+      </span>
+      <span style={{
+        fontSize: 'clamp(16px, 2.5vw, 28px)',
+        letterSpacing: '0.05em',
+        position: 'relative'
+      }}>
+        <span style={{ color: '#ff0000' }}>Л</span>окаций
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: (isHovered || isActive) ? 1 : 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          style={{
+            position: 'absolute',
+            bottom: '-4px',
+            left: 0,
+            right: 0,
+            height: '2px',
+            backgroundColor: '#ff0000',
+            transformOrigin: 'left center'
+          }}
+        />
+      </span>
+    </motion.div>
+  )
+})
+
+// Плавающая галерея для просмотра фото
+function PhotoViewer({ frames, currentIndex, onClose, onPrev, onNext, onPrevLenta, onNextLenta, cityName }) {
+  const currentFrames = frames || []
+  const currentFrame = currentFrames[currentIndex]
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'ArrowLeft') {
-        handlePrevFrame()
-      } else if (e.key === 'ArrowRight') {
-        handleNextFrame()
-      } else if (e.key === 'ArrowUp') {
-        handlePrevLenta()
-      } else if (e.key === 'ArrowDown') {
-        handleNextLenta()
-      } else if (e.key === 'Escape') {
-        onClose()
-      }
+      if (e.key === 'ArrowLeft') onPrev()
+      else if (e.key === 'ArrowRight') onNext()
+      else if (e.key === 'ArrowUp') onPrevLenta()
+      else if (e.key === 'ArrowDown') onNextLenta()
+      else if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentFrameIndex, currentLentaIndex, currentFrames, allLentas])
+  }, [onPrev, onNext, onPrevLenta, onNextLenta, onClose])
 
-  // Навигация по кадрам (горизонтально)
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: 'calc(var(--vh, 1vh) * 100)',
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        zIndex: 200000,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      <button onClick={(e) => { e.stopPropagation(); onClose() }} style={{ position: 'absolute', top: '20px', right: '20px', width: '50px', height: '50px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.1)', border: 'none', color: '#fff', fontSize: '28px', cursor: 'pointer', zIndex: 200001 }}>×</button>
+      <button onClick={(e) => { e.stopPropagation(); onPrev() }} style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', width: '50px', height: '50px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.1)', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', zIndex: 200001 }}>‹</button>
+      <button onClick={(e) => { e.stopPropagation(); onNext() }} style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', width: '50px', height: '50px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.1)', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', zIndex: 200001 }}>›</button>
+      <button onClick={(e) => { e.stopPropagation(); onPrevLenta() }} style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', width: '50px', height: '50px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.1)', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', zIndex: 200001 }}>↑</button>
+      <button onClick={(e) => { e.stopPropagation(); onNextLenta() }} style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', width: '50px', height: '50px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.1)', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', zIndex: 200001 }}>↓</button>
+      {currentFrame && (
+        <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: '80vw', maxHeight: '70vh', position: 'relative' }}>
+          {currentFrame.type === 'image' ? (
+            <Image 
+              src={currentFrame.fullSrc || currentFrame.src} 
+              alt={cityName} 
+              width={1920} 
+              height={1080}
+              unoptimized
+              style={{ maxWidth: '80vw', maxHeight: '70vh', objectFit: 'contain' }} 
+            />
+          ) : (
+            <div style={{ width: '60vw', height: '50vh', backgroundColor: currentFrame.value || '#333' }} />
+          )}
+          <div style={{ position: 'absolute', bottom: '-40px', left: '50%', transform: 'translateX(-50%)', color: '#fff', fontSize: '14px', fontFamily: "'Slovic', sans-serif", whiteSpace: 'nowrap' }}>
+            {cityName} — {currentIndex + 1} / {currentFrames.length}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
+// Компонент Галерея - выдвижная панель как страница книги
+function Gallery({ onClose, lentaIndex, allLentas, embeddedImages }) {
+  const [loadedLentas, setLoadedLentas] = useState({})
+  const [photoViewer, setPhotoViewer] = useState(null)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+  
+  useEffect(() => {
+    if (!allLentas || allLentas.length === 0) return
+    allLentas.forEach(lenta => {
+      const folderId = lenta.folderId
+      // Проверяем наличие файлов в public/photos
+      // Пытаемся загрузить изображения - начинаем с 1, пока не найдем отсутствующий
+      const images = []
+      const embeddedCount = embeddedImages?.[folderId]?.length || 0; const maxPhotos = Math.max(embeddedCount, 1); for (let i = 1; i <= maxPhotos; i++) {
+        images.push({
+          type: 'image',
+          src: `/photos/${folderId}/${i}_gallery.webp`, // gallery версия для списка
+          fullSrc: `/photos/${folderId}/${i}.webp`, // полная версия для просмотра
+          thumbSrc: `/photos/${folderId}/${i}_thumb.webp` // thumbnail для превью
+        })
+      }
+      if (images.length > 0) {
+        setLoadedLentas(prev => ({ ...prev, [lenta.id]: images }))
+      }
+    })
+  }, [allLentas, loadedLentas])
+
   const handlePrevFrame = () => {
-    if (!currentFrames) return
-    setCurrentFrameIndex((prev) => (prev > 0 ? prev - 1 : currentFrames.length - 1))
+    if (!photoViewer) return
+    const frames = loadedLentas[allLentas[photoViewer.lentaIndex]?.id] || []
+    setPhotoViewer(prev => ({ ...prev, frameIndex: prev.frameIndex > 0 ? prev.frameIndex - 1 : frames.length - 1 }))
   }
 
   const handleNextFrame = () => {
-    if (!currentFrames) return
-    setCurrentFrameIndex((prev) => (prev < currentFrames.length - 1 ? prev + 1 : 0))
+    if (!photoViewer) return
+    const frames = loadedLentas[allLentas[photoViewer.lentaIndex]?.id] || []
+    setPhotoViewer(prev => ({ ...prev, frameIndex: prev.frameIndex < frames.length - 1 ? prev.frameIndex + 1 : 0 }))
   }
 
-  // Навигация по лентам (вертикально)
   const handlePrevLenta = () => {
-    if (!allLentas || allLentas.length === 0) return
-    setCurrentLentaIndex((prev) => {
-      const newIndex = prev > 0 ? prev - 1 : allLentas.length - 1
-      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
-      return newIndex
-    })
+    if (!photoViewer || !allLentas) return
+    setPhotoViewer(prev => ({ lentaIndex: prev.lentaIndex > 0 ? prev.lentaIndex - 1 : allLentas.length - 1, frameIndex: 0 }))
   }
 
   const handleNextLenta = () => {
-    if (!allLentas || allLentas.length === 0) return
-    setCurrentLentaIndex((prev) => {
-      const newIndex = prev < allLentas.length - 1 ? prev + 1 : 0
-      setCurrentFrameIndex(0) // Сбрасываем на первый кадр при смене ленты
-      return newIndex
-    })
+    if (!photoViewer || !allLentas) return
+    setPhotoViewer(prev => ({ lentaIndex: prev.lentaIndex < allLentas.length - 1 ? prev.lentaIndex + 1 : 0, frameIndex: 0 }))
   }
 
-  const handleVerticalDragStart = () => {
-    setIsDragging(true)
-  }
+  const marginSize = isMobile ? '2.5em' : '5em'
+  const panelWidth = 'min(500px, calc(100vw - 4em))'
+  const borderRadius = isMobile ? '12px' : '24px'
 
-  const handleVerticalDragEnd = (event, info) => {
-    // Вертикальный drag - переключение между лентами
-    if (!allLentas || allLentas.length === 0) {
-      setIsDragging(false)
-      return
-    }
-    const threshold = 50 // Минимальное расстояние для смены ленты
-    if (info.offset.y > threshold) {
-      handlePrevLenta()
-    } else if (info.offset.y < -threshold) {
-      handleNextLenta()
-    }
-    setIsDragging(false)
-  }
-
-  const handleHorizontalDragStart = () => {
-    setIsDragging(true)
-  }
-
-  const handleHorizontalDragEnd = (event, info) => {
-    // Горизонтальный drag - смена кадров в ленте
-    if (!currentFrames) {
-      setIsDragging(false)
-      return
-    }
-    const threshold = 50 // Минимальное расстояние для смены кадра
-    if (info.offset.x > threshold) {
-      handlePrevFrame()
-    } else if (info.offset.x < -threshold) {
-      handleNextFrame()
-    }
-    setIsDragging(false)
-  }
+  // Параметры для "братьев-листов"
+  const siblings = [
+    { offset: 3, delay: 0.02, stiffness: 220, opacity: 0.7 },
+    { offset: 6, delay: 0.04, stiffness: 240, opacity: 0.5 },
+    { offset: 9, delay: 0.06, stiffness: 260, opacity: 0.3 }
+  ]
 
   return (
     <>
-      {/* Overlay с затемнением */}
-      <div
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
         onClick={onClose}
         style={{
           position: 'fixed',
           top: 0,
           left: 0,
           width: '100vw',
-          height: 'calc(var(--vh, 1vh) * 100)',
-          backgroundColor: 'rgba(0, 0, 0, 0.95)',
+          height: '100vh',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
           zIndex: 100000,
           cursor: 'pointer'
         }}
       />
       
-      {/* Слайдер */}
+      {/* Братья-листы (сзади) */}
+      {siblings.map((sibling, i) => (
+        <motion.div
+          key={`sibling-${i}`}
+          initial={{ x: '100%', y: 0 }}
+          animate={{ x: `-${sibling.offset}px`, y: `${sibling.offset}px` }}
+          exit={{ x: '100%', y: 0 }}
+          transition={{ 
+            type: 'spring', 
+            damping: 30, 
+            stiffness: sibling.stiffness,
+            delay: sibling.delay
+          }}
+          style={{
+            position: 'fixed',
+            top: marginSize,
+            right: sibling.offset,
+            width: panelWidth,
+            height: `calc(100vh - ${marginSize} * 2)`,
+            backgroundColor: '#1a1a1a',
+            zIndex: 100001 - (i + 1),
+            borderTopLeftRadius: borderRadius,
+            borderBottomLeftRadius: borderRadius,
+            opacity: sibling.opacity,
+            pointerEvents: 'none',
+            ...(i === 2 ? {
+              borderLeft: '2px solid #ff0000',
+              borderTop: '2px solid #ff0000',
+              borderBottom: '2px solid #ff0000'
+            } : {})
+          }}
+        />
+      ))}
+      
+      {/* Основная галерея */}
       <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 200 }}
         onClick={(e) => e.stopPropagation()}
-        drag="y"
-        dragConstraints={dragConstraints}
-        dragElastic={0.3}
-        onDragStart={handleVerticalDragStart}
-        onDragEnd={handleVerticalDragEnd}
         style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: 'calc(var(--vh, 1vh) * 100)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          top: marginSize,
+          right: 0,
+          width: panelWidth,
+          height: `calc(100vh - ${marginSize} * 2)`,
+          backgroundColor: '#1a1a1a',
           zIndex: 100001,
-          overflow: 'hidden'
+          boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          borderTopLeftRadius: borderRadius,
+          borderBottomLeftRadius: borderRadius
         }}
       >
-        {/* Вертикальная карусель всех лент */}
-        {allLentas && allLentas.length > 0 ? (
-          <div
-            style={{
-              position: 'relative',
-              width: '90vw',
-              height: 'calc(var(--vh, 1vh) * 90)',
-              maxWidth: '1400px',
-              maxHeight: '900px',
-              overflow: 'hidden'
-            }}
-          >
-            {/* Все ленты вертикально */}
-            {allLentas.map((lenta, lentaIdx) => {
-              const isLentaActive = lentaIdx === currentLentaIndex
-              // Используем загруженные frames если есть, иначе пустой массив (файлы проверяются асинхронно)
-              const lentaFrames = loadedLentas[lenta.id] || []
-              
-              return (
-                <motion.div
-                  key={lenta.id}
-                  initial={false}
-                  animate={{
-                    opacity: isLentaActive ? 1 : 0,
-                    y: isLentaActive ? 0 : (lentaIdx < currentLentaIndex ? -100 : 100),
-                    scale: isLentaActive ? 1 : 0.8
-                  }}
-                  transition={{
-                    duration: 0.4,
-                    ease: [0.25, 0.46, 0.45, 0.94]
-                  }}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    pointerEvents: isLentaActive ? 'auto' : 'none'
-                  }}
-                >
-                  {/* Кадры текущей ленты горизонтально */}
-                  {isLentaActive && lentaFrames.map((frame, frameIdx) => {
-                    const isFrameActive = frameIdx === currentFrameIndex
-                    return (
-                      <motion.div
-                        key={`${lenta.id}-${frameIdx}`}
-                        initial={false}
-                        animate={{
-                          opacity: isFrameActive ? 1 : 0,
-                          scale: isFrameActive ? 1 : 0.8,
-                          x: isFrameActive ? 0 : (frameIdx < currentFrameIndex ? -100 : 100)
-                        }}
-                        transition={{
-                          duration: 0.4,
-                          ease: [0.25, 0.46, 0.45, 0.94]
-                        }}
-                        drag="x"
-                        dragConstraints={dragConstraints}
-                        dragElastic={0.2}
-                        onDragStart={handleHorizontalDragStart}
-                        onDragEnd={handleHorizontalDragEnd}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          pointerEvents: isFrameActive ? 'auto' : 'none',
-                          cursor: isDragging ? 'grabbing' : 'grab'
-                        }}
-                      >
-                        {frame.type === 'image' ? (
-                          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                            <Image
-                              src={frame.src}
-                              alt={`Frame ${frameIdx}`}
-                              fill
-                              style={{
-                                objectFit: 'contain',
-                                borderRadius: '12px',
-                                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
-                              }}
-                              priority={frameIdx === currentFrameIndex} // Текущий кадр загружаем с приоритетом
-                              loading={frameIdx === currentFrameIndex ? undefined : 'lazy'}
-                              onError={(e) => {
-                                // При ошибке показываем серый фон
-                                e.target.style.display = 'none'
-                                const parent = e.target.parentElement
-                                if (parent && !parent.querySelector('.fallback-bg')) {
-                                  const fallback = document.createElement('div')
-                                  fallback.className = 'fallback-bg'
-                                  fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
-                                  parent.appendChild(fallback)
-                                }
-                              }}
-                              unoptimized={false}
-                            />
-                          </div>
-                        ) : (
-                          <div
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              backgroundColor: frame.value || frame || '#333',
-                              borderRadius: '12px',
-                              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          />
-                        )}
-                      </motion.div>
-                    )
-                  })}
-                </motion.div>
-              )
-            })}
-          </div>
-        ) : (
-          /* Fallback для старого режима без всех лент */
-          <div
-            style={{
-              position: 'relative',
-              width: '90vw',
-              height: 'calc(var(--vh, 1vh) * 90)',
-              maxWidth: '1400px',
-              maxHeight: '900px'
-            }}
-          >
-            {currentFrames && currentFrames.map((frame, index) => {
-              const isActive = index === currentFrameIndex
-              // Поддерживаем обратную совместимость: если frame - строка (старый формат), преобразуем в объект
-              const frameData = typeof frame === 'string' ? { type: 'color', value: frame } : frame
-              
-              return (
-                <motion.div
-                  key={index}
-                  initial={false}
-                  animate={{
-                    opacity: isActive ? 1 : 0,
-                    scale: isActive ? 1 : 0.8,
-                    x: isActive ? 0 : (index < currentFrameIndex ? -100 : 100)
-                  }}
-                  transition={{
-                    duration: 0.4,
-                    ease: [0.25, 0.46, 0.45, 0.94]
-                  }}
-                  drag="x"
-                  dragConstraints={dragConstraints}
-                  dragElastic={0.2}
-                  onDragStart={handleHorizontalDragStart}
-                  onDragEnd={handleHorizontalDragEnd}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    pointerEvents: isActive ? 'auto' : 'none',
-                    cursor: isDragging ? 'grabbing' : 'grab'
-                  }}
-                >
-                  {frameData.type === 'image' ? (
-                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                      <Image
-                        src={frameData.src}
-                        alt={`Frame ${index}`}
-                        fill
-                        style={{
-                          objectFit: 'contain',
-                          borderRadius: '12px',
-                          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)'
-                        }}
-                        priority={index === currentFrameIndex} // Текущий кадр загружаем с приоритетом
-                        loading={index === currentFrameIndex ? undefined : 'lazy'}
-                        onError={(e) => {
-                          // При ошибке показываем серый фон
-                          e.target.style.display = 'none'
-                          const parent = e.target.parentElement
-                          if (parent && !parent.querySelector('.fallback-bg')) {
-                            const fallback = document.createElement('div')
-                            fallback.className = 'fallback-bg'
-                            fallback.style.cssText = 'width: 100%; height: 100%; background-color: #333; border-radius: 12px;'
-                            parent.appendChild(fallback)
-                          }
-                        }}
-                        unoptimized={false}
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: frameData.value || frameData || '#333',
-                        borderRadius: '12px',
-                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.8)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    />
-                  )}
-                </motion.div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Кнопка закрытия в левом верхнем углу */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onClose()
-          }}
-          style={{
-            position: 'absolute',
-            top: '32px',
-            left: '32px',
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            border: '2px solid rgba(255, 255, 255, 0.3)',
-            color: '#ffffff',
-            fontSize: '24px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100002,
-            transition: 'all 0.2s ease',
-            backdropFilter: 'blur(10px)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-          }}
-        >
-          ×
-        </button>
-
-        {/* Кнопки навигации по кадрам (горизонтально) */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            handlePrevFrame()
-          }}
-          style={{
-            position: 'absolute',
-            left: '32px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            border: '2px solid rgba(255, 255, 255, 0.3)',
-            color: '#ffffff',
-            fontSize: '24px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100002,
-            transition: 'all 0.2s ease',
-            backdropFilter: 'blur(10px)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-          }}
-        >
-          ‹
-        </button>
-        
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            handleNextFrame()
-          }}
-          style={{
-            position: 'absolute',
-            right: '32px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            border: '2px solid rgba(255, 255, 255, 0.3)',
-            color: '#ffffff',
-            fontSize: '24px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100002,
-            transition: 'all 0.2s ease',
-            backdropFilter: 'blur(10px)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-          }}
-        >
-          ›
-        </button>
-
-        {/* Кнопки навигации по лентам (вертикально) - только если есть все ленты */}
-        {allLentas && allLentas.length > 0 && (
-          <>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handlePrevLenta()
-              }}
-              style={{
-                position: 'absolute',
-                top: '32px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                color: '#ffffff',
-                fontSize: '24px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 100002,
-                transition: 'all 0.2s ease',
-                backdropFilter: 'blur(10px)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              ↑
-            </button>
-            
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleNextLenta()
-              }}
-              style={{
-                position: 'absolute',
-                bottom: '32px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                color: '#ffffff',
-                fontSize: '24px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 100002,
-                transition: 'all 0.2s ease',
-                backdropFilter: 'blur(10px)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              ↓
-            </button>
-          </>
-        )}
-
-        {/* Индикатор текущего кадра и ленты */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: allLentas && allLentas.length > 0 ? '100px' : '32px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px',
-            zIndex: 100002,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            backdropFilter: 'blur(10px)'
-          }}
-        >
-          {allLentas && allLentas.length > 0 && (
-            <div style={{
-              color: '#ffffff',
-              fontSize: '14px',
-              fontFamily: "'Science Gothic', monospace"
-            }}>
-              Лента {currentLentaIndex + 1} / {allLentas.length}
-            </div>
-          )}
-          {currentFrames && (
-            <div style={{
-              display: 'flex',
-              gap: '8px'
-            }}>
-              {currentFrames.map((_, index) => (
-                <div
-                  key={index}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setCurrentFrameIndex(index)
-                  }}
-                  style={{
-                    width: index === currentFrameIndex ? '32px' : '8px',
-                    height: '8px',
-                    borderRadius: '4px',
-                    backgroundColor: index === currentFrameIndex ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                />
-              ))}
-            </div>
-          )}
-          {currentFrames && (
-            <div style={{
-              color: '#ffffff',
-              fontSize: '12px',
-              fontFamily: "'Science Gothic', monospace"
-            }}>
-              {currentFrameIndex + 1} / {currentFrames.length}
-            </div>
-          )}
+        <div style={{ padding: isMobile ? '10px 12px' : '16px 20px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 2, position: 'relative' }}>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(16px, 3.5vw, 28px)', fontFamily: "'Slovic', sans-serif", margin: 0, fontWeight: 'bold', display: 'flex', alignItems: 'baseline', gap: '0.3em' }}>
+            <span style={{ fontSize: '0.8em' }}>Галерея</span>
+            <span><span style={{ color: '#ff0000' }}>Л</span>окаций</span>
+          </h2>
+          <button onClick={onClose} style={{ width: isMobile ? '28px' : '36px', height: isMobile ? '28px' : '36px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.1)', border: 'none', color: '#ffffff', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
-
+        
+        <div style={{ flex: 1, overflow: 'auto', padding: isMobile ? '10px 6px' : '16px 12px', display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '24px' }}>
+          {allLentas && allLentas.map((lenta, idx) => {
+            const frames = loadedLentas[lenta.id] || []
+            const scale = isMobile ? 0.85 : 1
+            const frameWidth = 130 * scale
+            const frameHeight = 85 * scale
+            const borderWidth = 12 * scale
+            const innerPadding = 4 * scale
+            const totalWidth = frameWidth * frames.length
+            
+            return (
+              <div key={lenta.id} style={{ position: 'relative' }}>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 'clamp(11px, 1.8vw, 14px)', fontFamily: "'Slovic', sans-serif", marginBottom: '8px', paddingLeft: '6px' }}>
+                  <span style={{ color: '#ffffff' }}>{frames.length}</span> фото
+                </div>
+                
+                <div style={{ 
+                  position: 'relative',
+                  display: 'flex', 
+                  gap: 0, 
+                  overflowX: 'auto',
+                  paddingBottom: '2px',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+                }}>
+                  {frames.length > 0 ? (
+                    <>
+                      <LentaPerforationTexture 
+                        width={totalWidth}
+                        height={borderWidth}
+                        position="top"
+                        scale={scale * 0.8}
+                      />
+                      <LentaPerforationTexture 
+                        width={totalWidth}
+                        height={borderWidth}
+                        position="bottom"
+                        scale={scale * 0.8}
+                      />
+                      {frames.map((frame, frameIdx) => (
+                        <div
+                          key={frameIdx}
+                          onClick={() => setPhotoViewer({ lentaIndex: idx, frameIndex: frameIdx })}
+                          style={{
+                            width: `${frameWidth}px`,
+                            height: `${frameHeight + borderWidth * 2}px`,
+                            flexShrink: 0,
+                            position: 'relative',
+                            backgroundColor: '#000000',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(255,0,0,0.3)' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none' }}
+                        >
+                          <div style={{
+                            position: 'absolute',
+                            top: `${borderWidth}px`,
+                            left: `${innerPadding}px`,
+                            right: `${innerPadding}px`,
+                            bottom: `${borderWidth}px`,
+                            borderRadius: '2px',
+                            overflow: 'hidden'
+                          }}>
+                            {frame.type === 'image' ? (
+                                <Image
+                                  src={frame.src}
+                                  alt={`Photo ${frameIdx + 1}`}
+                                  fill
+                                  style={{ objectFit: 'cover' }}
+                                  loading="lazy"
+                                  unoptimized
+                                />
+                            ) : (
+                              <div style={{
+                                width: '100%',
+                                height: '100%',
+                                backgroundColor: frame.value || '#333'
+                              }} />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', padding: '16px' }}>Загрузка...</div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </motion.div>
+
+      {photoViewer && (
+        <PhotoViewer
+          frames={loadedLentas[allLentas[photoViewer.lentaIndex]?.id] || []}
+          currentIndex={photoViewer.frameIndex}
+          onClose={() => setPhotoViewer(null)}
+          onPrev={handlePrevFrame}
+          onNext={handleNextFrame}
+          onPrevLenta={handlePrevLenta}
+          onNextLenta={handleNextLenta}
+          cityName={CITY_NAMES[photoViewer.lentaIndex] || `Альбом ${photoViewer.lentaIndex + 1}`}
+        />
+      )}
     </>
   )
 }
@@ -2732,22 +2669,17 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
     }
   }, [folderId, embeddedImages])
   
-  // Генерируем список изображений: используем base64 если доступны, иначе пути к файлам
+  // Генерируем список изображений: используем файлы из public/photos с thumbnail версиями для лент
   const frames = useMemo(() => {
-    // Приоритет: встроенные base64 изображения
-    if (embeddedImages && embeddedImages[folderId] && embeddedImages[folderId].length > 0) {
-      return embeddedImages[folderId].map((img) => ({
-        type: 'image',
-        src: img.data, // base64 data URL
-        isEmbedded: true
-      }))
-    }
-    
-    // Fallback: пути к файлам
+    // Используем файлы из public/photos - они уже оптимизированы
+    // _thumb версия: 120x80, quality 50 - для быстрой загрузки на лентах
+    // Полная версия используется в галерее
     if (existingFileNumbers.length > 0 && folderId) {
       return existingFileNumbers.map((fileNum) => ({
         type: 'image',
-        src: `/photos/${folderId}/${fileNum}.webp`,
+        src: `/photos/${folderId}/${fileNum}_thumb.webp`, // thumbnail для ленты
+        fullSrc: `/photos/${folderId}/${fileNum}.webp`, // полное для галереи
+        gallerySrc: `/photos/${folderId}/${fileNum}_gallery.webp`, // среднее для галереи
         isEmbedded: false
       }))
     }
@@ -2759,7 +2691,7 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
       const b = Math.floor(Math.random() * 256)
       return { type: 'color', value: `rgb(${r}, ${g}, ${b})` }
     })
-  }, [existingFileNumbers, folderId, embeddedImages])
+  }, [existingFileNumbers, folderId])
   
   const frameCount = frames.length
   
@@ -2919,28 +2851,6 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
               >
                 {/* Сам кадр в центре */}
                 {frame.type === 'image' ? (
-                  // Для встроенных base64 используем обычный img (next/image не поддерживает data URLs)
-                  frame.isEmbedded ? (
-                    <img
-                      src={frame.src}
-                      alt={`Frame ${index}`}
-                      style={{
-                        position: 'absolute',
-                        top: `${borderWidth}px`,
-                        left: 0,
-                        width: '100%',
-                        height: `${frameHeight}px`,
-                        objectFit: 'cover',
-                        borderRadius: '2px'
-                      }}
-                      onError={(e) => {
-                        e.target.style.display = 'none'
-                        if (e.target.parentElement) {
-                          e.target.parentElement.style.backgroundColor = '#333'
-                        }
-                      }}
-                    />
-                  ) : (
                     <Image
                       src={frame.src}
                       alt={`Frame ${index}`}
@@ -2955,17 +2865,16 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
                         objectFit: 'cover',
                         borderRadius: '2px'
                       }}
-                      priority={index < 3} // Первые 3 кадра загружаем с приоритетом
-                      loading={index < 3 ? undefined : 'lazy'} // Остальные - lazy
+                      priority={index < 2}
+                      loading={index < 2 ? undefined : 'lazy'}
+                      unoptimized
                       onError={(e) => {
                         e.target.style.display = 'none'
                         if (e.target.parentElement) {
                           e.target.parentElement.style.backgroundColor = '#333'
                         }
                       }}
-                      unoptimized={false} // Используем оптимизацию Next.js
                     />
-                  )
                 ) : (
                   <div
                     style={{
@@ -3104,6 +3013,9 @@ export default function Home() {
 
   // Состояние для активной галереи
   const [activeGallery, setActiveGallery] = useState(null) // { lentaId, frameIndex, frames }
+  
+  // Состояние для выдвижной панели галереи
+  const [showGallery, setShowGallery] = useState(false)
 
   // Ленивая загрузка лент для производительности
   const [showLents, setShowLents] = useState(false)
@@ -3757,14 +3669,13 @@ export default function Home() {
       {/* Компонент Вспышка */}
       <Flash isActive={flashActive} onComplete={handleFlashComplete} />
       
-      {/* Галерея для активированной ленты */}
-      {activeGallery && (
+      {/* Выдвижная галерея локаций */}
+      {showGallery && (
         <Gallery
-          frames={activeGallery.frames}
-          initialIndex={activeGallery.frameIndex}
-          onClose={handleCloseGallery}
-          lentaIndex={activeGallery.lentaIndex}
-          allLentas={activeGallery.allLentas}
+          onClose={() => setShowGallery(false)}
+          lentaIndex={0}
+          allLentas={allLentas}
+          embeddedImages={embeddedLentaImages}
         />
       )}
       
@@ -3985,6 +3896,7 @@ export default function Home() {
         }}
       >
       {/* Ленты — sticky контейнер, прилипает к viewport при скролле */}
+      {/* СТАРЫЕ ЛЕНТЫ ЗАКОММЕНТИРОВАНЫ - теперь используем BottomPhotoStrip и GalleryLink
       <div style={{
         position: 'sticky',
         top: 0,
@@ -3995,24 +3907,20 @@ export default function Home() {
         zIndex: 900,
         overflow: 'visible'
       }}>
-        {/* Центральные крупные ленты */}
         <KinoLenta lentaId="lenta-1" folderId="1" progress={springProgressFast} center={0.6 * 0.6 / 3} topOffset={0} speed={1.0} angle={15} scale={2} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
         <KinoLenta lentaId="lenta-6" folderId="2" progress={springProgressFast} center={0.35 * 0.6 / 3} topOffset={-40} speed={1.3} angle={10} scale={1.8} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
         <KinoLenta lentaId="lenta-9" folderId="3" progress={springProgressFast} center={0.55 * 0.6 / 3} topOffset={-15} speed={1.4} angle={-12} inverse={true} scale={1.6} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
-
-        {/* Промежуточные ленты */}
         <KinoLenta lentaId="lenta-2" folderId="4" progress={springProgressMedium} center={0.9 * 0.6 / 3} topOffset={25} speed={1.0} angle={-15} inverse={true} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
         <KinoLenta lentaId="lenta-3" folderId="5" progress={springProgressMedium} center={0.3 * 0.6 / 3} topOffset={-45} speed={1.5} angle={20} scale={1.5} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
         <KinoLenta lentaId="lenta-4" folderId="6" progress={springProgressMedium} center={0.4 * 0.6 / 3} topOffset={-35} speed={1.2} angle={15} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
         <KinoLenta lentaId="lenta-7" folderId="7" progress={springProgressMedium} center={0.65 * 0.6 / 3} topOffset={-25} speed={0.9} angle={-18} inverse={true} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
         <KinoLenta lentaId="lenta-8" folderId="8" progress={springProgressMedium} center={0.45 * 0.6 / 3} topOffset={-20} speed={1.1} angle={22} scale={1.3} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
         <KinoLenta lentaId="lenta-12" folderId="9" progress={springProgressMedium} center={0.8 * 0.6 / 3} topOffset={30} speed={0.8} angle={18} scale={1.6} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaLargeParallaxX} parallaxY={lentaLargeParallaxY} rotateX={lentaLargeRotateX} rotateY={lentaLargeRotateY} embeddedImages={embeddedLentaImages} />
-
-        {/* Фоновые ленты */}
         <KinoLenta lentaId="lenta-5" folderId="10" progress={springProgressSlow} center={0.5 * 0.6 / 3} topOffset={-30} speed={0.7} angle={-25} inverse={true} scale={1.2} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
         <KinoLenta lentaId="lenta-10" folderId="11" progress={springProgressSlow} center={0.7 * 0.6 / 3} topOffset={-10} speed={0.8} angle={-15} inverse={true} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
         <KinoLenta lentaId="lenta-11" folderId="12" progress={springProgressSlow} center={0.75 * 0.6 / 3} topOffset={10} speed={1.2} angle={-12} inverse={true} scale={1.4} spreadMultiplier={lentaSpread} onFrameClick={handleFrameClick} containerRef={containerRef} parallaxX={lentaMediumParallaxX} parallaxY={lentaMediumParallaxY} rotateX={lentaMediumRotateX} rotateY={lentaMediumRotateY} embeddedImages={embeddedLentaImages} />
       </div>
+      КОНЕЦ ЗАКОММЕНТИРОВАННЫХ СТАРЫХ ЛЕНТ */}
       
       {/* Индикатор прогресса в левом верхнем углу */}
       <div style={{
@@ -4032,15 +3940,15 @@ export default function Home() {
         Прогресс кинопроизводства: {progressText}%
             </div>
 
-      {/* Первый экран — на мобильном растягивается до 200vh чтобы ленты не перекрывали видео */}
+      {/* Первый экран */}
       <section
         ref={firstScreenRef}
         style={{
           width: '100vw',
-          height: 'calc(var(--vh, 1vh) * 200)',
+          height: 'calc(var(--vh, 1vh) * 100)',
           backgroundColor: '#0a0a0a',
           position: 'relative',
-          overflow: 'clip', // clip не ломает sticky (в отличие от hidden)
+          overflow: 'clip',
           overflowX: 'clip'
         }}
       >
@@ -4094,6 +4002,24 @@ export default function Home() {
         }}>
           Составление плана: {firstScreenProgressText}%
             </div>
+        
+        {/* Нижняя лента фотографий */}
+        {showLents && (
+          <BottomPhotoStrip
+            allLentas={allLentas}
+            embeddedImages={embeddedLentaImages}
+            onPhotoClick={() => setShowGallery(true)}
+            firstScreenProgress={firstScreenProgressMotionValue}
+          />
+        )}
+        
+        {/* Ссылка на галерею локаций */}
+        {showLents && (
+          <GalleryLink
+            onClick={() => setShowGallery(true)}
+            firstScreenProgress={firstScreenProgressMotionValue.get()}
+          />
+        )}
       </section>
 
       {/* Второй экран */}

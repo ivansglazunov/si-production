@@ -40,3 +40,5 @@ next-env.d.ts
 /scripts/
 /data/
 /pages/api/
+TELEGRAM_AUTH_COMMAND.sh
+/.playwright-mcp/
