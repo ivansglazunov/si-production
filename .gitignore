@@ -39,6 +39,7 @@ next-env.d.ts
 /lib/
 /scripts/
 /data/
+!/data/lenta_images.js
 /pages/api/
 TELEGRAM_AUTH_COMMAND.sh
 /.playwright-mcp/
