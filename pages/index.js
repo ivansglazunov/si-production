@@ -557,17 +557,18 @@ function BottomPhotoStrip({ allLentas, embeddedImages, onPhotoClick, firstScreen
   useEffect(() => {
     const photos = allLentas.map((lenta, index) => {
       const folderId = lenta.folderId
-      // Используем thumbnail версию для быстрой загрузки
+      // Используем встроенный base64 если есть — мгновенная загрузка
+      const embedded = embeddedImages?.[folderId]?.[0]
       return {
         lentaId: lenta.id,
         folderId,
         cityName: CITY_NAMES[index] || `Альбом ${index + 1}`,
-        src: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/1_thumb.webp`,
+        src: embedded ? embedded.data : `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/1_thumb.webp`,
         index: 0
       }
     })
     setFirstPhotos(photos)
-  }, [allLentas])
+  }, [allLentas, embeddedImages])
 
   const frameWidth = 200
   const frameHeight = 120
@@ -894,7 +895,7 @@ function Gallery({ onClose, lentaIndex, allLentas, embeddedImages }) {
         setLoadedLentas(prev => ({ ...prev, [lenta.id]: images }))
       }
     })
-  }, [allLentas, loadedLentas])
+  }, [allLentas, embeddedImages])
 
   const handlePrevFrame = () => {
     if (!photoViewer) return
@@ -2682,17 +2683,25 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
     }
   }, [folderId, embeddedImages])
   
-  // Генерируем список изображений: используем файлы из public/photos с thumbnail версиями для лент
+  // Генерируем список изображений: используем встроенные base64 для мгновенной загрузки на лентах
   const frames = useMemo(() => {
-    // Используем файлы из public/photos - они уже оптимизированы
-    // _thumb версия: 120x80, quality 50 - для быстрой загрузки на лентах
-    // Полная версия используется в галерее
+    // Если есть встроенные base64 данные — используем их напрямую (мгновенная загрузка, 0 запросов)
+    if (embeddedImages && embeddedImages[folderId] && Array.isArray(embeddedImages[folderId]) && embeddedImages[folderId].length > 0) {
+      return embeddedImages[folderId].map((img) => ({
+        type: 'image',
+        src: img.data, // base64 — грузится мгновенно
+        fullSrc: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${img.fileNum}.webp`,
+        gallerySrc: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${img.fileNum}_gallery.webp`,
+        isEmbedded: true
+      }))
+    }
+    // Fallback на URL если нет встроенных данных
     if (existingFileNumbers.length > 0 && folderId) {
       return existingFileNumbers.map((fileNum) => ({
         type: 'image',
-        src: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${fileNum}_thumb.webp`, // thumbnail для ленты
-        fullSrc: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${fileNum}.webp`, // полное для галереи
-        gallerySrc: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${fileNum}_gallery.webp`, // среднее для галереи
+        src: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${fileNum}_thumb.webp`,
+        fullSrc: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${fileNum}.webp`,
+        gallerySrc: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${fileNum}_gallery.webp`,
         isEmbedded: false
       }))
     }
@@ -2704,7 +2713,7 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
       const b = Math.floor(Math.random() * 256)
       return { type: 'color', value: `rgb(${r}, ${g}, ${b})` }
     })
-  }, [existingFileNumbers, folderId])
+  }, [existingFileNumbers, folderId, embeddedImages])
   
   const frameCount = frames.length
   
