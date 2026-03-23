@@ -3980,8 +3980,8 @@ export default function Home() {
               objectFit: 'cover'
             }}
           >
-            <source src="/video_background.webm" type="video/webm" />
-            <source src="/video_2026-02-04_19-56-39.mp4" type="video/mp4" />
+            <source src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/video_background.webm`} type="video/webm" />
+            <source src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/video_2026-02-04_19-56-39.mp4`} type="video/mp4" />
           </video>
         </div>
         {/* Индикатор прогресса первого экрана */}
@@ -4052,7 +4052,7 @@ export default function Home() {
               pointerEvents: 'none',
               zIndex: 100,
               opacity: 0.15,
-              backgroundImage: 'url(/noise.png)',
+              backgroundImage: `url(${process.env.NEXT_PUBLIC_BASE_PATH || ''}/noise.png)`,
               backgroundSize: '128px 128px',
               backgroundRepeat: 'repeat',
               animation: 'tvNoise 0.3s steps(4) infinite',
@@ -4617,7 +4617,7 @@ export default function Home() {
                 }}>
                   {/* Иконка православного купола из SVG файла */}
                   <img 
-                    src="/tampls.svg" 
+                    src={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/tampls.svg`} 
                     alt="Zvenigorod dome" 
                     style={{ 
                       display: 'inline-block',
