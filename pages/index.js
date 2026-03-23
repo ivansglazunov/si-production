@@ -549,7 +549,7 @@ function BottomPhotoStrip({ allLentas, embeddedImages, onPhotoClick, firstScreen
         lentaId: lenta.id,
         folderId,
         cityName: CITY_NAMES[index] || `Альбом ${index + 1}`,
-        src: `/photos/${folderId}/1_thumb.webp`,
+        src: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/1_thumb.webp`,
         index: 0
       }
     })
@@ -872,9 +872,9 @@ function Gallery({ onClose, lentaIndex, allLentas, embeddedImages }) {
       const embeddedCount = embeddedImages?.[folderId]?.length || 0; const maxPhotos = Math.max(embeddedCount, 1); for (let i = 1; i <= maxPhotos; i++) {
         images.push({
           type: 'image',
-          src: `/photos/${folderId}/${i}_gallery.webp`, // gallery версия для списка
-          fullSrc: `/photos/${folderId}/${i}.webp`, // полная версия для просмотра
-          thumbSrc: `/photos/${folderId}/${i}_thumb.webp` // thumbnail для превью
+          src: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${i}_gallery.webp`, // gallery версия для списка
+          fullSrc: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${i}.webp`, // полная версия для просмотра
+          thumbSrc: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${i}_thumb.webp` // thumbnail для превью
         })
       }
       if (images.length > 0) {
@@ -2677,9 +2677,9 @@ function KinoLenta({ folderId, progress, center, topOffset = 0, speed = 1, angle
     if (existingFileNumbers.length > 0 && folderId) {
       return existingFileNumbers.map((fileNum) => ({
         type: 'image',
-        src: `/photos/${folderId}/${fileNum}_thumb.webp`, // thumbnail для ленты
-        fullSrc: `/photos/${folderId}/${fileNum}.webp`, // полное для галереи
-        gallerySrc: `/photos/${folderId}/${fileNum}_gallery.webp`, // среднее для галереи
+        src: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${fileNum}_thumb.webp`, // thumbnail для ленты
+        fullSrc: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${fileNum}.webp`, // полное для галереи
+        gallerySrc: `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/photos/${folderId}/${fileNum}_gallery.webp`, // среднее для галереи
         isEmbedded: false
       }))
     }
@@ -3242,7 +3242,7 @@ export default function Home() {
     let cancelled = false
     const load = async () => {
       try {
-        const res = await fetch('/data/posters.json', { cache: 'no-store' })
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/data/posters.json`, { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           if (!cancelled) setPostersMap(data)
@@ -3299,7 +3299,7 @@ export default function Home() {
 
     const load = async () => {
       try {
-        const res = await fetch('/data/filmography.csv', { cache: 'no-store' })
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/data/filmography.csv`, { cache: 'no-store' })
         const text = await res.text()
         const parsed = Papa.parse(text, { skipEmptyLines: false })
         const rows = Array.isArray(parsed.data) ? parsed.data : []
