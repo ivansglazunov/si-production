@@ -4757,6 +4757,15 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            <div style={{ textAlign: 'right', marginTop: '1.5rem' }}>
+              <a href="https://vaed.ai" target="_blank" rel="noopener noreferrer" style={{
+                color: 'rgba(255, 255, 255, 0.35)',
+                fontSize: 'clamp(0.7rem, 1.1vw, 0.85rem)',
+                fontFamily: "'Slovic', sans-serif",
+                textDecoration: 'none',
+                letterSpacing: '0.05em'
+              }}>væd.ai</a>
+            </div>
           </footer>
         </div>
       </section>
