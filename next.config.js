@@ -1,13 +1,16 @@
 /** @type {import('next').NextConfig} */
+const useGhBasePath = process.env.USE_GH_BASE_PATH === 'true'
+const basePath = useGhBasePath ? '/si-production' : ''
+
 const nextConfig = {
   output: 'export',
-  basePath: '/si-production',
+  basePath,
   reactStrictMode: true,
   images: {
     unoptimized: true,
   },
   env: {
-    NEXT_PUBLIC_BASE_PATH: '/si-production',
+    NEXT_PUBLIC_BASE_PATH: basePath,
   },
 }
 
