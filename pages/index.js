@@ -375,24 +375,27 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
           </div>
 
           {/* Строка 3, Колонка 2: @si_production_bot */}
-          <div style={{ 
-            display: 'flex', 
+          <div style={{
+            display: 'flex',
             alignItems: 'center',
             padding: '12px',
             borderBottom: '2px solid #888888',
             color: '#ffffff',
             fontFamily: "'Slovic', cursive",
-            fontSize: '26px'
+            fontSize: '26px',
+            position: 'relative'
           }}>
             <a
               href="https://t.me/si_production_bot"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
               style={{
                 color: '#ffffff',
                 textDecoration: 'none',
                 pointerEvents: 'auto',
-                transition: 'opacity 0.2s ease'
+                transition: 'opacity 0.2s ease',
+                position: 'relative'
               }}
               onMouseEnter={(e) => {
                 e.target.style.opacity = '0.8'
@@ -402,6 +405,16 @@ const Clapperboard = memo(({ isActive, isVisible, onClose }) => {
               }}
             >
               @si_production_bot
+              {/* Красный незамкнутый круг-маркер */}
+              <svg style={{ position: 'absolute', top: '-12px', left: '-16px', width: 'calc(100% + 32px)', height: 'calc(100% + 24px)', pointerEvents: 'none', overflow: 'visible' }} viewBox="0 0 200 60" preserveAspectRatio="none">
+                <ellipse cx="100" cy="30" rx="95" ry="26" fill="none" stroke="#ff2222" strokeWidth="3" strokeLinecap="round" strokeDasharray="520" strokeDashoffset="80" style={{ filter: 'url(#marker-roughness)' }} />
+                <defs>
+                  <filter id="marker-roughness">
+                    <feTurbulence type="turbulence" baseFrequency="0.04" numOctaves="4" result="noise" />
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+                  </filter>
+                </defs>
+              </svg>
             </a>
           </div>
 
@@ -3276,7 +3289,7 @@ export default function Home() {
   const getPoster = useCallback((title) => {
     const posterData = postersMap[title]
     if (posterData && posterData.posterUrl) {
-      return posterData.posterUrl
+      return `${process.env.NEXT_PUBLIC_BASE_PATH || ''}${posterData.posterUrl}`
     }
     return null // вернём null, чтобы использовать SVG fallback в компоненте
   }, [postersMap])
@@ -3810,14 +3823,16 @@ export default function Home() {
         left: 0,
         width: '100vw',
         height: '100vh',
-        pointerEvents: 'none',
+        pointerEvents: clapperboardVisible ? 'auto' : 'none',
         overflow: 'hidden',
         zIndex: 99999, // Ниже вспышки (100000)
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        perspective: '1000px' // Для 3D эффекта хлопающей створки
-      }}>
+        perspective: '1000px', // Для 3D эффекта хлопающей створки
+        cursor: 'pointer'
+      }}
+      onClick={handleClapperboardClose}>
         <Clapperboard isActive={clapperboardActive} isVisible={clapperboardVisible} onClose={handleClapperboardClose} />
             </div>
 
